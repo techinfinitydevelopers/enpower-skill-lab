@@ -31,12 +31,12 @@
           <!-- Download Sample -->
           <div class="d-flex align-items-center justify-content-between p-3 mb-3" style="background: #F0F7FF; border-radius: 10px;">
             <div>
-              <p class="fw-medium mb-0" style="font-size: 0.9rem;">Download sample CSV template</p>
+              <p class="fw-medium mb-0" style="font-size: 0.9rem;">Download sample Excel template</p>
               <p class="text-muted mb-0" style="font-size: 0.8rem;">Use this template to fill in your data correctly.</p>
             </div>
             <a href="/super-admin/bulk-import/{{ role }}/sample-csv/" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1" style="border-radius: 8px;">
               <span class="material-symbols-outlined" style="font-size: 1rem;">download</span>
-              Sample CSV
+              Sample Excel
             </a>
           </div>
 
@@ -44,8 +44,8 @@
           <div id="biDropZone" class="text-center p-4 mb-3" style="border: 2px dashed #D1D5DB; border-radius: 12px; cursor: pointer; transition: all 0.2s;">
             <span class="material-symbols-outlined mb-2" style="font-size: 2.5rem; color: #9CA3AF;">cloud_upload</span>
             <p class="fw-medium mb-1">Click to upload or drag & drop</p>
-            <p class="text-muted mb-0" style="font-size: 0.8rem;">CSV files only</p>
-            <input type="file" id="biFileInput" accept=".csv" style="display: none;">
+            <p class="text-muted mb-0" style="font-size: 0.8rem;">CSV or Excel (.xlsx) files</p>
+            <input type="file" id="biFileInput" accept=".csv,.xlsx" style="display: none;">
           </div>
 
           <!-- Selected File -->
@@ -209,8 +209,8 @@
     });
 
     function handleFile(file) {
-        if (!file.name.endsWith('.csv')) {
-            alert('Please select a CSV file.');
+        if (!file.name.endsWith('.csv') && !file.name.endsWith('.xlsx')) {
+            alert('Please select a CSV or Excel (.xlsx) file.');
             return;
         }
         selectedFile = file;
