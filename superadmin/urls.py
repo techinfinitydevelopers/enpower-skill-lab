@@ -62,4 +62,17 @@ urlpatterns = [
     path('skill-passport/learning-pillars/', views.learning_pillars, name='learning_pillars'),
     path('skill-passport/profiles-competencies/', views.profiles_competencies, name='profiles_competencies'),
     path('skill-passport/project-assessment/', views.project_assessment, name='project_assessment'),
+    path('skill-passport/custom-framework/', views.custom_framework, name='custom_framework'),
+    path('skill-passport/manage-frameworks/', views.manage_frameworks, name='manage_frameworks'),
+    # ESL Products
+    path('esl-products/', views.esl_products, name='esl_products'),
+    path('esl-products/add/', views.esl_product_add, name='esl_product_add'),
+    path('esl-products/<int:product_id>/edit/', views.esl_product_edit, name='esl_product_edit'),
+    path('esl-products/<int:product_id>/delete/', views.esl_product_delete, name='esl_product_delete'),
+    # Announcements
+    path('announcements/', views.announcements_list, name='announcements_list'),
+    path('announcements/add/', views.announcement_add, name='announcement_add'),
+    path('announcements/<int:ann_id>/edit/', views.announcement_edit, name='announcement_edit'),
+    path('announcements/<int:ann_id>/delete/', views.announcement_delete, name='announcement_delete'),
+    path('api/schools-by-product/', views.api_schools_by_product, name='api_schools_by_product'),
 ]

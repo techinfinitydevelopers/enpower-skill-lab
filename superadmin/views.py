@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.http import JsonResponse
+from django.db import models
 from django.db.models import Q
 from django.contrib.auth import get_user_model, logout
 from django.contrib.auth.hashers import make_password
@@ -11,7 +12,7 @@ from django.utils import timezone
 from schools.models import School
 from school_admin.models import SchoolAdmin
 from .models import SuperAdmin
-from competencies.models import Pillar, SubPillar, Competency, Profile, Project, Assessment, AssessmentCompetency
+from competencies.models import Pillar, SubPillar, Competency, Profile, Project, Assessment, AssessmentCompetency, ESLProduct, Announcement
 import json
 import secrets
 import string
@@ -144,6 +145,9 @@ def onboard_school(request):
             school = School()
             
             # A. School Basic Information
+            from competencies.models import Framework as FW
+            fw_name = data.get('frameworkType', 'FSL')
+            school.framework_ref = FW.objects.filter(name=fw_name).first()
             school.school_name = data.get('schoolName')
             school.school_code = data.get('schoolCode')
             school.board = data.get('board')
@@ -194,27 +198,52 @@ def onboard_school(request):
             school.skill_subjects = data.get('skillSubjects') or None
             school.remedial_programs = data.get('remedialPrograms') or None
             
-            # E. Skill Lab Integration
-            school.skill_lab_reg_id = data.get('skillLabRegId') or None
-            school.skills_offered = data.get('skillsOffered') or None
-            school.batch_timings = data.get('batchTimings') or None
-            school.trainers_assigned = data.get('trainersAssigned') or None
-            school.lab_usage_hours = data.get('labUsageHours') or None
-            school.student_groups_linked = data.get('studentGroupsLinked') or None
-            school.csl_integration_status = data.get('cslIntegrationStatus') or None
-            school.csl_project_list = data.get('cslProjectList') or None
-            school.assessment_system_linked = data.get('assessmentSystemLinked') or None
+            # E. Skill Program Information
+            school.skill_program = data.get('skillProgram') or None
+            school.program_academic_year = data.get('programAcademicYear') or None
+
+            # Auto-set framework_ref based on skill_program selection
+            sp = school.skill_program
+            if sp == 'fsl':
+                school.framework_ref = FW.objects.filter(name='FSL').first()
+            elif sp in ('csl_plus_pc', 'csl_plus_tc'):
+                school.framework_ref = FW.objects.filter(name='CSL+').first() or school.framework_ref
+            elif sp in ('csl_foundation_pc', 'csl_foundation'):
+                school.framework_ref = FW.objects.filter(name='CSL Foundation').first() or school.framework_ref
+
+            srm_id = data.get('srmId')
+            if srm_id:
+                from django.contrib.auth import get_user_model
+                User = get_user_model()
+                school.srm = User.objects.filter(id=srm_id, role='PROGRAM_COORDINATOR').first()
+
+            trainer_id = data.get('trainerId')
+            if trainer_id:
+                from django.contrib.auth import get_user_model
+                User = get_user_model()
+                school.trainer_assigned = User.objects.filter(id=trainer_id, role='THINKING_COACH').first()
+
+            # Grade-wise students
+            grade_students = {}
+            for g in range(1, 13):
+                val = data.get(f'grade_{g}_students')
+                if val and val.strip():
+                    try:
+                        grade_students[str(g)] = int(val)
+                    except ValueError:
+                        pass
+            school.grade_wise_students = grade_students
             
-            # F. Administrative Information
-            school.billing_email = data.get('billingEmail')
-            school.gst_number = data.get('gstNumber') or None
-            school.payment_preferences = data.get('paymentPreferences') or None
-            school.finance_contact = data.get('financeContact') or None
-            school.admin_coordinator_name = data.get('adminCoordinatorName') or None
-            school.admin_coordinator_phone = data.get('adminCoordinatorPhone') or None
-            school.academic_year_cycle = data.get('academicYearCycle') or None
-            school.workshop_approval_status = data.get('workshopApprovalStatus') or None
-            school.digital_reports_consent = data.get('digitalReportsConsent') or None
+            # F. Fees & Commercial Information
+            school.lab_fees_with_gst = data.get('labFeesWithGst') or None
+            school.program_fees_with_gst = data.get('programFeesWithGst') or None
+            school.payment_terms = data.get('paymentTerms') or None
+            school.tce_sales_spoc_name = data.get('tceSalesSpocName') or None
+            school.tce_sales_spoc_contact = data.get('tceSalesSpocContact') or None
+            if 'signedAgreement' in request.FILES:
+                school.signed_agreement = request.FILES['signedAgreement']
+            if 'goLiveCertificate' in request.FILES:
+                school.go_live_certificate = request.FILES['goLiveCertificate']
             
             # G. Compliance & Documentation - Handle file uploads
             if 'schoolLogo' in request.FILES:
@@ -241,12 +270,16 @@ def onboard_school(request):
             school.nearest_hospital = data.get('nearestHospital') or None
             school.evacuation_plan = data.get('evacuationPlan') or None
             
-            # I. Additional Data (Optional)
-            school.awards = data.get('awards') or None
+            # I. Additional Information
+            school.exceptions_for_school = data.get('exceptionsForSchool') or None
             school.notable_alumni = data.get('notableAlumni') or None
-            school.performance_trends = data.get('performanceTrends') or None
-            school.social_media_links = data.get('socialMediaLinks') or None
-            school.events_calendar = data.get('eventsCalendar') or None
+
+            # Events & Workshop Calendar (JSON)
+            events_json = data.get('eventsWorkshopCalendar', '[]')
+            try:
+                school.events_workshop_calendar = json.loads(events_json) if events_json else []
+            except (json.JSONDecodeError, TypeError):
+                school.events_workshop_calendar = []
             
             # Mark onboarding as completed
             school.onboarding_completed = True
@@ -259,10 +292,25 @@ def onboard_school(request):
             
         except Exception as e:
             messages.error(request, f'Error onboarding school: {str(e)}')
-            return render(request, 'superadmin/onboard-school.html')
+            from coordinator.models import ProgramCoordinator
+            from teacher.models import Teacher
+            return render(request, 'superadmin/onboard-school.html', {
+                'frameworks': FW.objects.order_by('order').all(),
+                'program_coordinators': ProgramCoordinator.objects.filter(is_active=True).select_related('user'),
+                'thinking_coaches': Teacher.objects.filter(is_active=True).select_related('user'),
+                'grade_list': list(range(1, 13)),
+            })
     
     # GET request - display the form
-    return render(request, 'superadmin/onboard-school.html')
+    from competencies.models import Framework as FW
+    from coordinator.models import ProgramCoordinator
+    from teacher.models import Teacher
+    return render(request, 'superadmin/onboard-school.html', {
+        'frameworks': FW.objects.order_by('order').all(),
+        'program_coordinators': ProgramCoordinator.objects.filter(is_active=True).select_related('user'),
+        'thinking_coaches': Teacher.objects.filter(is_active=True).select_related('user'),
+        'grade_list': list(range(1, 13)),
+    })
 
 
 @login_required
@@ -301,7 +349,7 @@ def view_school(request, school_id):
     View to display school details.
     """
     school = get_object_or_404(School, id=school_id)
-    
+
     # Get initials and badge color
     colors = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4']
     words = school.school_name.strip().split()
@@ -310,9 +358,28 @@ def view_school(request, school_id):
     else:
         school.initials = school.school_name[:2].upper()
     school.badge_color = colors[ord(school.school_name[0]) % len(colors)]
-    
+
+    # SRM and Trainer display names
+    srm_name = None
+    if school.srm:
+        from coordinator.models import ProgramCoordinator
+        try:
+            srm_name = ProgramCoordinator.objects.get(user=school.srm).full_name
+        except ProgramCoordinator.DoesNotExist:
+            srm_name = school.srm.get_full_name() or school.srm.username
+
+    trainer_name = None
+    if school.trainer_assigned:
+        from teacher.models import Teacher
+        try:
+            trainer_name = Teacher.objects.get(user=school.trainer_assigned).full_name
+        except Teacher.DoesNotExist:
+            trainer_name = school.trainer_assigned.get_full_name() or school.trainer_assigned.username
+
     context = {
         'school': school,
+        'srm_name': srm_name,
+        'trainer_name': trainer_name,
     }
     return render(request, 'superadmin/view-school.html', context)
 
@@ -324,11 +391,11 @@ def edit_school(request, school_id):
     View to edit school details.
     """
     school = get_object_or_404(School, id=school_id)
-    
+
     if request.method == 'POST':
         try:
             data = request.POST
-            
+
             # Update basic info
             school.school_name = data.get('school_name', school.school_name)
             school.school_code = data.get('school_code', school.school_code)
@@ -341,25 +408,93 @@ def edit_school(request, school_id):
             school.principal_name = data.get('principal_name', school.principal_name)
             school.principal_phone = data.get('principal_phone', school.principal_phone)
             school.principal_email = data.get('principal_email', school.principal_email)
-            
+
             # Update address
             school.city = data.get('city', school.city)
             school.state = data.get('state', school.state)
             school.pincode = data.get('pincode', school.pincode)
             school.branch_address = data.get('branch_address', school.branch_address)
-            
+
             # Update status
             is_active = data.get('is_active', 'true')
             school.is_active = is_active == 'true'
-            
+
+            # E. Skill Program
+            school.skill_program = data.get('skill_program') or None
+            school.program_academic_year = data.get('program_academic_year') or None
+
+            # Auto-set framework_ref from skill_program
+            from competencies.models import Framework as FW
+            sp = school.skill_program
+            if sp == 'fsl':
+                school.framework_ref = FW.objects.filter(name='FSL').first()
+            elif sp in ('csl_plus_pc', 'csl_plus_tc'):
+                school.framework_ref = FW.objects.filter(name='CSL+').first() or school.framework_ref
+            elif sp in ('csl_foundation_pc', 'csl_foundation'):
+                school.framework_ref = FW.objects.filter(name='CSL Foundation').first() or school.framework_ref
+
+            srm_id = data.get('srm_id')
+            if srm_id:
+                User = get_user_model()
+                school.srm = User.objects.filter(id=srm_id, role='PROGRAM_COORDINATOR').first()
+            elif srm_id == '':
+                school.srm = None
+
+            trainer_id = data.get('trainer_id')
+            if trainer_id:
+                User = get_user_model()
+                school.trainer_assigned = User.objects.filter(id=trainer_id, role='THINKING_COACH').first()
+            elif trainer_id == '':
+                school.trainer_assigned = None
+
+            # Grade-wise students
+            grade_students = {}
+            for g in range(1, 13):
+                val = data.get(f'grade_{g}_students')
+                if val and val.strip():
+                    try:
+                        grade_students[str(g)] = int(val)
+                    except ValueError:
+                        pass
+            school.grade_wise_students = grade_students
+
+            # F. Fees & Commercial
+            school.lab_fees_with_gst = data.get('lab_fees_with_gst') or None
+            school.program_fees_with_gst = data.get('program_fees_with_gst') or None
+            school.payment_terms = data.get('payment_terms') or None
+            school.tce_sales_spoc_name = data.get('tce_sales_spoc_name') or None
+            school.tce_sales_spoc_contact = data.get('tce_sales_spoc_contact') or None
+            if 'signed_agreement' in request.FILES:
+                school.signed_agreement = request.FILES['signed_agreement']
+            if 'go_live_certificate' in request.FILES:
+                school.go_live_certificate = request.FILES['go_live_certificate']
+
+            # I. Additional Information
+            school.exceptions_for_school = data.get('exceptions_for_school') or None
+            school.notable_alumni = data.get('notable_alumni') or None
+
+            events_json = data.get('events_workshop_calendar', '[]')
+            try:
+                school.events_workshop_calendar = json.loads(events_json) if events_json else []
+            except (json.JSONDecodeError, TypeError):
+                school.events_workshop_calendar = []
+
             school.save()
             messages.success(request, f'School "{school.school_name}" updated successfully!')
             return redirect('school_list')
         except Exception as e:
             messages.error(request, f'Error updating school: {str(e)}')
-    
+
+    from coordinator.models import ProgramCoordinator
+    from teacher.models import Teacher
+
     context = {
         'school': school,
+        'program_coordinators': ProgramCoordinator.objects.filter(is_active=True).select_related('user'),
+        'thinking_coaches': Teacher.objects.filter(is_active=True).select_related('user'),
+        'grade_list': list(range(1, 13)),
+        'grade_wise_students_json': json.dumps(school.grade_wise_students or {}),
+        'events_json': json.dumps(school.events_workshop_calendar or []),
     }
     return render(request, 'superadmin/edit-school.html', context)
 
@@ -2636,15 +2771,47 @@ def delete_lesson(request, lesson_id):
 @login_required
 @user_passes_test(is_superadmin)
 def learning_pillars(request):
-    # Active sub-pillar (default SP1)
-    try:
-        active_sp = int(request.GET.get('sp', 1))
-    except (ValueError, TypeError):
-        active_sp = 1
+    from competencies.models import Framework
+    # Framework selector — accepts id or name
+    fw_param = request.GET.get('fw', '')
+    if fw_param.isdigit():
+        active_fw_obj = Framework.objects.filter(id=fw_param).first()
+    else:
+        active_fw_obj = Framework.objects.filter(name=fw_param).first()
+    if not active_fw_obj:
+        active_fw_obj = Framework.objects.filter(is_fixed=True).first()
+    is_csl = not active_fw_obj.is_fixed if active_fw_obj else False
+    active_fw = active_fw_obj.name if active_fw_obj else 'FSL'
 
-    pillars      = Pillar.objects.prefetch_related('sub_pillars').all()
-    sub_pillar   = get_object_or_404(SubPillar, sp_number=active_sp)
-    competencies = sub_pillar.competencies.all()
+    # Active sub-pillar
+    active_sp_param = request.GET.get('sp', '')
+
+    pillars = Pillar.objects.prefetch_related('sub_pillars').filter(framework_ref=active_fw_obj)
+    all_frameworks = Framework.objects.order_by('order').all()
+
+    # Determine active sub-pillar
+    sub_pillar = None
+    if is_csl:
+        # CSL+ uses sub-pillar ID
+        if active_sp_param:
+            try:
+                sub_pillar = SubPillar.objects.get(id=active_sp_param, pillar__framework_ref=active_fw_obj)
+            except (SubPillar.DoesNotExist, ValueError):
+                pass
+        if sub_pillar is None:
+            sub_pillar = SubPillar.objects.filter(pillar__framework_ref=active_fw_obj).first()
+    else:
+        # Fixed framework (FSL) uses sp_number
+        try:
+            sp_num = int(active_sp_param) if active_sp_param else 1
+        except (ValueError, TypeError):
+            sp_num = 1
+        sub_pillar = SubPillar.objects.filter(sp_number=sp_num, pillar__framework_ref=active_fw_obj).first()
+        if sub_pillar is None:
+            sub_pillar = SubPillar.objects.filter(pillar__framework_ref=active_fw_obj).first()
+
+    competencies = sub_pillar.competencies.all() if sub_pillar else Competency.objects.none()
+    is_kb_active = sub_pillar.pillar.is_kb if sub_pillar else False
 
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -2658,10 +2825,11 @@ def learning_pillars(request):
                 messages.error(request, 'Name and Stage are required.')
             else:
                 existing_count = sub_pillar.competencies.count()
-                code = f"SP{active_sp}.C{existing_count + 1}"
+                prefix = sub_pillar.code  # SP1, SP2... or KB1, KB2...
+                code = f"{prefix}.C{existing_count + 1}"
                 while Competency.objects.filter(code=code).exists():
                     existing_count += 1
-                    code = f"SP{active_sp}.C{existing_count + 1}"
+                    code = f"{prefix}.C{existing_count + 1}"
                 Competency.objects.create(
                     sub_pillar=sub_pillar, code=code,
                     name=name, description=desc, stage=stage, status=status,
@@ -2687,13 +2855,165 @@ def learning_pillars(request):
                 comp.save()
                 messages.success(request, f'Competency "{comp.code}" updated.')
 
-        return redirect(f"{request.path}?sp={active_sp}")
+        # Editable pillar actions (KB in FSL, or any CSL+ pillar)
+        elif action == 'add_subpillar':
+            p_id = request.POST.get('pillar_id')
+            sp_name = request.POST.get('sp_name', '').strip()
+            pillar_obj = get_object_or_404(Pillar, id=p_id)
+            # Only allow for KB pillar (FSL) or any CSL+ pillar
+            if not pillar_obj.is_kb and pillar_obj.framework_ref and pillar_obj.framework_ref.is_fixed:
+                messages.error(request, 'Cannot add sub-pillars to this pillar.')
+            elif not sp_name:
+                messages.error(request, 'Sub-pillar name is required.')
+            else:
+                max_sp = SubPillar.objects.aggregate(models.Max('sp_number'))['sp_number__max'] or 17
+                new_sp = SubPillar.objects.create(pillar=pillar_obj, sp_number=max_sp + 1, name=sp_name)
+                messages.success(request, f'Sub-pillar "{sp_name}" added!')
+                sp_param = new_sp.sp_number if not is_csl else new_sp.id
+                return redirect(f"{request.path}?fw={active_fw_obj.id}&sp={sp_param}")
+
+        elif action == 'edit_subpillar':
+            sp_id = request.POST.get('sp_id')
+            sp_name = request.POST.get('sp_name', '').strip()
+            sp_obj = get_object_or_404(SubPillar, id=sp_id)
+            if not sp_obj.pillar.is_kb and sp_obj.pillar.framework_ref and sp_obj.pillar.framework_ref.is_fixed:
+                messages.error(request, 'This sub-pillar cannot be edited.')
+            elif not sp_name:
+                messages.error(request, 'Sub-pillar name is required.')
+            else:
+                sp_obj.name = sp_name
+                sp_obj.save()
+                messages.success(request, f'Sub-pillar renamed to "{sp_name}".')
+
+        elif action == 'delete_subpillar':
+            sp_id = request.POST.get('sp_id')
+            sp_obj = get_object_or_404(SubPillar, id=sp_id)
+            if not sp_obj.pillar.is_kb and sp_obj.pillar.framework_ref and sp_obj.pillar.framework_ref.is_fixed:
+                messages.error(request, 'This sub-pillar cannot be deleted.')
+            else:
+                sp_obj.delete()
+                messages.success(request, 'Sub-pillar deleted.')
+                return redirect(f"{request.path}?fw={active_fw_obj.id}")
+
+        elif action == 'rename_pillar':
+            p_id = request.POST.get('pillar_id')
+            pillar_obj = get_object_or_404(Pillar, id=p_id)
+            if not pillar_obj.is_kb and pillar_obj.framework_ref and pillar_obj.framework_ref.is_fixed:
+                messages.error(request, 'This pillar cannot be renamed.')
+            else:
+                new_name = request.POST.get('pillar_name', '').strip()
+                if new_name:
+                    pillar_obj.name = new_name
+                    color = request.POST.get('pillar_color')
+                    if color:
+                        pillar_obj.color = color
+                    pillar_obj.save()
+                    messages.success(request, f'Pillar renamed to "{new_name}".')
+
+        # CSL+ only: add/delete pillar
+        elif action == 'add_pillar' and is_csl:
+            name = request.POST.get('pillar_name', '').strip()
+            color = request.POST.get('pillar_color', 'teal')
+            if not name:
+                messages.error(request, 'Pillar name is required.')
+            else:
+                max_order = Pillar.objects.filter(framework_ref=active_fw_obj).aggregate(models.Max('order'))['order__max'] or 0
+                count = Pillar.objects.filter(framework_ref=active_fw_obj, is_kb=False).count()
+                prefix = active_fw_obj.prefix.replace('-SP', '') if active_fw_obj.prefix.endswith('-SP') else active_fw_obj.prefix
+                Pillar.objects.create(
+                    name=name, number=f"{count + 1:02d}", color=color,
+                    order=max_order + 1, framework_ref=active_fw_obj, is_kb=False,
+                )
+                messages.success(request, f'Pillar "{name}" added!')
+
+        elif action == 'delete_pillar' and is_csl:
+            p_id = request.POST.get('pillar_id')
+            p_obj = get_object_or_404(Pillar, id=p_id, framework_ref=active_fw_obj)
+            p_obj.delete()
+            messages.success(request, 'Pillar deleted.')
+            return redirect(f"{request.path}?fw=CSL")
+
+        # Framework CRUD
+        elif action == 'create_framework':
+            fw_name = request.POST.get('name', '').strip()
+            fw_prefix = request.POST.get('prefix', '').strip()
+            if not fw_name or not fw_prefix:
+                messages.error(request, 'Name and prefix are required.')
+            elif Framework.objects.filter(name=fw_name).exists():
+                messages.error(request, f'Framework "{fw_name}" already exists.')
+            elif Framework.objects.filter(prefix=fw_prefix).exists():
+                messages.error(request, f'Prefix "{fw_prefix}" already in use.')
+            else:
+                max_order = Framework.objects.aggregate(models.Max('order'))['order__max'] or 0
+                new_fw = Framework.objects.create(name=fw_name, prefix=fw_prefix, is_fixed=False, order=max_order + 1)
+                messages.success(request, f'Framework "{fw_name}" created!')
+                return redirect(f"{request.path}?fw={new_fw.id}")
+
+        elif action == 'edit_framework':
+            fw_id = request.POST.get('fw_id')
+            fw_obj = get_object_or_404(Framework, id=fw_id)
+            if fw_obj.is_fixed:
+                messages.error(request, 'Fixed frameworks cannot be edited.')
+            else:
+                fw_name = request.POST.get('name', '').strip()
+                fw_prefix = request.POST.get('prefix', '').strip()
+                if fw_name and fw_prefix:
+                    fw_obj.name = fw_name
+                    fw_obj.prefix = fw_prefix
+                    fw_obj.save()
+                    messages.success(request, f'Framework updated to "{fw_name}".')
+                    return redirect(f"{request.path}?fw={fw_obj.id}")
+
+        elif action == 'delete_framework':
+            fw_id = request.POST.get('fw_id')
+            fw_obj = get_object_or_404(Framework, id=fw_id)
+            if fw_obj.is_fixed:
+                messages.error(request, 'Fixed frameworks cannot be deleted.')
+            else:
+                fw_obj.delete()
+                messages.success(request, 'Framework deleted.')
+                return redirect(request.path)
+
+        elif action == 'import_pillars':
+            fw_id = request.POST.get('fw_id')
+            source_id = request.POST.get('source_fw_id')
+            fw_target = get_object_or_404(Framework, id=fw_id)
+            source = get_object_or_404(Framework, id=source_id)
+            if fw_target.is_fixed:
+                messages.error(request, 'Cannot import into a fixed framework.')
+            else:
+                imported = 0
+                max_sp = SubPillar.objects.aggregate(models.Max('sp_number'))['sp_number__max'] or 0
+                for src_pillar in source.pillars.filter(is_kb=False):
+                    max_order = Pillar.objects.filter(framework_ref=fw_target).aggregate(models.Max('order'))['order__max'] or 0
+                    count = Pillar.objects.filter(framework_ref=fw_target, is_kb=False).count()
+                    new_pillar = Pillar.objects.create(
+                        name=src_pillar.name, number=f"{count + 1:02d}",
+                        color=src_pillar.color, order=max_order + 1,
+                        framework_ref=fw_target, is_kb=False,
+                    )
+                    for src_sp in src_pillar.sub_pillars.all():
+                        max_sp += 1
+                        SubPillar.objects.create(pillar=new_pillar, sp_number=max_sp, name=src_sp.name)
+                    imported += 1
+                messages.success(request, f'Imported {imported} pillars from "{source.name}" into "{fw_target.name}".')
+                return redirect(f"{request.path}?fw={fw_target.id}")
+
+        # Build redirect URL
+        if sub_pillar:
+            sp_param = sub_pillar.id if is_csl else sub_pillar.sp_number
+            return redirect(f"{request.path}?fw={active_fw_obj.id}&sp={sp_param}")
+        return redirect(f"{request.path}?fw={active_fw_obj.id}")
 
     context = {
-        'pillars':      pillars,
-        'sub_pillar':   sub_pillar,
-        'competencies': competencies,
-        'active_sp':    active_sp,
+        'pillars':        pillars,
+        'sub_pillar':     sub_pillar,
+        'competencies':   competencies,
+        'active_fw':      active_fw,
+        'active_fw_obj':  active_fw_obj,
+        'all_frameworks': all_frameworks,
+        'is_csl':         is_csl,
+        'is_kb_active':   is_kb_active,
     }
     return render(request, 'superadmin/learning-pillars.html', context)
 
@@ -2708,8 +3028,8 @@ def profiles_competencies(request):
 
     profiles       = Profile.objects.prefetch_related('primary_competencies', 'secondary_competencies').all()
     active_profile = get_object_or_404(Profile, number=active_id)
-    pillars        = Pillar.objects.prefetch_related('sub_pillars__competencies').all()
-    all_comps      = Competency.objects.select_related('sub_pillar__pillar').filter(status='Active').order_by('sub_pillar__sp_number', 'code')
+    pillars        = Pillar.objects.prefetch_related('sub_pillars__competencies').filter(is_kb=False, framework_ref__is_fixed=True)
+    all_comps      = Competency.objects.select_related('sub_pillar__pillar').filter(status='Active', sub_pillar__pillar__is_kb=False, sub_pillar__pillar__framework_ref__is_fixed=True).order_by('sub_pillar__sp_number', 'code')
 
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -2761,8 +3081,13 @@ def project_assessment(request):
         active_project = projects.first()
         active_id = active_project.id
 
-    pillars   = Pillar.objects.prefetch_related('sub_pillars__competencies').all()
-    all_comps = Competency.objects.select_related('sub_pillar').filter(status='Active').order_by('sub_pillar__sp_number', 'code')
+    # Filter pillars/competencies by active project's framework (default FSL)
+    from competencies.models import Framework
+    active_fw_obj = active_project.framework_ref if active_project else Framework.objects.filter(is_fixed=True).first()
+    if not active_fw_obj:
+        active_fw_obj = Framework.objects.first()
+    pillars   = Pillar.objects.prefetch_related('sub_pillars__competencies').filter(framework_ref=active_fw_obj)
+    all_comps = Competency.objects.select_related('sub_pillar__pillar').filter(status='Active', sub_pillar__pillar__framework_ref=active_fw_obj).order_by('sub_pillar__sp_number', 'code')
 
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -2771,6 +3096,8 @@ def project_assessment(request):
             title        = request.POST.get('title', '').strip()
             project_type = request.POST.get('project_type', 'Life Form')
             grade        = request.POST.get('grade', '')
+            framework_name = request.POST.get('framework', 'FSL')
+            fw_obj = Framework.objects.filter(name=framework_name).first()
             seq_raw      = request.POST.get('sequence_number', '').strip()
             linked_id    = request.POST.get('linked_project', '').strip()
             if title and grade:
@@ -2778,7 +3105,7 @@ def project_assessment(request):
                 seq    = int(seq_raw) if seq_raw.isdigit() else None
                 p = Project.objects.create(
                     title=title, project_type=project_type, grade=grade,
-                    sequence_number=seq, linked_project=linked
+                    framework_ref=fw_obj, sequence_number=seq, linked_project=linked
                 )
                 messages.success(request, f'Project "{p.title}" created!')
                 return redirect(f"{request.path}?project={p.id}")
@@ -2790,6 +3117,11 @@ def project_assessment(request):
             active_project.title        = request.POST.get('title', active_project.title).strip() or active_project.title
             active_project.project_type = request.POST.get('project_type', active_project.project_type)
             active_project.grade        = request.POST.get('grade', active_project.grade)
+            fw_name = request.POST.get('framework', '')
+            if fw_name:
+                fw_save = Framework.objects.filter(name=fw_name).first()
+                if fw_save:
+                    active_project.framework_ref = fw_save
             active_project.status       = request.POST.get('status', active_project.status)
             seq_raw = request.POST.get('sequence_number', '').strip()
             active_project.sequence_number = int(seq_raw) if seq_raw.isdigit() else None
@@ -2850,11 +3182,618 @@ def project_assessment(request):
     main_projects = Project.objects.exclude(project_type='Plug In').order_by('sequence_number', 'title')
 
     context = {
-        'projects':       projects,
-        'active_project': active_project,
-        'active_id':      active_id,
-        'pillars':        pillars,
-        'all_comps':      all_comps,
-        'main_projects':  main_projects,
+        'projects':        projects,
+        'active_project':  active_project,
+        'active_id':       active_id,
+        'active_fw_obj':   active_fw_obj,
+        'all_frameworks':  Framework.objects.order_by('order').all(),
+        'pillars':         pillars,
+        'all_comps':       all_comps,
+        'main_projects':   main_projects,
     }
     return render(request, 'superadmin/project-assessment.html', context)
+
+
+# ============================================================
+# CUSTOM FRAMEWORK (CSL+) — Fully Editable Pillars
+# ============================================================
+
+@login_required
+@user_passes_test(is_superadmin)
+def custom_framework(request):
+    """Fully editable Learning Pillars page for CSL+ framework."""
+
+    # Active sub-pillar
+    active_sp_id = request.GET.get('sp')  # Using ID since CSL+ sp_numbers may overlap later
+
+    csl_pillars = Pillar.objects.prefetch_related('sub_pillars__competencies').filter(framework_ref__is_fixed=False)
+
+    # Determine active sub-pillar
+    sub_pillar = None
+    competencies = Competency.objects.none()
+
+    if active_sp_id:
+        try:
+            sub_pillar = SubPillar.objects.get(id=active_sp_id, pillar__framework_ref__is_fixed=False)
+        except SubPillar.DoesNotExist:
+            sub_pillar = None
+
+    if sub_pillar is None:
+        # Default to first CSL+ sub-pillar
+        first_sp = SubPillar.objects.filter(pillar__framework_ref__is_fixed=False).first()
+        sub_pillar = first_sp
+
+    if sub_pillar:
+        competencies = sub_pillar.competencies.all()
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        # ── Pillar CRUD ──
+        if action == 'add_pillar':
+            name = request.POST.get('pillar_name', '').strip()
+            color = request.POST.get('pillar_color', 'teal')
+            if not name:
+                messages.error(request, 'Pillar name is required.')
+            else:
+                max_order = Pillar.objects.filter(framework_ref__is_fixed=False).aggregate(models.Max('order'))['order__max'] or 0
+                count = Pillar.objects.filter(framework_ref__is_fixed=False, is_kb=False).count()
+                Pillar.objects.create(
+                    name=name, number=f"{count + 1:02d}", color=color,
+                    order=max_order + 1, framework_ref__is_fixed=False, is_kb=False,
+                )
+                messages.success(request, f'Pillar "{name}" added!')
+
+        elif action == 'edit_pillar':
+            p_id = request.POST.get('pillar_id')
+            name = request.POST.get('pillar_name', '').strip()
+            color = request.POST.get('pillar_color', 'teal')
+            p_obj = get_object_or_404(Pillar, id=p_id, framework_ref__is_fixed=False)
+            if name:
+                p_obj.name = name
+                p_obj.color = color
+                p_obj.save()
+                messages.success(request, f'Pillar renamed to "{name}".')
+
+        elif action == 'delete_pillar':
+            p_id = request.POST.get('pillar_id')
+            p_obj = get_object_or_404(Pillar, id=p_id, framework_ref__is_fixed=False)
+            p_name = p_obj.name
+            p_obj.delete()
+            messages.success(request, f'Pillar "{p_name}" deleted.')
+            return redirect('custom_framework')
+
+        # ── Sub-Pillar CRUD ──
+        elif action == 'add_subpillar':
+            p_id = request.POST.get('pillar_id')
+            sp_name = request.POST.get('sp_name', '').strip()
+            pillar_obj = get_object_or_404(Pillar, id=p_id, framework_ref__is_fixed=False)
+            if not sp_name:
+                messages.error(request, 'Sub-pillar name is required.')
+            else:
+                max_sp = SubPillar.objects.aggregate(models.Max('sp_number'))['sp_number__max'] or 17
+                new_sp = SubPillar.objects.create(pillar=pillar_obj, sp_number=max_sp + 1, name=sp_name)
+                messages.success(request, f'Sub-pillar "{sp_name}" added!')
+                return redirect(f"{request.path}?sp={new_sp.id}")
+
+        elif action == 'edit_subpillar':
+            sp_id = request.POST.get('sp_id')
+            sp_name = request.POST.get('sp_name', '').strip()
+            sp_obj = get_object_or_404(SubPillar, id=sp_id, pillar__framework_ref__is_fixed=False)
+            if sp_name:
+                sp_obj.name = sp_name
+                sp_obj.save()
+                messages.success(request, f'Sub-pillar renamed to "{sp_name}".')
+
+        elif action == 'delete_subpillar':
+            sp_id = request.POST.get('sp_id')
+            sp_obj = get_object_or_404(SubPillar, id=sp_id, pillar__framework_ref__is_fixed=False)
+            sp_obj.delete()
+            messages.success(request, 'Sub-pillar deleted.')
+            return redirect('custom_framework')
+
+        # ── Competency CRUD ──
+        elif action == 'add_competency':
+            if sub_pillar:
+                name = request.POST.get('name', '').strip()
+                desc = request.POST.get('description', '').strip()
+                stage = request.POST.get('stage', '')
+                status = request.POST.get('status', 'Active')
+                if not name or not stage:
+                    messages.error(request, 'Name and Stage are required.')
+                else:
+                    prefix = sub_pillar.code
+                    existing_count = sub_pillar.competencies.count()
+                    code = f"{prefix}.C{existing_count + 1}"
+                    while Competency.objects.filter(code=code).exists():
+                        existing_count += 1
+                        code = f"{prefix}.C{existing_count + 1}"
+                    Competency.objects.create(
+                        sub_pillar=sub_pillar, code=code,
+                        name=name, description=desc, stage=stage, status=status,
+                    )
+                    messages.success(request, f'Competency "{code}" added!')
+
+        elif action == 'delete_competency':
+            if sub_pillar:
+                comp = get_object_or_404(Competency, id=request.POST.get('competency_id'), sub_pillar=sub_pillar)
+                comp.delete()
+                messages.success(request, 'Competency deleted.')
+
+        elif action == 'edit_competency':
+            if sub_pillar:
+                comp = get_object_or_404(Competency, id=request.POST.get('competency_id'), sub_pillar=sub_pillar)
+                name = request.POST.get('name', '').strip()
+                desc = request.POST.get('description', '').strip()
+                stage = request.POST.get('stage', '')
+                status = request.POST.get('status', 'Active')
+                if not name or not stage:
+                    messages.error(request, 'Name and Stage are required.')
+                else:
+                    comp.name = name
+                    comp.description = desc
+                    comp.stage = stage
+                    comp.status = status
+                    comp.save()
+                    messages.success(request, f'Competency "{comp.code}" updated.')
+
+        sp_redirect = sub_pillar.id if sub_pillar else ''
+        return redirect(f"{request.path}?sp={sp_redirect}" if sp_redirect else 'custom_framework')
+
+    context = {
+        'csl_pillars':  csl_pillars,
+        'sub_pillar':   sub_pillar,
+        'competencies': competencies,
+    }
+    return render(request, 'superadmin/custom-framework.html', context)
+
+
+# ============================================================
+# MANAGE FRAMEWORKS
+# ============================================================
+
+@login_required
+@user_passes_test(is_superadmin)
+def manage_frameworks(request):
+    """CRUD page for skill frameworks."""
+    from competencies.models import Framework
+
+    frameworks = Framework.objects.order_by('order').all()
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'create':
+            name = request.POST.get('name', '').strip()
+            prefix = request.POST.get('prefix', '').strip()
+            if not name or not prefix:
+                messages.error(request, 'Name and prefix are required.')
+            elif Framework.objects.filter(name=name).exists():
+                messages.error(request, f'Framework "{name}" already exists.')
+            elif Framework.objects.filter(prefix=prefix).exists():
+                messages.error(request, f'Prefix "{prefix}" already in use.')
+            else:
+                max_order = Framework.objects.aggregate(models.Max('order'))['order__max'] or 0
+                Framework.objects.create(name=name, prefix=prefix, is_fixed=False, order=max_order + 1)
+                messages.success(request, f'Framework "{name}" created! Go to Learning Pillars to add pillars.')
+
+        elif action == 'edit':
+            fw_id = request.POST.get('fw_id')
+            fw = get_object_or_404(Framework, id=fw_id)
+            if fw.is_fixed:
+                messages.error(request, 'Fixed frameworks cannot be edited.')
+            else:
+                name = request.POST.get('name', '').strip()
+                prefix = request.POST.get('prefix', '').strip()
+                if not name or not prefix:
+                    messages.error(request, 'Name and prefix are required.')
+                elif Framework.objects.filter(name=name).exclude(id=fw.id).exists():
+                    messages.error(request, f'Framework "{name}" already exists.')
+                elif Framework.objects.filter(prefix=prefix).exclude(id=fw.id).exists():
+                    messages.error(request, f'Prefix "{prefix}" already in use.')
+                else:
+                    fw.name = name
+                    fw.prefix = prefix
+                    fw.save()
+                    messages.success(request, f'Framework updated to "{name}".')
+
+        elif action == 'delete':
+            fw_id = request.POST.get('fw_id')
+            fw = get_object_or_404(Framework, id=fw_id)
+            if fw.is_fixed:
+                messages.error(request, 'Fixed frameworks cannot be deleted.')
+            else:
+                fw_name = fw.name
+                fw.delete()
+                messages.success(request, f'Framework "{fw_name}" deleted.')
+
+        elif action == 'import_pillars':
+            fw_id = request.POST.get('fw_id')
+            source_id = request.POST.get('source_fw_id')
+            fw = get_object_or_404(Framework, id=fw_id)
+            source = get_object_or_404(Framework, id=source_id)
+            if fw.is_fixed:
+                messages.error(request, 'Cannot import into a fixed framework.')
+            else:
+                imported = 0
+                for src_pillar in source.pillars.filter(is_kb=False):
+                    max_order = Pillar.objects.filter(framework_ref=fw).aggregate(models.Max('order'))['order__max'] or 0
+                    count = Pillar.objects.filter(framework_ref=fw, is_kb=False).count()
+                    new_pillar = Pillar.objects.create(
+                        name=src_pillar.name, number=f"{count + 1:02d}",
+                        color=src_pillar.color, order=max_order + 1,
+                        framework_ref=fw, is_kb=False,
+                    )
+                    max_sp = SubPillar.objects.aggregate(models.Max('sp_number'))['sp_number__max'] or 0
+                    for src_sp in src_pillar.sub_pillars.all():
+                        max_sp += 1
+                        SubPillar.objects.create(pillar=new_pillar, sp_number=max_sp, name=src_sp.name)
+                    imported += 1
+                messages.success(request, f'Imported {imported} pillars from "{source.name}" into "{fw.name}".')
+
+        return redirect('manage_frameworks')
+
+    context = {
+        'frameworks': frameworks,
+    }
+    return render(request, 'superadmin/manage-frameworks.html', context)
+
+
+# ─────────────────────────────────────────────
+# ESL Products (Add ESL Product — Slide 7)
+# ─────────────────────────────────────────────
+
+BOARD_CHOICES_LIST = [
+    ('CBSE', 'CBSE'), ('ICSE', 'ICSE'), ('IGCSE', 'IGCSE'),
+    ('IB', 'IB'), ('State Board', 'State Board'), ('Other', 'Other'),
+]
+
+
+@login_required
+@user_passes_test(is_superadmin)
+def esl_products(request):
+    """List all ESL Products."""
+    from competencies.models import ESLProduct
+    from django.db.models import Count
+    products = ESLProduct.objects.annotate(
+        project_count=Count('projects', distinct=True),
+        session_count=Count('projects__sessions', distinct=True),
+    ).order_by('-created_at')
+    return render(request, 'superadmin/esl-products.html', {'products': products})
+
+
+@login_required
+@user_passes_test(is_superadmin)
+def esl_product_add(request):
+    """Add new ESL Product."""
+    from competencies.models import ESLProduct, ProductProject, ProjectSession
+
+    if request.method == 'POST':
+        data = request.POST
+        try:
+            product = ESLProduct.objects.create(
+                name=data.get('name', ''),
+                description=data.get('description', ''),
+                competencies_description=data.get('competencies_description', ''),
+                applicable_grades=[int(g) for g in data.getlist('grades')],
+                applicable_boards=data.getlist('boards'),
+                status=data.get('status', 'Draft'),
+            )
+            if 'program_document' in request.FILES:
+                product.program_document = request.FILES['program_document']
+                product.save()
+
+            # Save projects & sessions from JSON
+            projects_json = data.get('projects_json', '[]')
+            _save_product_projects(product, projects_json)
+
+            messages.success(request, f'ESL Product "{product.name}" created successfully!')
+            return redirect('esl_products')
+        except Exception as e:
+            messages.error(request, f'Error creating product: {str(e)}')
+
+    return render(request, 'superadmin/esl-products.html', {
+        'form_mode': 'add',
+        'product': None,
+        'grade_list': list(range(1, 13)),
+        'board_choices': BOARD_CHOICES_LIST,
+        'selected_grades': [],
+        'selected_boards': [],
+        'projects_json': '[]',
+    })
+
+
+@login_required
+@user_passes_test(is_superadmin)
+def esl_product_edit(request, product_id):
+    """Edit ESL Product."""
+    from competencies.models import ESLProduct, ProductProject, ProjectSession
+
+    product = get_object_or_404(ESLProduct, id=product_id)
+
+    if request.method == 'POST':
+        data = request.POST
+        try:
+            product.name = data.get('name', product.name)
+            product.description = data.get('description', '')
+            product.competencies_description = data.get('competencies_description', '')
+            product.applicable_grades = [int(g) for g in data.getlist('grades')]
+            product.applicable_boards = data.getlist('boards')
+            product.status = data.get('status', product.status)
+            if 'program_document' in request.FILES:
+                product.program_document = request.FILES['program_document']
+            product.save()
+
+            # Re-save projects & sessions
+            projects_json = data.get('projects_json', '[]')
+            _save_product_projects(product, projects_json)
+
+            messages.success(request, f'ESL Product "{product.name}" updated successfully!')
+            return redirect('esl_products')
+        except Exception as e:
+            messages.error(request, f'Error updating product: {str(e)}')
+
+    # Build existing projects JSON for the form
+    existing_projects = []
+    for proj in product.projects.order_by('project_number'):
+        sessions = []
+        for sess in proj.sessions.order_by('session_number'):
+            sessions.append({
+                'session_number': sess.session_number,
+                'title': sess.title,
+                'description': sess.description,
+            })
+        existing_projects.append({
+            'project_number': proj.project_number,
+            'name': proj.name,
+            'description': proj.description,
+            'grade': proj.grade,
+            'sessions': sessions,
+        })
+
+    return render(request, 'superadmin/esl-products.html', {
+        'form_mode': 'edit',
+        'product': product,
+        'grade_list': list(range(1, 13)),
+        'board_choices': BOARD_CHOICES_LIST,
+        'selected_grades': product.applicable_grades or [],
+        'selected_boards': product.applicable_boards or [],
+        'projects_json': json.dumps(existing_projects),
+    })
+
+
+@login_required
+@user_passes_test(is_superadmin)
+def esl_product_delete(request, product_id):
+    """Delete ESL Product."""
+    from competencies.models import ESLProduct
+    product = get_object_or_404(ESLProduct, id=product_id)
+    name = product.name
+    product.delete()
+    messages.success(request, f'ESL Product "{name}" deleted.')
+    return redirect('esl_products')
+
+
+def _save_product_projects(product, projects_json_str):
+    """Helper: save projects and sessions from JSON string."""
+    from competencies.models import ProductProject, ProjectSession
+    try:
+        projects_data = json.loads(projects_json_str) if projects_json_str else []
+    except (json.JSONDecodeError, TypeError):
+        projects_data = []
+
+    # Clear existing and recreate
+    product.projects.all().delete()
+    for proj_data in projects_data:
+        if not proj_data.get('name', '').strip():
+            continue
+        proj = ProductProject.objects.create(
+            esl_product=product,
+            project_number=proj_data.get('project_number', 1),
+            name=proj_data['name'].strip(),
+            description=proj_data.get('description', ''),
+            grade=proj_data.get('grade', ''),
+        )
+        for sess_data in proj_data.get('sessions', []):
+            if not sess_data.get('title', '').strip():
+                continue
+            ProjectSession.objects.create(
+                product_project=proj,
+                session_number=sess_data.get('session_number', 1),
+                title=sess_data['title'].strip(),
+                description=sess_data.get('description', ''),
+            )
+
+
+# ─────────────────────────────────────────────
+# Announcements
+# ─────────────────────────────────────────────
+
+@login_required
+@user_passes_test(is_superadmin)
+def announcements_list(request):
+    """List all announcements."""
+    announcements = Announcement.objects.all()
+    return render(request, 'superadmin/announcements.html', {
+        'announcements': announcements,
+        'list_mode': True,
+    })
+
+
+@login_required
+@user_passes_test(is_superadmin)
+def announcement_add(request):
+    """Add a new announcement."""
+    if request.method == 'POST':
+        try:
+            ann_type = request.POST.get('announcement_type', 'event')
+            ann = Announcement(announcement_type=ann_type)
+
+            # Common fields for all types
+            esl_id = request.POST.get('esl_product')
+            if esl_id:
+                ann.esl_product = ESLProduct.objects.filter(id=esl_id).first()
+            ann.applicable_grades = [int(g) for g in request.POST.getlist('applicable_grades')]
+            ann.is_published = request.POST.get('action') == 'publish'
+
+            # Type-specific fields
+            if ann_type == 'event':
+                ann.event_name = request.POST.get('event_name', '')
+                ann.event_date = request.POST.get('event_date') or None
+                ann.event_description = request.POST.get('event_description', '')
+                ann.event_link = request.POST.get('event_link', '')
+                ann.publish_to = request.POST.getlist('publish_to')
+
+            elif ann_type == 'newsletter':
+                ann.newsletter_date = request.POST.get('newsletter_date') or None
+                ann.newsletter_month = request.POST.get('newsletter_month', '')
+                ann.newsletter_weblink = request.POST.get('newsletter_weblink', '')
+                if 'newsletter_file' in request.FILES:
+                    ann.newsletter_file = request.FILES['newsletter_file']
+
+            elif ann_type == 'success_story':
+                ann.story_student_name = request.POST.get('story_student_name', '')
+                ann.story_grade = request.POST.get('story_grade', '')
+                story_school_id = request.POST.get('story_school')
+                if story_school_id:
+                    ann.story_school = School.objects.filter(id=story_school_id).first()
+                ann.story_text = request.POST.get('story_text', '')[:500]
+                ann.story_youtube_link = request.POST.get('story_youtube_link', '')
+                if 'story_photo_1' in request.FILES:
+                    ann.story_photo_1 = request.FILES['story_photo_1']
+                if 'story_photo_2' in request.FILES:
+                    ann.story_photo_2 = request.FILES['story_photo_2']
+
+            ann.save()
+            # M2M after save
+            school_ids = request.POST.getlist('applicable_schools')
+            if school_ids:
+                ann.applicable_schools.set(School.objects.filter(id__in=school_ids))
+
+            messages.success(request, 'Announcement created successfully!')
+            return redirect('announcements_list')
+        except Exception as e:
+            messages.error(request, f'Error creating announcement: {str(e)}')
+
+    schools = School.objects.filter(is_active=True)
+    esl_products = ESLProduct.objects.all()
+    return render(request, 'superadmin/announcements.html', {
+        'form_mode': 'add',
+        'schools': schools,
+        'esl_products': esl_products,
+        'grade_list': list(range(1, 13)),
+        'month_list': ['January','February','March','April','May','June','July','August','September','October','November','December'],
+    })
+
+
+@login_required
+@user_passes_test(is_superadmin)
+def announcement_edit(request, ann_id):
+    """Edit an existing announcement."""
+    ann = get_object_or_404(Announcement, id=ann_id)
+
+    if request.method == 'POST':
+        try:
+            ann_type = ann.announcement_type
+
+            if ann_type == 'event':
+                esl_id = request.POST.get('esl_product')
+                ann.esl_product = ESLProduct.objects.filter(id=esl_id).first() if esl_id else None
+                ann.applicable_grades = [int(g) for g in request.POST.getlist('applicable_grades')]
+                ann.event_name = request.POST.get('event_name', '')
+                ann.event_date = request.POST.get('event_date') or None
+                ann.event_description = request.POST.get('event_description', '')
+                ann.event_link = request.POST.get('event_link', '')
+                ann.publish_to = request.POST.getlist('publish_to')
+                ann.is_published = request.POST.get('is_published') == 'on'
+                ann.save()
+                school_ids = request.POST.getlist('applicable_schools')
+                ann.applicable_schools.set(School.objects.filter(id__in=school_ids))
+
+            elif ann_type == 'newsletter':
+                ann.newsletter_date = request.POST.get('newsletter_date') or None
+                ann.newsletter_month = request.POST.get('newsletter_month', '')
+                ann.newsletter_weblink = request.POST.get('newsletter_weblink', '')
+                ann.is_published = request.POST.get('is_published') == 'on'
+                if 'newsletter_file' in request.FILES:
+                    ann.newsletter_file = request.FILES['newsletter_file']
+                ann.save()
+
+            elif ann_type == 'success_story':
+                ann.story_student_name = request.POST.get('story_student_name', '')
+                ann.story_grade = request.POST.get('story_grade', '')
+                story_school_id = request.POST.get('story_school')
+                ann.story_school = School.objects.filter(id=story_school_id).first() if story_school_id else None
+                ann.story_text = request.POST.get('story_text', '')[:500]
+                ann.story_youtube_link = request.POST.get('story_youtube_link', '')
+                ann.is_published = request.POST.get('is_published') == 'on'
+                if 'story_photo_1' in request.FILES:
+                    ann.story_photo_1 = request.FILES['story_photo_1']
+                if 'story_photo_2' in request.FILES:
+                    ann.story_photo_2 = request.FILES['story_photo_2']
+                ann.save()
+
+            messages.success(request, 'Announcement updated successfully!')
+            return redirect('announcements_list')
+        except Exception as e:
+            messages.error(request, f'Error updating announcement: {str(e)}')
+
+    schools = School.objects.filter(is_active=True)
+    esl_products = ESLProduct.objects.all()
+    return render(request, 'superadmin/announcements.html', {
+        'form_mode': 'edit',
+        'ann': ann,
+        'schools': schools,
+        'esl_products': esl_products,
+        'grade_list': list(range(1, 13)),
+        'selected_schools': list(ann.applicable_schools.values_list('id', flat=True)) if ann.announcement_type == 'event' else [],
+        'selected_grades': ann.applicable_grades or [],
+        'selected_publish_to': ann.publish_to or [],
+        'month_list': ['January','February','March','April','May','June','July','August','September','October','November','December'],
+    })
+
+
+@login_required
+@user_passes_test(is_superadmin)
+def announcement_delete(request, ann_id):
+    """Delete an announcement."""
+    ann = get_object_or_404(Announcement, id=ann_id)
+    ann.delete()
+    messages.success(request, 'Announcement deleted.')
+    return redirect('announcements_list')
+
+
+@login_required
+@user_passes_test(is_superadmin)
+def api_schools_by_product(request):
+    """AJAX: return schools that have a skill_program matching the given ESL product."""
+    product_id = request.GET.get('product_id', '')
+    if not product_id:
+        # No product selected — return all active schools
+        schools = School.objects.filter(is_active=True).values('id', 'school_name')
+        return JsonResponse({'schools': list(schools)})
+
+    try:
+        product = ESLProduct.objects.get(id=product_id)
+    except ESLProduct.DoesNotExist:
+        return JsonResponse({'schools': []})
+
+    # Map product name to skill_program codes
+    name_lower = product.name.lower()
+    if 'future' in name_lower or 'fsl' in name_lower:
+        codes = ['fsl']
+    elif 'csl' in name_lower and 'plus' in name_lower:
+        codes = ['csl_plus_pc', 'csl_plus_tc']
+    elif 'csl' in name_lower and 'foundation' in name_lower:
+        codes = ['csl_foundation_pc', 'csl_foundation']
+    else:
+        # Fallback — try exact match or return all
+        codes = []
+
+    if codes:
+        schools = School.objects.filter(is_active=True, skill_program__in=codes).values('id', 'school_name')
+    else:
+        # No matching codes — no schools for this product
+        schools = School.objects.none()
+
+    return JsonResponse({'schools': list(schools)})

@@ -146,6 +146,112 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Skill Program Information -->
+            <div class="details-card">
+                <div class="card-header">
+                    <span class="material-symbols-outlined">workspace_premium</span>
+                    <h2>Skill Program</h2>
+                </div>
+                <div class="card-body">
+                    <div class="info-row">
+                        <span class="label">Skill Program (ESL Product)</span>
+                        <span class="value">{{ school.get_skill_program_display|default:"-" }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Program Academic Year</span>
+                        <span class="value">{{ school.program_academic_year|default:"-" }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Skill Framework</span>
+                        <span class="value">{{ school.framework_ref|default:"-" }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">School Relationship Manager (SRM)</span>
+                        <span class="value">{{ srm_name|default:"-" }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Trainer Assigned</span>
+                        <span class="value">{{ trainer_name|default:"-" }}</span>
+                    </div>
+                    {% if school.grade_wise_students %}
+                    <div class="info-row">
+                        <span class="label">Grade-wise Students</span>
+                        <span class="value">
+                            {% for grade, count in school.grade_wise_students.items %}
+                                Grade {{ grade }}: {{ count }}{% if not forloop.last %}, {% endif %}
+                            {% endfor %}
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Fees & Commercial -->
+            <div class="details-card">
+                <div class="card-header">
+                    <span class="material-symbols-outlined">payments</span>
+                    <h2>Fees & Commercial</h2>
+                </div>
+                <div class="card-body">
+                    <div class="info-row">
+                        <span class="label">Lab Fees (with GST)</span>
+                        <span class="value">{% if school.lab_fees_with_gst %}₹{{ school.lab_fees_with_gst }}{% else %}-{% endif %}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Program Fees (with GST)</span>
+                        <span class="value">{% if school.program_fees_with_gst %}₹{{ school.program_fees_with_gst }}{% else %}-{% endif %}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Payment Terms</span>
+                        <span class="value">{{ school.get_payment_terms_display|default:"-" }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">TCE Sales SPOC</span>
+                        <span class="value">{{ school.tce_sales_spoc_name|default:"-" }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">TCE SPOC Contact</span>
+                        <span class="value">{{ school.tce_sales_spoc_contact|default:"-" }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Signed Agreement</span>
+                        <span class="value">{% if school.signed_agreement %}<a href="{{ school.signed_agreement.url }}" target="_blank">View Document</a>{% else %}-{% endif %}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Go-Live Certificate</span>
+                        <span class="value">{% if school.go_live_certificate %}<a href="{{ school.go_live_certificate.url }}" target="_blank">View Document</a>{% else %}-{% endif %}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Additional Information -->
+            <div class="details-card">
+                <div class="card-header">
+                    <span class="material-symbols-outlined">info</span>
+                    <h2>Additional Information</h2>
+                </div>
+                <div class="card-body">
+                    <div class="info-row">
+                        <span class="label">Exceptions for this School</span>
+                        <span class="value">{{ school.exceptions_for_school|default:"-" }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Notable Alumni</span>
+                        <span class="value">{{ school.notable_alumni|default:"-" }}</span>
+                    </div>
+                    {% if school.events_workshop_calendar %}
+                    <div class="info-row">
+                        <span class="label">Events & Workshop Calendar</span>
+                        <span class="value">
+                            {% for ev in school.events_workshop_calendar %}
+                                {{ ev.date }} — {{ ev.event }}{% if not forloop.last %}<br>{% endif %}
+                            {% endfor %}
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
         </div>
     </div>
 </div>

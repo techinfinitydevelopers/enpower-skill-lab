@@ -1,0 +1,527 @@
+{% extends 'superadmin/base.html' %}
+{% load static %}
+
+{% block title %}{% if form_mode %}{% if form_mode == 'add' %}Add Announcement{% else %}Edit Announcement{% endif %}{% else %}Announcements{% endif %} - Enpower Skill Lab{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/superadmin/add-lessons.css' %}">
+<style>
+    /* Type tabs */
+    .ann-tabs { display: flex; gap: 0; background: var(--bg-light); border-radius: 10px; padding: 4px; margin-bottom: 0; }
+    .ann-tabs button {
+        flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
+        padding: 12px 16px; border: none; border-radius: 8px; background: transparent;
+        color: var(--text-secondary); font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s;
+    }
+    .ann-tabs button:hover { background: #f0edff; color: var(--primary); }
+    .ann-tabs button.active { background: #fff; color: var(--primary); box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-weight: 600; }
+    .ann-tabs button .material-symbols-outlined { font-size: 20px; }
+    .ann-section { display: none; }
+    .ann-section.active { display: block; }
+    .char-counter { font-size: 12px; color: var(--text-secondary); text-align: right; margin-top: 4px; }
+
+    /* Checkbox pills */
+    .al-pill-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+    .al-pill-label {
+        display: flex; align-items: center; gap: 6px; padding: 8px 14px;
+        border: 1.5px solid var(--border-color); border-radius: 20px; font-size: 13px;
+        cursor: pointer; transition: all 0.2s; color: var(--text-main); background: #fff;
+    }
+    .al-pill-label:hover { border-color: var(--primary); }
+    .al-pill-label:has(input:checked) { border-color: var(--primary); background: rgba(91,31,111,0.06); color: var(--primary); font-weight: 500; }
+    .al-pill-label input[type="checkbox"] { accent-color: var(--primary); width: 14px; height: 14px; }
+
+    /* Multi-select searchable dropdown */
+    .ms-wrapper { position: relative; }
+    .ms-input-area {
+        display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+        padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 10px;
+        background: #faf9fb; cursor: text; min-height: 44px; transition: border-color 0.2s;
+    }
+    .ms-input-area:focus-within { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); background: #fff; }
+    .ms-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+    .ms-tag {
+        display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px;
+        background: rgba(91,31,111,0.08); color: var(--primary); border-radius: 16px;
+        font-size: 12px; font-weight: 500; white-space: nowrap;
+    }
+    .ms-tag-remove { cursor: pointer; font-size: 14px; line-height: 1; opacity: 0.7; }
+    .ms-tag-remove:hover { opacity: 1; }
+    .ms-search {
+        border: none !important; outline: none !important; background: transparent !important;
+        font-size: 14px; flex: 1; min-width: 120px; padding: 4px 0 !important;
+        box-shadow: none !important;
+    }
+    .ms-dropdown {
+        display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 100;
+        background: #fff; border: 1px solid var(--border-color); border-radius: 10px;
+        margin-top: 4px; max-height: 220px; overflow-y: auto;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    }
+    .ms-dropdown.open { display: block; }
+    .ms-option {
+        display: flex; align-items: center; gap: 8px; padding: 10px 14px;
+        cursor: pointer; font-size: 14px; color: var(--text-main); transition: background 0.15s;
+    }
+    .ms-option:hover { background: var(--bg-light); }
+    .ms-option:has(input:checked) { background: rgba(91,31,111,0.04); font-weight: 500; }
+    .ms-option input[type="checkbox"] { accent-color: var(--primary); width: 16px; height: 16px; cursor: pointer; }
+    .ms-dropdown::-webkit-scrollbar { width: 6px; }
+    .ms-dropdown::-webkit-scrollbar-thumb { background: #d1d1d6; border-radius: 3px; }
+
+    /* List */
+    .ann-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; }
+    .ann-card { background: #fff; border: 1px solid var(--border-color); border-radius: 16px; padding: 20px; transition: box-shadow 0.2s; }
+    .ann-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+    .ann-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .ann-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; color: #fff; }
+    .badge-event { background: #7c3aed; }
+    .badge-newsletter { background: #3b82f6; }
+    .badge-success_story { background: #10b981; }
+    .badge-published { background: #10b981; }
+    .badge-draft { background: #f59e0b; color: #333; }
+    .ann-card-title { font-size: 16px; font-weight: 600; color: var(--text-main); margin-bottom: 6px; }
+    .ann-card-meta { font-size: 13px; color: var(--text-secondary); margin-bottom: 4px; }
+    .ann-card-actions { display: flex; gap: 8px; margin-top: 14px; }
+    .ann-card-actions a, .ann-card-actions button { padding: 6px 14px; border-radius: 8px; font-size: 13px; text-decoration: none; border: none; cursor: pointer; font-weight: 500; }
+    .act-edit-ann { background: #ede9fe; color: #7c3aed; }
+    .act-delete-ann { background: #fee2e2; color: #ef4444; }
+    .empty-state { text-align: center; padding: 80px 20px; color: var(--text-secondary); }
+
+    /* Publish to section */
+    .publish-to-row { display: flex; gap: 12px; align-items: center; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-color); }
+    .publish-to-row label { font-weight: 500; font-size: 14px; color: var(--text-main); margin-right: 8px; white-space: nowrap; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="al-dashboard-page">
+    <main class="container-xl py-4 px-4" style="max-width: 1600px;">
+
+    {% if list_mode %}
+    <!-- ==================== LIST VIEW ==================== -->
+    <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3 mb-4">
+        <div>
+            <h1 class="al-page-title">Announcements</h1>
+            <p class="al-page-subtitle mb-0">Manage events, newsletters, and student success stories.</p>
+        </div>
+        <a href="{% url 'announcement_add' %}" class="al-btn-primary" style="text-decoration: none;">
+            <span class="material-symbols-outlined" style="font-size: 1.125rem;">add</span>
+            Add Announcement
+        </a>
+    </div>
+
+    {% if announcements %}
+    <div class="ann-grid">
+        {% for ann in announcements %}
+        <div class="ann-card">
+            <div class="ann-card-header">
+                <span class="ann-badge badge-{{ ann.announcement_type }}">
+                    {% if ann.announcement_type == 'event' %}Event{% elif ann.announcement_type == 'newsletter' %}Newsletter{% else %}Success Story{% endif %}
+                </span>
+                <span class="ann-badge {% if ann.is_published %}badge-published{% else %}badge-draft{% endif %}">
+                    {% if ann.is_published %}Published{% else %}Draft{% endif %}
+                </span>
+            </div>
+            <div class="ann-card-title">
+                {% if ann.announcement_type == 'event' %}{{ ann.event_name|default:"Untitled Event" }}
+                {% elif ann.announcement_type == 'newsletter' %}Newsletter — {{ ann.newsletter_month|default:"" }}
+                {% else %}{{ ann.story_student_name|default:"Untitled Story" }}{% endif %}
+            </div>
+            {% if ann.announcement_type == 'event' %}
+                <div class="ann-card-meta">Date: {{ ann.event_date|default:"N/A" }}</div>
+                {% if ann.esl_product %}<div class="ann-card-meta">Product: {{ ann.esl_product.name }}</div>{% endif %}
+            {% elif ann.announcement_type == 'success_story' %}
+                <div class="ann-card-meta">Grade {{ ann.story_grade|default:"N/A" }}{% if ann.story_school %} — {{ ann.story_school.school_name }}{% endif %}</div>
+            {% endif %}
+            <div class="ann-card-meta">Created: {{ ann.created_at|date:"d M Y" }}</div>
+            <div class="ann-card-actions">
+                <a href="{% url 'announcement_edit' ann.id %}" class="act-edit-ann">Edit</a>
+                <form method="POST" action="{% url 'announcement_delete' ann.id %}" style="display:inline;" onsubmit="return confirm('Delete this announcement?');">
+                    {% csrf_token %}
+                    <button type="submit" class="act-delete-ann">Delete</button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <span class="material-symbols-outlined">campaign</span>
+        <h3>No Announcements Yet</h3>
+        <p>Click "Add Announcement" to create one.</p>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <!-- ==================== ADD / EDIT FORM ==================== -->
+    <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3 mb-4">
+        <div>
+            <h1 class="al-page-title">{% if form_mode == 'edit' %}Edit Announcement{% else %}Add Announcement{% endif %}</h1>
+            <p class="al-page-subtitle mb-0">{% if form_mode == 'edit' %}Update announcement details.{% else %}Select product, schools, grades and then fill in announcement details.{% endif %}</p>
+        </div>
+        <a href="{% url 'announcements_list' %}" class="al-btn-outline" style="text-decoration: none;">
+            <span class="material-symbols-outlined" style="font-size: 18px;">arrow_back</span>
+            Back to List
+        </a>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data" action="{% if form_mode == 'edit' %}{% url 'announcement_edit' ann.id %}{% else %}{% url 'announcement_add' %}{% endif %}">
+        {% csrf_token %}
+        <div class="row g-4">
+            <!-- Left Column -->
+            <div class="col-lg-8">
+
+                <!-- STEP 1: Common — ESL Product, Schools, Grades -->
+                <div class="al-card-box">
+                    <h5 class="fw-bold mb-4 d-flex align-items-center gap-2">
+                        <span class="material-symbols-outlined">tune</span>
+                        Select Product, Schools & Grades
+                    </h5>
+
+                    <div class="mb-4">
+                        <label class="al-form-label">Select ESL Product</label>
+                        <select class="al-form-select" name="esl_product" id="eslProductSelect">
+                            <option value="">— Select ESL Product (FSL / CSL Plus etc) —</option>
+                            {% for p in esl_products %}
+                            <option value="{{ p.id }}" {% if ann and ann.esl_product_id == p.id %}selected{% endif %}>{{ p.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="al-form-label">Select Applicable Schools</label>
+                        <div class="ms-wrapper" id="schoolMultiSelect">
+                            <div class="ms-input-area" onclick="document.getElementById('schoolSearchInput').focus();">
+                                <div class="ms-tags" id="schoolTags"></div>
+                                <input type="text" class="ms-search" id="schoolSearchInput" placeholder="Search schools..." autocomplete="off">
+                            </div>
+                            <div class="ms-dropdown" id="schoolDropdown">
+                                {% for s in schools %}
+                                <label class="ms-option" data-name="{{ s.school_name|lower }}">
+                                    <input type="checkbox" name="applicable_schools" value="{{ s.id }}" {% if selected_schools and s.id in selected_schools %}checked{% endif %}>
+                                    <span>{{ s.school_name }}</span>
+                                </label>
+                                {% endfor %}
+                                <div class="ms-no-results" style="display:none; padding: 12px; color: var(--text-secondary); font-size: 13px; text-align: center;">No schools found</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-0">
+                        <label class="al-form-label">Select Applicable Grades</label>
+                        <div class="al-pill-grid">
+                            {% for g in grade_list %}
+                            <label class="al-pill-label">
+                                <input type="checkbox" name="applicable_grades" value="{{ g }}" {% if selected_grades and g in selected_grades %}checked{% endif %}>
+                                Grade {{ g }}
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 2: Type Tabs -->
+                {% if form_mode == 'add' %}
+                <div class="al-card-box">
+                    <h5 class="fw-bold mb-4">Select Announcement Type</h5>
+                    <div class="ann-tabs">
+                        <button type="button" class="active" data-type="event">
+                            <span class="material-symbols-outlined">event</span> Add Event
+                        </button>
+                        <button type="button" data-type="newsletter">
+                            <span class="material-symbols-outlined">newspaper</span> Add Newsletter
+                        </button>
+                        <button type="button" data-type="success_story">
+                            <span class="material-symbols-outlined">emoji_events</span> Add Success Story
+                        </button>
+                    </div>
+                    <input type="hidden" name="announcement_type" id="annTypeInput" value="event">
+                </div>
+                {% else %}
+                <input type="hidden" name="announcement_type" value="{{ ann.announcement_type }}">
+                {% endif %}
+
+                <!-- EVENT SECTION -->
+                <div class="ann-section {% if form_mode == 'add' %}active{% elif ann.announcement_type == 'event' %}active{% endif %}" id="section-event">
+                    <div class="al-card-box">
+                        <h5 class="fw-bold mb-4 d-flex align-items-center gap-2">
+                            <span class="material-symbols-outlined" style="color:#7c3aed;">event</span> Event Details
+                        </h5>
+                        <div class="mb-3">
+                            <label class="al-form-label">Event Name <span class="al-required">*</span></label>
+                            <input type="text" class="al-form-control" name="event_name" value="{% if ann %}{{ ann.event_name }}{% endif %}" placeholder="Enter event name">
+                        </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="al-form-label">Event Date</label>
+                                <input type="date" class="al-form-control" name="event_date" value="{% if ann and ann.event_date %}{{ ann.event_date|date:'Y-m-d' }}{% endif %}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="al-form-label">Event Link</label>
+                                <input type="url" class="al-form-control" name="event_link" value="{% if ann %}{{ ann.event_link }}{% endif %}" placeholder="https://...">
+                            </div>
+                        </div>
+                        <div class="mb-0">
+                            <label class="al-form-label">Event Description</label>
+                            <textarea class="al-form-control al-textarea" name="event_description" rows="3" placeholder="Describe the event...">{% if ann %}{{ ann.event_description }}{% endif %}</textarea>
+                        </div>
+
+                        <!-- Publish To -->
+                        <div class="publish-to-row">
+                            <label>Publish to:</label>
+                            <label class="al-pill-label"><input type="checkbox" name="publish_to" value="school" {% if selected_publish_to and 'school' in selected_publish_to %}checked{% endif %}> School</label>
+                            <label class="al-pill-label"><input type="checkbox" name="publish_to" value="student" {% if selected_publish_to and 'student' in selected_publish_to %}checked{% endif %}> Student</label>
+                            <label class="al-pill-label"><input type="checkbox" name="publish_to" value="parent" {% if selected_publish_to and 'parent' in selected_publish_to %}checked{% endif %}> Parent</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- NEWSLETTER SECTION -->
+                <div class="ann-section {% if ann and ann.announcement_type == 'newsletter' %}active{% endif %}" id="section-newsletter">
+                    <div class="al-card-box">
+                        <h5 class="fw-bold mb-4 d-flex align-items-center gap-2">
+                            <span class="material-symbols-outlined" style="color:#3b82f6;">newspaper</span> Newsletter Details
+                        </h5>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="al-form-label">Date</label>
+                                <input type="date" class="al-form-control" name="newsletter_date" value="{% if ann and ann.newsletter_date %}{{ ann.newsletter_date|date:'Y-m-d' }}{% endif %}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="al-form-label">Month</label>
+                                <select class="al-form-select" name="newsletter_month">
+                                    <option value="">— Select Month —</option>
+                                    {% for m in month_list %}
+                                    <option value="{{ m }}" {% if ann and ann.newsletter_month == m %}selected{% endif %}>{{ m }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row g-3 mb-0">
+                            <div class="col-md-6">
+                                <label class="al-form-label">Upload (PDF)</label>
+                                <input type="file" class="al-form-control" name="newsletter_file" accept=".pdf" style="padding: 8px 12px;">
+                                {% if ann and ann.newsletter_file %}
+                                <small style="color: var(--text-secondary); margin-top: 4px; display: block;">Current: <a href="{{ ann.newsletter_file.url }}" target="_blank" style="color: var(--primary);">View</a></small>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="al-form-label">Web Link</label>
+                                <input type="url" class="al-form-control" name="newsletter_weblink" value="{% if ann %}{{ ann.newsletter_weblink }}{% endif %}" placeholder="https://...">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SUCCESS STORY SECTION -->
+                <div class="ann-section {% if ann and ann.announcement_type == 'success_story' %}active{% endif %}" id="section-success_story">
+                    <div class="al-card-box">
+                        <h5 class="fw-bold mb-4 d-flex align-items-center gap-2">
+                            <span class="material-symbols-outlined" style="color:#10b981;">emoji_events</span> Student Success Story
+                        </h5>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <label class="al-form-label">Student Name <span class="al-required">*</span></label>
+                                <input type="text" class="al-form-control" name="story_student_name" value="{% if ann %}{{ ann.story_student_name }}{% endif %}" placeholder="Full name">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="al-form-label">Grade</label>
+                                <select class="al-form-select" name="story_grade">
+                                    <option value="">— Grade —</option>
+                                    {% for g in grade_list %}
+                                    <option value="{{ g }}" {% if ann and ann.story_grade == g|stringformat:"d" %}selected{% endif %}>Grade {{ g }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="al-form-label">School</label>
+                                <select class="al-form-select" name="story_school">
+                                    <option value="">— School —</option>
+                                    {% for s in schools %}
+                                    <option value="{{ s.id }}" {% if ann and ann.story_school_id == s.id %}selected{% endif %}>{{ s.school_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="al-form-label">Success Story <span style="color: var(--text-secondary); font-weight: 400;">(max 500 characters)</span></label>
+                            <textarea class="al-form-control al-textarea" name="story_text" rows="4" maxlength="500" id="storyTextArea" placeholder="Write the success story...">{% if ann %}{{ ann.story_text }}{% endif %}</textarea>
+                            <div class="char-counter"><span id="storyCharCount">{% if ann %}{{ ann.story_text|length }}{% else %}0{% endif %}</span> / 500</div>
+                        </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="al-form-label">Photo 1</label>
+                                <input type="file" class="al-form-control" name="story_photo_1" accept="image/*" style="padding: 8px 12px;">
+                                {% if ann and ann.story_photo_1 %}
+                                <small style="color: var(--text-secondary); margin-top: 4px; display: block;">Current: <a href="{{ ann.story_photo_1.url }}" target="_blank" style="color: var(--primary);">View</a></small>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="al-form-label">Photo 2</label>
+                                <input type="file" class="al-form-control" name="story_photo_2" accept="image/*" style="padding: 8px 12px;">
+                                {% if ann and ann.story_photo_2 %}
+                                <small style="color: var(--text-secondary); margin-top: 4px; display: block;">Current: <a href="{{ ann.story_photo_2.url }}" target="_blank" style="color: var(--primary);">View</a></small>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="mb-0">
+                            <label class="al-form-label">YouTube Video Link</label>
+                            <input type="url" class="al-form-control" name="story_youtube_link" value="{% if ann %}{{ ann.story_youtube_link }}{% endif %}" placeholder="https://youtube.com/...">
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right Column -->
+            <div class="col-lg-4">
+                <!-- Publish -->
+                <div class="al-card-box">
+                    <button type="submit" class="al-btn-primary w-100 mb-3" name="action" value="publish">
+                        <span class="material-symbols-outlined" style="font-size: 1.125rem;">publish</span>
+                        Publish Announcement
+                    </button>
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <button type="submit" class="al-btn-outline w-100" name="action" value="draft">Save Draft</button>
+                        </div>
+                        <div class="col-6">
+                            <a href="{% url 'announcements_list' %}" class="al-btn-ghost w-100 d-flex align-items-center justify-content-center" style="text-decoration: none;">Cancel</a>
+                        </div>
+                    </div>
+                </div>
+
+                {% if form_mode == 'edit' %}
+                <div class="al-card-box">
+                    <h5 class="fw-bold mb-3 d-flex align-items-center gap-2">
+                        <span class="material-symbols-outlined">info</span>
+                        Info
+                    </h5>
+                    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 4px;">Type: {{ ann.get_announcement_type_display }}</p>
+                    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 4px;">Status: {% if ann.is_published %}Published{% else %}Draft{% endif %}</p>
+                    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 4px;">Created: {{ ann.created_at|date:"d M Y, H:i" }}</p>
+                    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 0;">Updated: {{ ann.updated_at|date:"d M Y, H:i" }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </form>
+    {% endif %}
+
+    </main>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Type tab switching
+    document.querySelectorAll('.ann-tabs button').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            // Toggle active tab
+            document.querySelectorAll('.ann-tabs button').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            // Toggle section
+            const type = this.dataset.type;
+            document.querySelectorAll('.ann-section').forEach(s => s.classList.remove('active'));
+            document.getElementById('section-' + type).classList.add('active');
+            // Update hidden input
+            document.getElementById('annTypeInput').value = type;
+        });
+    });
+
+    // Char counter
+    var storyTA = document.getElementById('storyTextArea');
+    if (storyTA) {
+        storyTA.addEventListener('input', function() {
+            document.getElementById('storyCharCount').textContent = this.value.length;
+        });
+    }
+
+    // ESL Product change → filter schools via AJAX
+    var eslSelect = document.getElementById('eslProductSelect');
+    if (eslSelect) {
+        eslSelect.addEventListener('change', function() {
+            var productId = this.value;
+            fetch('{% url "api_schools_by_product" %}?product_id=' + productId)
+                .then(r => r.json())
+                .then(function(data) {
+                    var dropdown = document.getElementById('schoolDropdown');
+                    var noResults = dropdown.querySelector('.ms-no-results');
+                    // Remove existing options
+                    dropdown.querySelectorAll('.ms-option').forEach(o => o.remove());
+                    // Add new options
+                    data.schools.forEach(function(s) {
+                        var label = document.createElement('label');
+                        label.className = 'ms-option';
+                        label.dataset.name = s.school_name.toLowerCase();
+                        label.innerHTML = '<input type="checkbox" name="applicable_schools" value="' + s.id + '"><span>' + s.school_name + '</span>';
+                        dropdown.insertBefore(label, noResults);
+                        label.querySelector('input').addEventListener('change', function() { renderSchoolTags(); });
+                    });
+                    noResults.style.display = data.schools.length === 0 ? '' : 'none';
+                    // Clear tags and search
+                    document.getElementById('schoolSearchInput').value = '';
+                    renderSchoolTags();
+                });
+        });
+    }
+
+    // Multi-select searchable dropdown
+    function renderSchoolTags() {
+        var tagsContainer = document.getElementById('schoolTags');
+        var dropdown = document.getElementById('schoolDropdown');
+        if (!tagsContainer || !dropdown) return;
+        tagsContainer.innerHTML = '';
+        dropdown.querySelectorAll('.ms-option').forEach(function(opt) {
+            var cb = opt.querySelector('input');
+            if (cb.checked) {
+                var tag = document.createElement('span');
+                tag.className = 'ms-tag';
+                tag.innerHTML = opt.querySelector('span').textContent + ' <span class="ms-tag-remove" data-val="' + cb.value + '">&times;</span>';
+                tagsContainer.appendChild(tag);
+            }
+        });
+        tagsContainer.querySelectorAll('.ms-tag-remove').forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                var val = this.dataset.val;
+                dropdown.querySelectorAll('.ms-option input').forEach(function(cb) {
+                    if (cb.value === val) cb.checked = false;
+                });
+                renderSchoolTags();
+            });
+        });
+    }
+
+    (function() {
+        var wrapper = document.getElementById('schoolMultiSelect');
+        if (!wrapper) return;
+        var inputArea = wrapper.querySelector('.ms-input-area');
+        var search = document.getElementById('schoolSearchInput');
+        var dropdown = document.getElementById('schoolDropdown');
+        var noResults = dropdown.querySelector('.ms-no-results');
+
+        search.addEventListener('focus', function() { dropdown.classList.add('open'); });
+        inputArea.addEventListener('click', function() { dropdown.classList.add('open'); search.focus(); });
+        document.addEventListener('click', function(e) { if (!wrapper.contains(e.target)) dropdown.classList.remove('open'); });
+
+        search.addEventListener('input', function() {
+            var q = this.value.toLowerCase();
+            var visible = 0;
+            dropdown.querySelectorAll('.ms-option').forEach(function(opt) {
+                var show = opt.dataset.name.includes(q);
+                opt.style.display = show ? '' : 'none';
+                if (show) visible++;
+            });
+            noResults.style.display = visible === 0 ? '' : 'none';
+        });
+
+        dropdown.querySelectorAll('.ms-option input').forEach(function(cb) {
+            cb.addEventListener('change', renderSchoolTags);
+        });
+
+        renderSchoolTags();
+    })();
+</script>
+{% endblock %}

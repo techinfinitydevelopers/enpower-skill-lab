@@ -28,8 +28,8 @@
             <div class="step"><div class="step-icon">2</div><div class="step-label">Branch</div></div>
             <div class="step"><div class="step-icon">3</div><div class="step-label">Infrastructure</div></div>
             <div class="step"><div class="step-icon">4</div><div class="step-label">Academic</div></div>
-            <div class="step"><div class="step-icon">5</div><div class="step-label">Skill Lab</div></div>
-            <div class="step"><div class="step-icon">6</div><div class="step-label">Admin</div></div>
+            <div class="step"><div class="step-icon">5</div><div class="step-label">Skill Program</div></div>
+            <div class="step"><div class="step-icon">6</div><div class="step-label">Fees & Commercial</div></div>
             <div class="step"><div class="step-icon">7</div><div class="step-label">Compliance</div></div>
             <div class="step"><div class="step-icon">8</div><div class="step-label">Emergency</div></div>
             <div class="step"><div class="step-icon">9</div><div class="step-label">Additional</div></div>
@@ -53,6 +53,14 @@
                     </div>
                 </div>
                 <div class="form-row">
+                    <div class="form-group">
+                        <label>Skill Framework <span class="required">*</span></label>
+                        <select name="frameworkType" id="frameworkType" required>
+                            {% for fw in frameworks %}
+                            <option value="{{ fw.name }}" {% if fw.is_fixed %}selected{% endif %}>{{ fw.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                     <div class="form-group">
                         <label>School Board <span class="required">*</span></label>
                         <select name="board" id="board" required>
@@ -345,131 +353,116 @@
             </div>
 
             <div class="form-section" id="step5" style="display:none;">
-                <h2>E. Skill Lab Integration</h2>
+                <h2>E. Skill Program Information</h2>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Skill Lab Registration ID</label>
-                        <input type="text" name="skillLabRegId" id="skillLabRegId" placeholder="Registration ID">
-                    </div>
-                    <div class="form-group">
-                        <label>Lab Usage Hours / Week</label>
-                        <input type="number" name="labUsageHours" id="labUsageHours" placeholder="e.g. 20" min="0">
-                    </div>
-                </div>
-                <div class="form-row full">
-                    <div class="form-group">
-                        <label>Skills Offered (List)</label>
-                        <textarea name="skillsOffered" id="skillsOffered" rows="3" placeholder="List skills offered"></textarea>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Batch Timings</label>
-                        <input type="text" name="batchTimings" id="batchTimings" placeholder="e.g. 9AM-11AM, 2PM-4PM">
-                    </div>
-                    <div class="form-group">
-                        <label>CSL Integration Status</label>
-                        <select name="cslIntegrationStatus" id="cslIntegrationStatus">
-                            <option value="" disabled selected>Select</option>
-                            <option value="integrated">Integrated</option>
-                            <option value="pending">Pending</option>
-                            <option value="not-applicable">Not Applicable</option>
+                        <label>Skill Program (ESL Product) <span class="required">*</span></label>
+                        <select name="skillProgram" id="skillProgram" required>
+                            <option value="" disabled selected>Select Program</option>
+                            <option value="fsl">Future Skills Lab</option>
+                            <option value="csl_plus_pc">CSL Plus with PC</option>
+                            <option value="csl_plus_tc">CSL Plus with TC</option>
+                            <option value="csl_foundation_pc">CSL Foundation with PC</option>
+                            <option value="csl_foundation">CSL Foundation</option>
                         </select>
+                        <span class="error-message" id="skillProgramError"></span>
                     </div>
-                </div>
-                <div class="form-row full">
                     <div class="form-group">
-                        <label>Trainers Assigned</label>
-                        <textarea name="trainersAssigned" id="trainersAssigned" rows="2" placeholder="List trainers"></textarea>
-                    </div>
-                </div>
-                <div class="form-row full">
-                    <div class="form-group">
-                        <label>Student Groups Linked</label>
-                        <textarea name="studentGroupsLinked" id="studentGroupsLinked" rows="2" placeholder="List student groups"></textarea>
-                    </div>
-                </div>
-                <div class="form-row full">
-                    <div class="form-group">
-                        <label>CSL Project List Selected</label>
-                        <textarea name="cslProjectList" id="cslProjectList" rows="2" placeholder="List CSL projects"></textarea>
+                        <label>Program Academic Year <span class="required">*</span></label>
+                        <select name="programAcademicYear" id="programAcademicYear" required>
+                            <option value="" disabled selected>Select Academic Year</option>
+                            <option value="2025-26">2025-26</option>
+                            <option value="2026-27">2026-27</option>
+                            <option value="2027-28">2027-28</option>
+                            <option value="2028-29">2028-29</option>
+                        </select>
+                        <span class="error-message" id="programAcademicYearError"></span>
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Assessment & Reporting System Linked</label>
-                        <select name="assessmentSystemLinked" id="assessmentSystemLinked">
-                            <option value="" disabled selected>Select</option>
-                            <option value="yes">Yes</option>
-                            <option value="no">No</option>
+                        <label>School Relationship Manager (SRM) <span class="required">*</span></label>
+                        <select name="srmId" id="srmId" required>
+                            <option value="" disabled selected>Select SRM</option>
+                            {% for pc in program_coordinators %}
+                            <option value="{{ pc.user.id }}">{{ pc.full_name }} ({{ pc.employee_id|default:"—" }})</option>
+                            {% endfor %}
                         </select>
+                        <span class="error-message" id="srmIdError"></span>
+                    </div>
+                    <div class="form-group">
+                        <label>Trainer Assigned (Thinking Coach) <span class="required">*</span></label>
+                        <select name="trainerId" id="trainerId" required>
+                            <option value="" disabled selected>Select Trainer</option>
+                            {% for tc in thinking_coaches %}
+                            <option value="{{ tc.user.id }}">{{ tc.full_name }} ({{ tc.employee_id|default:"—" }})</option>
+                            {% endfor %}
+                        </select>
+                        <span class="error-message" id="trainerIdError"></span>
+                    </div>
+                </div>
+                <div class="form-row full">
+                    <div class="form-group">
+                        <label>Number of Students Grade-wise</label>
+                        <p style="color: #6e6e73; font-size: 13px; margin-bottom: 12px;">Enter number of students per grade (leave blank for grades not applicable)</p>
+                        <div class="grade-wise-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
+                            {% for g in grade_list %}
+                            <div class="grade-input-group" style="display: flex; align-items: center; gap: 8px;">
+                                <label style="min-width: 65px; font-size: 13px; font-weight: 500; margin: 0;">Grade {{ g }}</label>
+                                <input type="number" name="grade_{{ g }}_students" id="grade_{{ g }}_students" placeholder="0" min="0" style="flex: 1; padding: 8px; border: 1px solid #d1d1d6; border-radius: 8px; font-size: 13px;">
+                            </div>
+                            {% endfor %}
+                        </div>
                     </div>
                 </div>
             </div>
 
             <div class="form-section" id="step6" style="display:none;">
-                <h2>F. Administrative Information</h2>
+                <h2>F. Fees & Commercial Information</h2>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Billing Email <span class="required">*</span></label>
-                        <input type="email" name="billingEmail" id="billingEmail" placeholder="billing@school.com" required>
-                        <span class="error-message" id="billingEmailError"></span>
+                        <label>Lab Fees with GST (₹)</label>
+                        <input type="number" name="labFeesWithGst" id="labFeesWithGst" placeholder="e.g. 50000" min="0" step="0.01">
                     </div>
                     <div class="form-group">
-                        <label>GST Number</label>
-                        <input type="text" name="gstNumber" id="gstNumber" placeholder="22AAAAA0000A1Z5" maxlength="15">
-                        <span class="error-message" id="gstNumberError"></span>
+                        <label>Program Fees with GST (₹)</label>
+                        <input type="number" name="programFeesWithGst" id="programFeesWithGst" placeholder="e.g. 75000" min="0" step="0.01">
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Payment Preferences</label>
-                        <select name="paymentPreferences" id="paymentPreferences">
-                            <option value="" disabled selected>Select</option>
-                            <option value="bank-transfer">Bank Transfer</option>
-                            <option value="cheque">Cheque</option>
-                            <option value="online">Online Payment</option>
-                            <option value="upi">UPI</option>
+                        <label>Payment Terms</label>
+                        <select name="paymentTerms" id="paymentTerms">
+                            <option value="" disabled selected>Select Payment Terms</option>
+                            <option value="quarterly">Quarterly</option>
+                            <option value="half_yearly">Half Yearly</option>
+                            <option value="annual">Annual</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Point of Contact for Finance</label>
-                        <input type="text" name="financeContact" id="financeContact" placeholder="Finance Manager Name">
+                        <label>School Email ID</label>
+                        <input type="email" name="schoolEmailSec6" id="schoolEmailSec6" placeholder="school@example.com" disabled>
+                        <p style="color: #6e6e73; font-size: 12px; margin-top: 4px;">Auto-filled from Step 1</p>
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Administrative Coordinator Name</label>
-                        <input type="text" name="adminCoordinatorName" id="adminCoordinatorName" placeholder="Admin Coordinator">
+                        <label>TCE Sales SPOC Name</label>
+                        <input type="text" name="tceSalesSpocName" id="tceSalesSpocName" placeholder="Sales SPOC Full Name">
                     </div>
                     <div class="form-group">
-                        <label>Admin Coordinator Phone</label>
-                        <input type="tel" name="adminCoordinatorPhone" id="adminCoordinatorPhone" placeholder="+91 XXXXX XXXXX" maxlength="10">
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Academic Year Cycle</label>
-                        <input type="text" name="academicYearCycle" id="academicYearCycle" placeholder="e.g. April - March">
-                    </div>
-                    <div class="form-group">
-                        <label>Workshop Approval Status</label>
-                        <select name="workshopApprovalStatus" id="workshopApprovalStatus">
-                            <option value="" disabled selected>Select</option>
-                            <option value="approved">Approved</option>
-                            <option value="pending">Pending</option>
-                            <option value="not-required">Not Required</option>
-                        </select>
+                        <label>TCE Sales SPOC Contact</label>
+                        <input type="tel" name="tceSalesSpocContact" id="tceSalesSpocContact" placeholder="+91 XXXXX XXXXX" maxlength="15">
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Consent for Digital Reports</label>
-                        <select name="digitalReportsConsent" id="digitalReportsConsent">
-                            <option value="" disabled selected>Select</option>
-                            <option value="yes">Yes</option>
-                            <option value="no">No</option>
-                        </select>
+                        <label>Upload Signed TCE School Agreement</label>
+                        <input type="file" name="signedAgreement" id="signedAgreement" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+                    </div>
+                    <div class="form-group">
+                        <label>Upload Go-Live Certificate</label>
+                        <input type="file" name="goLiveCertificate" id="goLiveCertificate" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
                     </div>
                 </div>
             </div>
@@ -560,31 +553,32 @@
             </div>
 
             <div class="form-section" id="step9" style="display:none;">
-                <h2>I. Additional Data (Optional)</h2>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Awards & Recognitions</label>
-                        <input type="text" name="awards" id="awards" placeholder="e.g. Best School Award 2023">
-                    </div>
-                    <div class="form-group">
-                        <label>Notable Alumni</label>
-                        <input type="text" name="notableAlumni" id="notableAlumni" placeholder="e.g. Famous personalities">
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>School Performance Trends</label>
-                        <input type="text" name="performanceTrends" id="performanceTrends" placeholder="e.g. 95% pass rate">
-                    </div>
-                    <div class="form-group">
-                        <label>Social Media Links</label>
-                        <input type="text" name="socialMediaLinks" id="socialMediaLinks" placeholder="Facebook, Instagram URLs">
-                    </div>
-                </div>
+                <h2>I. Additional Information</h2>
                 <div class="form-row full">
                     <div class="form-group">
-                        <label>Events & Workshops Calendar</label>
-                        <textarea name="eventsCalendar" id="eventsCalendar" rows="2" placeholder="e.g. Annual Day - March, Sports Day - December"></textarea>
+                        <label>Exceptions for this School</label>
+                        <textarea name="exceptionsForSchool" id="exceptionsForSchool" rows="3" placeholder="Any special exceptions, notes or arrangements for this school..."></textarea>
+                    </div>
+                </div>
+
+                <div class="form-row full">
+                    <div class="form-group">
+                        <label>Events & Workshop Calendar</label>
+                        <p style="color: #6e6e73; font-size: 13px; margin-bottom: 12px;">Add events with dates for the school calendar</p>
+                        <div id="eventsContainer">
+                            <!-- Dynamic event rows added here -->
+                        </div>
+                        <button type="button" id="addEventBtn" style="margin-top: 10px; padding: 8px 16px; background: #007aff; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; display: inline-flex; align-items: center; gap: 6px;">
+                            <span class="material-symbols-outlined" style="font-size: 16px;">add</span> Add Event
+                        </button>
+                        <input type="hidden" name="eventsWorkshopCalendar" id="eventsWorkshopCalendar" value="[]">
+                    </div>
+                </div>
+
+                <div class="form-row full">
+                    <div class="form-group">
+                        <label>Notable Alumni</label>
+                        <textarea name="notableAlumni" id="notableAlumni" rows="2" placeholder="e.g. Dr. Sharma (IAS 2015), Prof. Mehta (IIT Delhi)"></textarea>
                     </div>
                 </div>
             </div>

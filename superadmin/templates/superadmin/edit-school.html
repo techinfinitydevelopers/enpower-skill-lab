@@ -47,7 +47,7 @@
     </a>
 
     <div class="add-teacher-page">
-        <form class="add-teacher-form" id="editSchoolForm" method="POST" action="{% url 'edit_school' school.id %}">
+        <form class="add-teacher-form" id="editSchoolForm" method="POST" action="{% url 'edit_school' school.id %}" enctype="multipart/form-data">
             {% csrf_token %}
             
             <div class="form-header">
@@ -199,6 +199,161 @@
                 </div>
             </div>
 
+            <!-- Skill Program Information -->
+            <div class="form-section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <span class="material-symbols-outlined">workspace_premium</span>
+                        E. Skill Program
+                    </h2>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="skillProgram" class="form-label">Skill Program (ESL Product)</label>
+                        <select id="skillProgram" name="skill_program" class="form-input">
+                            <option value="">Select Program</option>
+                            <option value="fsl" {% if school.skill_program == 'fsl' %}selected{% endif %}>Future Skills Lab</option>
+                            <option value="csl_plus_pc" {% if school.skill_program == 'csl_plus_pc' %}selected{% endif %}>CSL Plus with PC</option>
+                            <option value="csl_plus_tc" {% if school.skill_program == 'csl_plus_tc' %}selected{% endif %}>CSL Plus with TC</option>
+                            <option value="csl_foundation_pc" {% if school.skill_program == 'csl_foundation_pc' %}selected{% endif %}>CSL Foundation with PC</option>
+                            <option value="csl_foundation" {% if school.skill_program == 'csl_foundation' %}selected{% endif %}>CSL Foundation</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="programAcademicYear" class="form-label">Program Academic Year</label>
+                        <select id="programAcademicYear" name="program_academic_year" class="form-input">
+                            <option value="">Select Year</option>
+                            <option value="2025-26" {% if school.program_academic_year == '2025-26' %}selected{% endif %}>2025-26</option>
+                            <option value="2026-27" {% if school.program_academic_year == '2026-27' %}selected{% endif %}>2026-27</option>
+                            <option value="2027-28" {% if school.program_academic_year == '2027-28' %}selected{% endif %}>2027-28</option>
+                            <option value="2028-29" {% if school.program_academic_year == '2028-29' %}selected{% endif %}>2028-29</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="srmId" class="form-label">School Relationship Manager (SRM)</label>
+                        <select id="srmId" name="srm_id" class="form-input">
+                            <option value="">Select SRM</option>
+                            {% for pc in program_coordinators %}
+                            <option value="{{ pc.user.id }}" {% if school.srm_id == pc.user.id %}selected{% endif %}>{{ pc.full_name }} ({{ pc.employee_id|default:"—" }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="trainerId" class="form-label">Trainer Assigned (Thinking Coach)</label>
+                        <select id="trainerId" name="trainer_id" class="form-input">
+                            <option value="">Select Trainer</option>
+                            {% for tc in thinking_coaches %}
+                            <option value="{{ tc.user.id }}" {% if school.trainer_assigned_id == tc.user.id %}selected{% endif %}>{{ tc.full_name }} ({{ tc.employee_id|default:"—" }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-grid" style="margin-top: 16px;">
+                    <div class="form-group full-width">
+                        <label class="form-label">Grade-wise Number of Students</label>
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 8px;">
+                            {% for g in grade_list %}
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <label style="min-width: 55px; font-size: 13px; font-weight: 500; margin: 0;">Grade {{ g }}</label>
+                                <input type="number" name="grade_{{ g }}_students" class="form-input" style="padding: 6px 8px; font-size: 13px;" min="0" placeholder="0" value="{% if school.grade_wise_students %}{{ school.grade_wise_students|default_if_none:"" }}{% endif %}" data-grade="{{ g }}">
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fees & Commercial -->
+            <div class="form-section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <span class="material-symbols-outlined">payments</span>
+                        F. Fees & Commercial
+                    </h2>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="labFeesWithGst" class="form-label">Lab Fees with GST (₹)</label>
+                        <input type="number" id="labFeesWithGst" name="lab_fees_with_gst" class="form-input" step="0.01" min="0" value="{{ school.lab_fees_with_gst|default_if_none:'' }}">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="programFeesWithGst" class="form-label">Program Fees with GST (₹)</label>
+                        <input type="number" id="programFeesWithGst" name="program_fees_with_gst" class="form-input" step="0.01" min="0" value="{{ school.program_fees_with_gst|default_if_none:'' }}">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="paymentTerms" class="form-label">Payment Terms</label>
+                        <select id="paymentTerms" name="payment_terms" class="form-input">
+                            <option value="">Select</option>
+                            <option value="quarterly" {% if school.payment_terms == 'quarterly' %}selected{% endif %}>Quarterly</option>
+                            <option value="half_yearly" {% if school.payment_terms == 'half_yearly' %}selected{% endif %}>Half Yearly</option>
+                            <option value="annual" {% if school.payment_terms == 'annual' %}selected{% endif %}>Annual</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="tceSalesSpocName" class="form-label">TCE Sales SPOC Name</label>
+                        <input type="text" id="tceSalesSpocName" name="tce_sales_spoc_name" class="form-input" value="{{ school.tce_sales_spoc_name|default_if_none:'' }}">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="tceSalesSpocContact" class="form-label">TCE Sales SPOC Contact</label>
+                        <input type="text" id="tceSalesSpocContact" name="tce_sales_spoc_contact" class="form-input" value="{{ school.tce_sales_spoc_contact|default_if_none:'' }}">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="signedAgreement" class="form-label">Signed TCE Agreement</label>
+                        {% if school.signed_agreement %}
+                        <p style="font-size: 12px; color: #6e6e73; margin-bottom: 4px;">Current: <a href="{{ school.signed_agreement.url }}" target="_blank">View</a></p>
+                        {% endif %}
+                        <input type="file" id="signedAgreement" name="signed_agreement" class="form-input" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="goLiveCertificate" class="form-label">Go-Live Certificate</label>
+                        {% if school.go_live_certificate %}
+                        <p style="font-size: 12px; color: #6e6e73; margin-bottom: 4px;">Current: <a href="{{ school.go_live_certificate.url }}" target="_blank">View</a></p>
+                        {% endif %}
+                        <input type="file" id="goLiveCertificate" name="go_live_certificate" class="form-input" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Additional Information -->
+            <div class="form-section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <span class="material-symbols-outlined">info</span>
+                        I. Additional Information
+                    </h2>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group full-width">
+                        <label for="exceptionsForSchool" class="form-label">Exceptions for this School</label>
+                        <textarea id="exceptionsForSchool" name="exceptions_for_school" class="form-input" rows="3">{{ school.exceptions_for_school|default_if_none:'' }}</textarea>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label class="form-label">Events & Workshop Calendar</label>
+                        <p style="color: #6e6e73; font-size: 12px; margin-bottom: 8px;">Add events with dates</p>
+                        <div id="editEventsContainer"></div>
+                        <button type="button" id="editAddEventBtn" style="margin-top: 8px; padding: 6px 14px; background: #007aff; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; display: inline-flex; align-items: center; gap: 4px;">
+                            <span class="material-symbols-outlined" style="font-size: 16px;">add</span> Add Event
+                        </button>
+                        <input type="hidden" name="events_workshop_calendar" id="editEventsHidden" value='{{ events_json }}'>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="notableAlumni" class="form-label">Notable Alumni</label>
+                        <textarea id="notableAlumni" name="notable_alumni" class="form-input" rows="2">{{ school.notable_alumni|default_if_none:'' }}</textarea>
+                    </div>
+                </div>
+            </div>
+
             <!-- Form Actions -->
             <div class="form-actions">
                 <a href="{% url 'school_list' %}" class="btn btn-secondary school-cancel"><span class="material-symbols-outlined">close</span>Cancel</a>
@@ -210,4 +365,79 @@
         </form>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // --- Grade-wise students: populate from JSON ---
+    const gradeData = {{ grade_wise_students_json|safe }};
+    if (gradeData && typeof gradeData === 'object') {
+        Object.keys(gradeData).forEach(function(g) {
+            const inp = document.querySelector('input[name="grade_' + g + '_students"]');
+            if (inp) inp.value = gradeData[g];
+        });
+    }
+
+    // --- Events calendar: populate from JSON ---
+    const eventsData = JSON.parse(document.getElementById('editEventsHidden').value || '[]');
+    eventsData.forEach(function(ev) {
+        addEditEventRow(ev.date || '', ev.event || '');
+    });
+
+    document.getElementById('editAddEventBtn').addEventListener('click', function() {
+        addEditEventRow('', '');
+    });
+
+    // Sync events before submit
+    document.getElementById('editSchoolForm').addEventListener('submit', function() {
+        syncEditEvents();
+    });
+});
+
+function addEditEventRow(dateVal, eventVal) {
+    const container = document.getElementById('editEventsContainer');
+    const row = document.createElement('div');
+    row.style.cssText = 'display: flex; align-items: center; gap: 10px; margin-bottom: 8px; width: 100%;';
+    row.className = 'edit-event-row';
+
+    const dateInput = document.createElement('input');
+    dateInput.type = 'date';
+    dateInput.className = 'edit-ev-date';
+    dateInput.value = dateVal;
+    dateInput.style.cssText = 'width: 200px; min-width: 200px; padding: 8px 12px; border: 1px solid #d1d1d6; border-radius: 8px; font-size: 13px;';
+
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.className = 'edit-ev-name';
+    nameInput.value = eventVal;
+    nameInput.placeholder = 'Event / Workshop name';
+    nameInput.style.cssText = 'flex: 1; padding: 8px 12px; border: 1px solid #d1d1d6; border-radius: 8px; font-size: 13px;';
+
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.textContent = '×';
+    delBtn.style.cssText = 'padding: 6px 12px; background: #ff3b30; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; line-height: 1;';
+    delBtn.onclick = function() { row.remove(); syncEditEvents(); };
+
+    row.appendChild(dateInput);
+    row.appendChild(nameInput);
+    row.appendChild(delBtn);
+    container.appendChild(row);
+
+    dateInput.addEventListener('change', syncEditEvents);
+    nameInput.addEventListener('input', syncEditEvents);
+}
+
+function syncEditEvents() {
+    const rows = document.querySelectorAll('#editEventsContainer .edit-event-row');
+    const events = [];
+    rows.forEach(function(row) {
+        const d = row.querySelector('.edit-ev-date').value;
+        const n = row.querySelector('.edit-ev-name').value.trim();
+        if (d || n) events.push({date: d, event: n});
+    });
+    document.getElementById('editEventsHidden').value = JSON.stringify(events);
+}
+</script>
 {% endblock %}

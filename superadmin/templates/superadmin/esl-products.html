@@ -1,0 +1,336 @@
+{% extends 'superadmin/base.html' %}
+{% load static %}
+
+{% block title %}ESL Products - Enpower Skill Lab{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/superadmin/add-lessons.css' %}">
+<style>
+    /* List page extras */
+    .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; }
+    .product-card { background: #fff; border: 1px solid var(--border-color); border-radius: 16px; padding: 20px; transition: box-shadow 0.2s; }
+    .product-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+    .product-card h3 { font-size: 17px; font-weight: 600; color: var(--text-main); margin-bottom: 6px; }
+    .product-card .meta { font-size: 13px; color: var(--text-secondary); margin-bottom: 10px; }
+    .product-card .badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+    .product-card .badge { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 500; }
+    .product-card .badge.grade { background: #e8f5e9; color: #2e7d32; }
+    .product-card .badge.board { background: #e3f2fd; color: #1565c0; }
+    .product-card .stats { display: flex; gap: 16px; font-size: 13px; color: var(--text-secondary); border-top: 1px solid var(--border-color); padding-top: 10px; margin-top: 10px; }
+    .product-card .card-actions { display: flex; gap: 8px; margin-top: 12px; }
+    .product-card .card-actions a { padding: 6px 14px; border-radius: 8px; font-size: 13px; text-decoration: none; font-weight: 500; }
+    .product-card .card-actions .act-edit { background: var(--primary); color: #fff; }
+    .product-card .card-actions .act-delete { background: #f5f5f7; color: var(--text-main); }
+    .status-badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+    .status-badge.active { background: #e8f5e9; color: #2e7d32; }
+    .status-badge.draft { background: #fff3e0; color: #e65100; }
+    .empty-state { text-align: center; padding: 80px 20px; color: var(--text-secondary); }
+    /* Checkbox grid */
+    .al-checkbox-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 8px; }
+    .al-checkbox-item { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text-main); }
+    .al-checkbox-item input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--primary); }
+    /* Project blocks */
+    .project-block { background: var(--bg-light); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+    .project-block .project-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .project-block .project-header h4 { font-size: 15px; font-weight: 600; color: var(--text-main); margin: 0; }
+    .session-row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+    .session-row .session-num { min-width: 30px; font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+    .session-row input { flex: 1; }
+    .btn-remove { padding: 6px 12px; background: #ff3b30; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; line-height: 1; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="al-dashboard-page">
+    <main class="container-xl py-4 px-4" style="max-width: 1600px;">
+
+    {% if form_mode == 'add' or form_mode == 'edit' %}
+    <!-- ==================== ADD / EDIT FORM ==================== -->
+    <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3 mb-4">
+        <div>
+            <h1 class="al-page-title">{% if form_mode == 'edit' %}Edit ESL Product{% else %}Add New ESL Product{% endif %}</h1>
+            <p class="al-page-subtitle mb-0">Fill in the details to {% if form_mode == 'edit' %}update{% else %}create{% endif %} an ESL product.</p>
+        </div>
+        <a href="{% url 'esl_products' %}" class="al-btn-outline" style="text-decoration: none;">
+            <span class="material-symbols-outlined" style="font-size: 18px;">arrow_back</span>
+            Back to List
+        </a>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data" id="eslProductForm">
+        {% csrf_token %}
+        <div class="row g-4">
+            <!-- Left Column -->
+            <div class="col-lg-8">
+                <!-- Program Details -->
+                <div class="al-card-box">
+                    <h5 class="fw-bold mb-4">Program Details</h5>
+                    <div class="mb-4">
+                        <label class="al-form-label">Program Title <span class="al-required">*</span></label>
+                        <input type="text" class="al-form-control" name="name" value="{{ product.name|default_if_none:'' }}" placeholder="e.g. Future Skills Lab" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="al-form-label">Description of the Program</label>
+                        <textarea class="al-form-control al-textarea" name="description" rows="3" placeholder="Describe the program...">{{ product.description|default_if_none:'' }}</textarea>
+                    </div>
+                    <div class="mb-0">
+                        <label class="al-form-label">Competencies</label>
+                        <textarea class="al-form-control al-textarea" name="competencies_description" rows="3" placeholder="Competencies applicable at program level...">{{ product.competencies_description|default_if_none:'' }}</textarea>
+                    </div>
+                </div>
+
+                <!-- Grades & Boards -->
+                <div class="al-card-box">
+                    <h5 class="fw-bold mb-4 d-flex align-items-center gap-2">
+                        <span class="material-symbols-outlined">school</span>
+                        Grades & Boards
+                    </h5>
+                    <div class="mb-4">
+                        <label class="al-form-label">Grades Applicable</label>
+                        <div class="al-checkbox-grid">
+                            {% for g in grade_list %}
+                            <label class="al-checkbox-item">
+                                <input type="checkbox" name="grades" value="{{ g }}" {% if g in selected_grades %}checked{% endif %}>
+                                Grade {{ g }}
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="mb-0">
+                        <label class="al-form-label">Boards Applicable</label>
+                        <div class="al-checkbox-grid">
+                            {% for code, label in board_choices %}
+                            <label class="al-checkbox-item">
+                                <input type="checkbox" name="boards" value="{{ code }}" {% if code in selected_boards %}checked{% endif %}>
+                                {{ label }}
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Projects & Sessions -->
+                <div class="al-card-box">
+                    <h5 class="fw-bold mb-4 d-flex align-items-center gap-2">
+                        <span class="material-symbols-outlined">assignment</span>
+                        Projects & Sessions
+                    </h5>
+                    <p class="al-page-subtitle mb-4">Add projects under this program. Each project can have multiple sessions.</p>
+                    <div id="projectsContainer"></div>
+                    <button type="button" id="addProjectBtn" class="al-btn-outline" style="gap: 0.4rem;">
+                        <span class="material-symbols-outlined" style="font-size: 18px;">add</span> Add Project
+                    </button>
+                    <input type="hidden" name="projects_json" id="projectsJson" value='{{ projects_json|default:"[]" }}'>
+                </div>
+            </div>
+
+            <!-- Right Column -->
+            <div class="col-lg-4">
+                <!-- Action Buttons -->
+                <div class="al-card-box">
+                    <button type="submit" name="status_val" value="Active" class="al-btn-primary w-100 mb-3">
+                        <span class="material-symbols-outlined" style="font-size: 1.125rem;">publish</span>
+                        {% if form_mode == 'edit' %}Save & Publish{% else %}Create & Publish{% endif %}
+                    </button>
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <button type="submit" name="status_val" value="Draft" class="al-btn-outline w-100">Save Draft</button>
+                        </div>
+                        <div class="col-6">
+                            <a href="{% url 'esl_products' %}" class="al-btn-ghost w-100 d-flex align-items-center justify-content-center" style="text-decoration: none;">Cancel</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Status -->
+                <div class="al-card-box">
+                    <h5 class="fw-bold mb-3 d-flex align-items-center gap-2">
+                        <span class="material-symbols-outlined">tune</span>
+                        Settings
+                    </h5>
+                    <div class="mb-3">
+                        <label class="al-form-label">Status</label>
+                        <select class="al-form-select" name="status">
+                            <option value="Draft" {% if product.status == 'Draft' %}selected{% endif %}>Draft</option>
+                            <option value="Active" {% if product.status == 'Active' %}selected{% endif %}>Active</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Program Document -->
+                <div class="al-card-box">
+                    <h5 class="fw-bold mb-4 d-flex align-items-center gap-2">
+                        <span class="material-symbols-outlined">upload_file</span>
+                        Program Document
+                    </h5>
+                    {% if product.program_document %}
+                    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;">Current: <a href="{{ product.program_document.url }}" target="_blank" style="color: var(--primary);">View Document</a></p>
+                    {% endif %}
+                    <div class="al-upload-box" id="docUploadBox">
+                        <div class="al-file-upload-icon">
+                            <span class="material-symbols-outlined">description</span>
+                        </div>
+                        <p class="mb-0 fw-medium">Click to upload</p>
+                        <small class="text-muted">PDF, DOC, PPT, Image (max 10MB)</small>
+                    </div>
+                    <input type="file" id="docFileInput" name="program_document" accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png" style="display: none;">
+                </div>
+            </div>
+        </div>
+    </form>
+
+    {% else %}
+    <!-- ==================== LIST VIEW ==================== -->
+    <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3 mb-4">
+        <div>
+            <h1 class="al-page-title">ESL Products</h1>
+            <p class="al-page-subtitle mb-0">Manage all ESL products and programs.</p>
+        </div>
+        <a href="{% url 'esl_product_add' %}" class="al-btn-primary" style="text-decoration: none;">
+            <span class="material-symbols-outlined" style="font-size: 1.125rem;">add</span>
+            Add New Product
+        </a>
+    </div>
+
+    {% if products %}
+    <div class="product-grid">
+        {% for p in products %}
+        <div class="product-card">
+            <div style="display: flex; justify-content: space-between; align-items: start;">
+                <h3>{{ p.name }}</h3>
+                <span class="status-badge {% if p.status == 'Active' %}active{% else %}draft{% endif %}">{{ p.status }}</span>
+            </div>
+            <p class="meta">{{ p.description|truncatewords:20|default:"No description" }}</p>
+            <div class="badges">
+                {% for g in p.applicable_grades %}<span class="badge grade">Grade {{ g }}</span>{% endfor %}
+            </div>
+            <div class="badges">
+                {% for b in p.applicable_boards %}<span class="badge board">{{ b }}</span>{% endfor %}
+            </div>
+            <div class="stats">
+                <span><strong>{{ p.project_count }}</strong> Projects</span>
+                <span><strong>{{ p.session_count }}</strong> Sessions</span>
+            </div>
+            <div class="card-actions">
+                <a href="{% url 'esl_product_edit' p.id %}" class="act-edit">Edit</a>
+                <a href="{% url 'esl_product_delete' p.id %}" class="act-delete" onclick="return confirm('Delete this product?');">Delete</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <span class="material-symbols-outlined">category</span>
+        <h3>No ESL Products Yet</h3>
+        <p>Add your first ESL product to get started.</p>
+    </div>
+    {% endif %}
+    {% endif %}
+
+    </main>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if form_mode == 'add' or form_mode == 'edit' %}
+<script>
+let projectCounter = 0;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // File upload click
+    const uploadBox = document.getElementById('docUploadBox');
+    const fileInput = document.getElementById('docFileInput');
+    if (uploadBox && fileInput) {
+        uploadBox.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', function() {
+            if (this.files.length) {
+                uploadBox.querySelector('p').textContent = this.files[0].name;
+                uploadBox.querySelector('small').textContent = (this.files[0].size / 1024 / 1024).toFixed(1) + ' MB';
+            }
+        });
+    }
+
+    // Load existing projects
+    const existing = JSON.parse(document.getElementById('projectsJson').value || '[]');
+    existing.forEach(proj => addProjectBlock(proj.name, proj.description, proj.grade, proj.sessions || []));
+
+    document.getElementById('addProjectBtn').addEventListener('click', () => addProjectBlock('', '', '', []));
+    document.getElementById('eslProductForm').addEventListener('submit', syncProjectsToHidden);
+});
+
+function addProjectBlock(name, desc, grade, sessions) {
+    projectCounter++;
+    const container = document.getElementById('projectsContainer');
+    const block = document.createElement('div');
+    block.className = 'project-block';
+    block.innerHTML = `
+        <div class="project-header">
+            <h4>Project #${projectCounter}</h4>
+            <button type="button" class="btn-remove" onclick="this.closest('.project-block').remove(); reNumberProjects();">×</button>
+        </div>
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <label class="al-form-label">Project Name</label>
+                <input type="text" class="al-form-control proj-name" value="${esc(name)}" placeholder="e.g. Bio Conservation">
+            </div>
+            <div class="col-md-6">
+                <label class="al-form-label">Grade</label>
+                <select class="al-form-select proj-grade">
+                    <option value="">Select Grade</option>
+                    ${[1,2,3,4,5,6,7,8,9,10,11,12].map(g=>`<option value="${g}" ${grade==g?'selected':''}>Grade ${g}</option>`).join('')}
+                </select>
+            </div>
+        </div>
+        <div class="mb-3">
+            <label class="al-form-label">Project Description</label>
+            <textarea class="al-form-control al-textarea proj-desc" rows="2" placeholder="Describe this project...">${esc(desc)}</textarea>
+        </div>
+        <div>
+            <label class="al-form-label fw-bold">Sessions</label>
+            <div class="sessions-container"></div>
+            <button type="button" class="al-btn-outline" onclick="addSessionRow(this.closest('.project-block'))" style="margin-top: 8px; gap: 0.4rem; font-size: 0.8rem; padding: 6px 12px;">
+                <span class="material-symbols-outlined" style="font-size: 16px;">add</span> Add Session
+            </button>
+        </div>
+    `;
+    container.appendChild(block);
+    sessions.forEach(s => _addSessionRow(block.querySelector('.sessions-container'), s.title||'', s.description||''));
+}
+
+function addSessionRow(block) { _addSessionRow(block.querySelector('.sessions-container'), '', ''); }
+
+function _addSessionRow(container, title, desc) {
+    const num = container.querySelectorAll('.session-row').length + 1;
+    const row = document.createElement('div');
+    row.className = 'session-row';
+    row.innerHTML = `
+        <span class="session-num">${num}.</span>
+        <input type="text" class="al-form-control sess-title" value="${esc(title)}" placeholder="Session title">
+        <input type="text" class="al-form-control sess-desc" value="${esc(desc)}" placeholder="Brief descriptor" maxlength="200">
+        <button type="button" class="btn-remove" onclick="this.closest('.session-row').remove(); reNumberSessions(this.closest('.project-block'));">×</button>
+    `;
+    container.appendChild(row);
+}
+
+function reNumberProjects() {
+    document.querySelectorAll('#projectsContainer .project-block').forEach((b,i) => b.querySelector('h4').textContent = 'Project #'+(i+1));
+}
+function reNumberSessions(block) {
+    if (!block) return;
+    block.querySelectorAll('.session-row').forEach((r,i) => r.querySelector('.session-num').textContent = (i+1)+'.');
+}
+function syncProjectsToHidden() {
+    const projects = [];
+    document.querySelectorAll('#projectsContainer .project-block').forEach((block, idx) => {
+        const sessions = [];
+        block.querySelectorAll('.session-row').forEach((row, sIdx) => {
+            sessions.push({ session_number: sIdx+1, title: row.querySelector('.sess-title').value.trim(), description: row.querySelector('.sess-desc').value.trim() });
+        });
+        projects.push({ project_number: idx+1, name: block.querySelector('.proj-name').value.trim(), description: block.querySelector('.proj-desc').value.trim(), grade: block.querySelector('.proj-grade').value, sessions });
+    });
+    document.getElementById('projectsJson').value = JSON.stringify(projects);
+}
+function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+</script>
+{% endif %}
+{% endblock %}

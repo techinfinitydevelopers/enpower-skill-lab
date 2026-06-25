@@ -551,6 +551,139 @@
 .lp-modal-actions {
     display: flex; gap: 8px; justify-content: flex-end;
 }
+
+/* KB Add Sub-Pillar button */
+.lp-kb-add-sp-btn {
+    display: flex; align-items: center; gap: 4px;
+    width: 100%; padding: 5px 8px;
+    background: none; border: 1px dashed #dc262660;
+    border-radius: 6px; color: #dc2626;
+    font-size: 0.78rem; font-weight: 500; cursor: pointer;
+    transition: background .15s;
+}
+.lp-kb-add-sp-btn:hover { background: #fef2f2; }
+
+/* KB badge on main content */
+.lp-kb-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 10px; border-radius: 20px;
+    background: #fef2f2; color: #dc2626;
+    font-size: 0.72rem; font-weight: 600;
+    border: 1px solid #dc262630;
+}
+
+/* KB sub-pillar actions in sidebar */
+.lp-kb-sp-actions {
+    display: none; align-items: center; gap: 2px; margin-left: auto;
+}
+.lp-sp-link:hover .lp-kb-sp-actions { display: flex; }
+.lp-kb-sp-act {
+    width: 20px; height: 20px; border: none; background: none;
+    border-radius: 4px; cursor: pointer; display: flex;
+    align-items: center; justify-content: center; padding: 0;
+    color: #9ca3af; transition: all .15s;
+}
+.lp-kb-sp-act:hover { background: #fee2e2; color: #dc2626; }
+
+/* ── Framework Dropdown ── */
+.lp-fw-select {
+    flex: 1; padding: 8px 12px; border: 1px solid #e5e7eb;
+    border-radius: 8px; font-size: 0.82rem; font-weight: 600;
+    color: #5A1F6E; background: #fff; cursor: pointer;
+    outline: none; appearance: auto;
+    font-family: 'Poppins', sans-serif;
+}
+.lp-fw-select:focus { border-color: #5A1F6E; }
+
+/* ── CSL+ Pillar Actions (edit/delete) ── */
+.lp-csl-pillar-actions {
+    display: inline-flex; gap: 0; flex-shrink: 0; align-items: center;
+}
+.lp-csl-act {
+    width: 22px; height: 22px; border: none; background: none;
+    border-radius: 4px; cursor: pointer; display: inline-flex;
+    align-items: center; justify-content: center; color: #bcbcbc;
+    padding: 0; transition: all .15s;
+}
+.lp-csl-act:hover { background: #f3f4f6; color: #374151; }
+.lp-csl-act.del:hover { background: #fee2e2; color: #dc2626; }
+
+/* CSL+ Add Sub-Pillar button */
+.lp-csl-add-sp-btn {
+    display: flex; align-items: center; gap: 4px;
+    width: 100%; padding: 4px 8px; background: none;
+    border: 1px dashed #d1d5db; border-radius: 6px;
+    color: #6b7280; font-size: 0.72rem; font-weight: 500;
+    cursor: pointer; transition: all .15s;
+}
+.lp-csl-add-sp-btn:hover { border-color: #5A1F6E; color: #5A1F6E; background: #faf5ff; }
+
+/* CSL+ Add Pillar button */
+.lp-csl-add-pillar-btn {
+    display: flex; align-items: center; gap: 4px;
+    width: 100%; padding: 6px 8px; background: none;
+    border: 1px dashed #d1d5db; border-radius: 6px;
+    color: #6b7280; font-size: 0.78rem; font-weight: 500;
+    cursor: pointer; transition: all .15s;
+}
+.lp-csl-add-pillar-btn:hover { border-color: #5A1F6E; color: #5A1F6E; background: #faf5ff; }
+
+/* CSL+ color picker */
+.lp-color-label {
+    display: flex; align-items: center; gap: 6px;
+    padding: 3px 6px; border-radius: 4px; cursor: pointer;
+    font-size: 0.72rem; color: #6b7280; border: 1.5px solid transparent;
+}
+.lp-color-label:hover { background: #f9fafb; }
+.lp-color-label.selected { background: #f3f4f6; border-color: #d1d5db; font-weight: 600; color: #374151; }
+.lp-color-dot {
+    width: 14px; height: 14px; border-radius: 3px; display: inline-block; flex-shrink: 0;
+}
+
+/* CSL+ overlay/modal reuse */
+.lp-csl-input {
+    width: 100%; padding: 6px 10px; border: 1px solid #e5e7eb;
+    border-radius: 6px; font-size: 0.82rem; outline: none;
+}
+.lp-csl-input:focus { border-color: #5A1F6E; }
+.lp-csl-btn { padding: 5px 12px; border: none; border-radius: 6px; font-size: 0.75rem; font-weight: 500; cursor: pointer; }
+.lp-csl-btn-primary { background: #5A1F6E; color: #fff; }
+.lp-csl-btn-secondary { background: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; }
+
+/* Framework manage button */
+.lp-fw-manage-btn {
+    width: 34px; height: 34px; border-radius: 8px; border: 1px solid #e5e7eb;
+    background: #fff; cursor: pointer; display: flex;
+    align-items: center; justify-content: center; color: #9ca3af;
+    transition: all .15s; flex-shrink: 0;
+}
+.lp-fw-manage-btn:hover { background: #f3f4f6; color: #5A1F6E; border-color: #5A1F6E; }
+
+/* Framework manage modal */
+.lp-fw-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; max-height: 300px; overflow-y: auto; }
+.lp-fw-item {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+    background: #f9fafb; border-radius: 8px; border: 1px solid #f3f4f6;
+}
+.lp-fw-item-icon {
+    width: 36px; height: 36px; border-radius: 8px; background: #5A1F6E;
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-size: 0.75rem; font-weight: 700; flex-shrink: 0;
+}
+.lp-fw-item-info { flex: 1; min-width: 0; }
+.lp-fw-item-name { font-weight: 600; font-size: 0.85rem; color: #1d1d1f; }
+.lp-fw-item-meta { font-size: 0.72rem; color: #9ca3af; }
+.lp-fw-item-badge {
+    font-size: 0.65rem; font-weight: 600; padding: 2px 8px; border-radius: 12px;
+}
+.lp-fw-item-actions { display: flex; gap: 4px; }
+.lp-fw-item-act {
+    padding: 4px 10px; border-radius: 6px; font-size: 0.72rem; font-weight: 500;
+    cursor: pointer; border: 1px solid #e5e7eb; background: #fff; color: #374151;
+}
+.lp-fw-item-act:hover { background: #f3f4f6; }
+.lp-fw-item-act.del { color: #dc2626; border-color: #fecaca; }
+.lp-fw-item-act.del:hover { background: #fef2f2; }
 </style>
 {% endblock %}
 
@@ -565,6 +698,10 @@
     {% if p.color == 'blue'   %}--pillar-bg:#eff6ff;--pillar-text:#1d4ed8;--pillar-border:#2563eb30;--pillar-solid:#2563eb;{% endif %}
     {% if p.color == 'orange' %}--pillar-bg:#fff7ed;--pillar-text:#c2410c;--pillar-border:#ea580c30;--pillar-solid:#ea580c;{% endif %}
     {% if p.color == 'green'  %}--pillar-bg:#f0fdf4;--pillar-text:#15803d;--pillar-border:#16a34a30;--pillar-solid:#16a34a;{% endif %}
+    {% if p.color == 'red'    %}--pillar-bg:#fef2f2;--pillar-text:#dc2626;--pillar-border:#dc262630;--pillar-solid:#dc2626;{% endif %}
+    {% if p.color == 'pink'   %}--pillar-bg:#fdf2f8;--pillar-text:#db2777;--pillar-border:#ec489930;--pillar-solid:#ec4899;{% endif %}
+    {% if p.color == 'indigo' %}--pillar-bg:#eef2ff;--pillar-text:#4338ca;--pillar-border:#6366f130;--pillar-solid:#6366f1;{% endif %}
+    {% if p.color == 'amber'  %}--pillar-bg:#fffbeb;--pillar-text:#b45309;--pillar-border:#f59e0b30;--pillar-solid:#f59e0b;{% endif %}
 }
 </style>
 {% endwith %}
@@ -576,27 +713,73 @@
 
         <div class="lp-sidebar-head">
             <div>
-                <p class="label">neoRiSE Framework</p>
-                <p class="sub">5 Thematics · 17 sub-pillars</p>
+                <p class="label">Learning Pillars</p>
+                <p class="sub">{% if is_csl %}CSL+ Custom Framework{% else %}FSL neoRiSE Framework{% endif %}</p>
             </div>
             <button class="lp-sidebar-toggle" onclick="toggleLpSidebar()" title="Collapse panel">
                 <span class="material-symbols-outlined tog-icon">chevron_left</span>
             </button>
         </div>
 
+        <!-- Framework Selector -->
+        <div style="display:flex;align-items:center;gap:6px;margin:12px 14px;">
+            <select class="lp-fw-select" onchange="window.location.href='?fw='+this.value">
+                {% for fw in all_frameworks %}
+                <option value="{{ fw.id }}" {% if active_fw_obj.id == fw.id %}selected{% endif %}>{{ fw.name }}</option>
+                {% endfor %}
+            </select>
+            <button type="button" class="lp-fw-manage-btn" onclick="openModal('fwManageModal')" title="Manage Frameworks">
+                <span class="material-symbols-outlined" style="font-size:18px;">settings</span>
+            </button>
+        </div>
+
+        {% if is_csl %}
+        <!-- CSL+: Add Pillar Button -->
+        <div style="padding:0 12px 8px;">
+            <button type="button" class="lp-csl-add-pillar-btn" onclick="toggleEl('cslAddPillarForm')">
+                <span class="material-symbols-outlined" style="font-size:16px;">add</span> Add Pillar
+            </button>
+            <form method="post" id="cslAddPillarForm" style="display:none;margin-top:6px;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add_pillar">
+                <input type="text" name="pillar_name" placeholder="Pillar name" required class="lp-csl-input" style="margin-bottom:4px;">
+                <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px;">
+                    <label class="lp-color-label selected" onclick="pickLpColor(this)"><input type="radio" name="pillar_color" value="teal" checked style="display:none;"><span class="lp-color-dot" style="background:#0d9488;"></span>Teal</label>
+                    <label class="lp-color-label" onclick="pickLpColor(this)"><input type="radio" name="pillar_color" value="purple" style="display:none;"><span class="lp-color-dot" style="background:#7c3aed;"></span>Purple</label>
+                    <label class="lp-color-label" onclick="pickLpColor(this)"><input type="radio" name="pillar_color" value="blue" style="display:none;"><span class="lp-color-dot" style="background:#2563eb;"></span>Blue</label>
+                    <label class="lp-color-label" onclick="pickLpColor(this)"><input type="radio" name="pillar_color" value="orange" style="display:none;"><span class="lp-color-dot" style="background:#ea580c;"></span>Orange</label>
+                    <label class="lp-color-label" onclick="pickLpColor(this)"><input type="radio" name="pillar_color" value="green" style="display:none;"><span class="lp-color-dot" style="background:#16a34a;"></span>Green</label>
+                    <label class="lp-color-label" onclick="pickLpColor(this)"><input type="radio" name="pillar_color" value="pink" style="display:none;"><span class="lp-color-dot" style="background:#ec4899;"></span>Pink</label>
+                    <label class="lp-color-label" onclick="pickLpColor(this)"><input type="radio" name="pillar_color" value="indigo" style="display:none;"><span class="lp-color-dot" style="background:#6366f1;"></span>Indigo</label>
+                    <label class="lp-color-label" onclick="pickLpColor(this)"><input type="radio" name="pillar_color" value="amber" style="display:none;"><span class="lp-color-dot" style="background:#f59e0b;"></span>Amber</label>
+                </div>
+                <div style="display:flex;gap:4px;">
+                    <button type="submit" class="lp-csl-btn lp-csl-btn-primary">Add</button>
+                    <button type="button" class="lp-csl-btn lp-csl-btn-secondary" onclick="toggleEl('cslAddPillarForm')">Cancel</button>
+                </div>
+            </form>
+        </div>
+        {% endif %}
+
         <nav class="lp-sidebar-nav">
             {% for pillar in pillars %}
             <div style="margin-bottom:2px;">
+                <div style="display:flex;align-items:center;gap:0;padding-right:4px;">
                 <button type="button"
                     id="p-btn-{{ pillar.id }}"
                     onclick="togglePillar({{ pillar.id }})"
-                    class="lp-pillar-btn {% if sub_pillar.pillar.id == pillar.id %}open{% endif %}"
+                    class="lp-pillar-btn {% if sub_pillar and sub_pillar.pillar.id == pillar.id %}open{% endif %}"
+                    style="flex:1;min-width:0;"
                     style="
                         {% if pillar.color == 'teal'   %}--pillar-bg:#f0fdfa;--pillar-text:#0f766e;{% endif %}
                         {% if pillar.color == 'purple' %}--pillar-bg:#f5f3ff;--pillar-text:#6d28d9;{% endif %}
                         {% if pillar.color == 'blue'   %}--pillar-bg:#eff6ff;--pillar-text:#1d4ed8;{% endif %}
                         {% if pillar.color == 'orange' %}--pillar-bg:#fff7ed;--pillar-text:#c2410c;{% endif %}
                         {% if pillar.color == 'green'  %}--pillar-bg:#f0fdf4;--pillar-text:#15803d;{% endif %}
+                        {% if pillar.color == 'red'    %}--pillar-bg:#fef2f2;--pillar-text:#dc2626;{% endif %}
+                        {% if pillar.color == 'pink'   %}--pillar-bg:#fdf2f8;--pillar-text:#db2777;{% endif %}
+                        {% if pillar.color == 'indigo' %}--pillar-bg:#eef2ff;--pillar-text:#4338ca;{% endif %}
+                        {% if pillar.color == 'amber'  %}--pillar-bg:#fffbeb;--pillar-text:#b45309;{% endif %}
                     ">
                     <span class="lp-pillar-badge" style="background:
                         {% if pillar.color == 'teal'   %}#0d9488{% endif %}
@@ -604,10 +787,30 @@
                         {% if pillar.color == 'blue'   %}#2563eb{% endif %}
                         {% if pillar.color == 'orange' %}#ea580c{% endif %}
                         {% if pillar.color == 'green'  %}#16a34a{% endif %}
+                        {% if pillar.color == 'red'    %}#dc2626{% endif %}
+                        {% if pillar.color == 'pink'   %}#ec4899{% endif %}
+                        {% if pillar.color == 'indigo' %}#6366f1{% endif %}
+                        {% if pillar.color == 'amber'  %}#f59e0b{% endif %}
                     ;">{{ pillar.number }}</span>
                     <span class="lp-pillar-name">{{ pillar.name }}</span>
                     <span class="material-symbols-outlined lp-chev">expand_more</span>
                 </button>
+                {% if is_csl %}
+                <span class="lp-csl-pillar-actions">
+                    <button type="button" class="lp-csl-act" title="Edit" onclick="event.stopPropagation();openLpEditPillar({{ pillar.id }},'{{ pillar.name|escapejs }}','{{ pillar.color }}')">
+                        <span class="material-symbols-outlined" style="font-size:14px;">edit</span>
+                    </button>
+                    <form method="post" style="display:contents;" onsubmit="event.stopPropagation();return confirm('Delete pillar &quot;{{ pillar.name|escapejs }}&quot;?');">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="delete_pillar">
+                        <input type="hidden" name="pillar_id" value="{{ pillar.id }}">
+                        <button type="submit" class="lp-csl-act del" title="Delete" onclick="event.stopPropagation();">
+                            <span class="material-symbols-outlined" style="font-size:14px;">delete</span>
+                        </button>
+                    </form>
+                </span>
+                {% endif %}
+                </div><!-- end flex row -->
 
                 <div id="sp-list-{{ pillar.id }}"
                      class="lp-sp-list {% if sub_pillar.pillar.id == pillar.id %}open{% endif %}"
@@ -617,21 +820,63 @@
                         {% if pillar.color == 'blue'   %}--pillar-bg:#eff6ff;--pillar-text:#1d4ed8;border-color:#2563eb30;{% endif %}
                         {% if pillar.color == 'orange' %}--pillar-bg:#fff7ed;--pillar-text:#c2410c;border-color:#ea580c30;{% endif %}
                         {% if pillar.color == 'green'  %}--pillar-bg:#f0fdf4;--pillar-text:#15803d;border-color:#16a34a30;{% endif %}
+                        {% if pillar.color == 'red'    %}--pillar-bg:#fef2f2;--pillar-text:#dc2626;border-color:#dc262630;{% endif %}
+                        {% if pillar.color == 'pink'   %}--pillar-bg:#fdf2f8;--pillar-text:#db2777;border-color:#ec489930;{% endif %}
+                        {% if pillar.color == 'indigo' %}--pillar-bg:#eef2ff;--pillar-text:#4338ca;border-color:#6366f130;{% endif %}
+                        {% if pillar.color == 'amber'  %}--pillar-bg:#fffbeb;--pillar-text:#b45309;border-color:#f59e0b30;{% endif %}
                      ">
                     {% for sp in pillar.sub_pillars.all %}
-                    <a href="?sp={{ sp.sp_number }}"
-                       class="lp-sp-link {% if sp.sp_number == active_sp %}active{% endif %}"
+                    <a href="?fw={{ active_fw_obj.id }}&sp={% if is_csl %}{{ sp.id }}{% else %}{{ sp.sp_number }}{% endif %}"
+                       class="lp-sp-link {% if sub_pillar and sp.id == sub_pillar.id %}active{% endif %}"
                        style="
                             {% if pillar.color == 'teal'   %}--pillar-bg:#f0fdfa;--pillar-text:#0f766e;{% endif %}
                             {% if pillar.color == 'purple' %}--pillar-bg:#f5f3ff;--pillar-text:#6d28d9;{% endif %}
                             {% if pillar.color == 'blue'   %}--pillar-bg:#eff6ff;--pillar-text:#1d4ed8;{% endif %}
                             {% if pillar.color == 'orange' %}--pillar-bg:#fff7ed;--pillar-text:#c2410c;{% endif %}
                             {% if pillar.color == 'green'  %}--pillar-bg:#f0fdf4;--pillar-text:#15803d;{% endif %}
+                            {% if pillar.color == 'red'    %}--pillar-bg:#fef2f2;--pillar-text:#dc2626;{% endif %}
+                            {% if pillar.color == 'pink'   %}--pillar-bg:#fdf2f8;--pillar-text:#db2777;{% endif %}
+                            {% if pillar.color == 'indigo' %}--pillar-bg:#eef2ff;--pillar-text:#4338ca;{% endif %}
+                            {% if pillar.color == 'amber'  %}--pillar-bg:#fffbeb;--pillar-text:#b45309;{% endif %}
                        ">
-                        <span class="lp-sp-code">SP{{ sp.sp_number }}</span>
+                        <span class="lp-sp-code">{{ sp.code }}</span>
                         {{ sp.name }}
+                        {% if pillar.is_kb or is_csl %}
+                        <span class="lp-kb-sp-actions">
+                            <button type="button" class="lp-kb-sp-act" title="Rename" onclick="event.preventDefault();event.stopPropagation();openKbSpEdit({{ sp.id }},'{{ sp.name|escapejs }}')">
+                                <span class="material-symbols-outlined" style="font-size:14px;">edit</span>
+                            </button>
+                            <form method="post" style="display:contents;" onsubmit="event.stopPropagation();return confirm('Delete {{ sp.code }}: {{ sp.name|escapejs }}?');">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="delete_subpillar">
+                                <input type="hidden" name="sp_id" value="{{ sp.id }}">
+                                <button type="submit" class="lp-kb-sp-act" title="Delete" onclick="event.stopPropagation();">
+                                    <span class="material-symbols-outlined" style="font-size:14px;">close</span>
+                                </button>
+                            </form>
+                        </span>
+                        {% endif %}
                     </a>
                     {% endfor %}
+                    {% if pillar.is_kb or is_csl %}
+                    <!-- Editable: Add Sub-Pillar button -->
+                    <div style="padding:4px 10px;">
+                        <button type="button" class="lp-csl-add-sp-btn" onclick="toggleEl('addSpForm{{ pillar.id }}')">
+                            <span class="material-symbols-outlined" style="font-size:14px;">add</span>
+                            Add Sub-Pillar
+                        </button>
+                        <form method="post" id="addSpForm{{ pillar.id }}" style="display:none;margin-top:4px;">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="add_subpillar">
+                            <input type="hidden" name="pillar_id" value="{{ pillar.id }}">
+                            <input type="text" name="sp_name" placeholder="Sub-pillar name" required class="lp-csl-input" style="margin-bottom:4px;">
+                            <div style="display:flex;gap:4px;">
+                                <button type="submit" class="lp-csl-btn lp-csl-btn-primary">Add</button>
+                                <button type="button" class="lp-csl-btn lp-csl-btn-secondary" onclick="toggleEl('addSpForm{{ pillar.id }}')">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
             {% endfor %}
@@ -657,12 +902,16 @@
                         <span class="material-symbols-outlined sep">chevron_right</span>
                         <span>Learning Pillars</span>
                         <span class="material-symbols-outlined sep">chevron_right</span>
-                        <span class="cur">SP{{ sub_pillar.sp_number }}</span>
+                        <span class="cur">{{ sub_pillar.code }}</span>
                     </div>
-                    <h1 class="lp-title">SP{{ sub_pillar.sp_number }}: {{ sub_pillar.name }}</h1>
+                    <h1 class="lp-title">
+                        {{ sub_pillar.code }}: {{ sub_pillar.name }}
+                        {% if is_kb_active %}<span class="lp-kb-badge">KB · Score Only</span>{% elif is_csl %}<span class="lp-kb-badge" style="background:#eef2ff;color:#6366f1;border-color:#6366f130;">CSL+ · Score Only</span>{% endif %}
+                    </h1>
                     <p class="lp-subtitle">
                         {{ sub_pillar.pillar.name }} &nbsp;·&nbsp;
                         {{ competencies.count }} competenc{{ competencies.count|pluralize:"y,ies" }}
+                        {% if is_kb_active %} &nbsp;·&nbsp; <em style="color:#dc2626;font-size:0.78rem;">Not included in Skill Passport</em>{% elif is_csl %} &nbsp;·&nbsp; <em style="color:#6366f1;font-size:0.78rem;">CSL+ Framework — No Profiling</em>{% endif %}
                     </p>
                 </div>
             </div>
@@ -675,7 +924,7 @@
 
         <!-- Add Competency inline form -->
         <div class="lp-add-card" id="addCompForm">
-            <p class="lp-add-card-title">Add New Competency — SP{{ sub_pillar.sp_number }}: {{ sub_pillar.name }}</p>
+            <p class="lp-add-card-title">Add New Competency — {{ sub_pillar.code }}: {{ sub_pillar.name }}</p>
             <form method="post">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="add_competency">
@@ -695,7 +944,7 @@
                     </select>
                 </div>
                 <p class="lp-form-hint">
-                    Code auto-generated as &nbsp;<strong>SP{{ sub_pillar.sp_number }}.C{{ competencies.count|add:1 }}</strong>
+                    Code auto-generated as &nbsp;<strong>{{ sub_pillar.code }}.C{{ competencies.count|add:1 }}</strong>
                 </p>
                 <div class="lp-form-actions">
                     <button type="submit" class="lp-btn-save">Save</button>
@@ -784,7 +1033,7 @@
                 </tbody>
             </table>
             <div class="lp-table-foot">
-                Showing {{ competencies.count }} competenc{{ competencies.count|pluralize:"y,ies" }} for SP{{ sub_pillar.sp_number }}
+                Showing {{ competencies.count }} competenc{{ competencies.count|pluralize:"y,ies" }} for {{ sub_pillar.code }}
             </div>
 
             {% else %}
@@ -793,7 +1042,7 @@
                     <span class="material-symbols-outlined">category</span>
                 </div>
                 <h4>No competencies yet</h4>
-                <p>Click <strong>Add Competency</strong> to add the first one for SP{{ sub_pillar.sp_number }}.</p>
+                <p>Click <strong>Add Competency</strong> to add the first one for {{ sub_pillar.code }}.</p>
             </div>
             {% endif %}
         </div>
@@ -831,6 +1080,155 @@
             <div class="lp-modal-actions">
                 <button type="button" class="lp-btn-cancel" onclick="closeEditModal()">Cancel</button>
                 <button type="submit" class="lp-btn-save">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ══ Framework Management Modal ══ -->
+<div class="lp-overlay" id="fwManageModal">
+    <div class="lp-modal" style="max-width:480px;">
+        <p class="lp-modal-title">Manage Frameworks</p>
+
+        <!-- Existing Frameworks -->
+        <div class="lp-fw-list">
+            {% for fw in all_frameworks %}
+            <div class="lp-fw-item">
+                <div class="lp-fw-item-icon" style="{% if not fw.is_fixed %}background:#6366f1;{% endif %}">{{ fw.name|truncatechars:3 }}</div>
+                <div class="lp-fw-item-info">
+                    <div class="lp-fw-item-name">
+                        {{ fw.name }}
+                        <span class="lp-fw-item-badge" style="{% if fw.is_fixed %}background:#f0fdf4;color:#15803d;{% else %}background:#eef2ff;color:#6366f1;{% endif %}">
+                            {% if fw.is_fixed %}Fixed{% else %}Editable{% endif %}
+                        </span>
+                    </div>
+                    <div class="lp-fw-item-meta">Prefix: {{ fw.prefix }} · {{ fw.pillars.count }} pillars</div>
+                </div>
+                {% if not fw.is_fixed %}
+                <div class="lp-fw-item-actions">
+                    <button type="button" class="lp-fw-item-act" onclick="openFwEdit({{ fw.id }},'{{ fw.name|escapejs }}','{{ fw.prefix|escapejs }}')">Edit</button>
+                    <button type="button" class="lp-fw-item-act" style="color:#6366f1;" onclick="openFwImport({{ fw.id }},'{{ fw.name|escapejs }}')">Import</button>
+                    <form method="post" style="display:contents;" onsubmit="return confirm('Delete &quot;{{ fw.name|escapejs }}&quot;? All pillars and competencies will be deleted.');">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="delete_framework">
+                        <input type="hidden" name="fw_id" value="{{ fw.id }}">
+                        <button type="submit" class="lp-fw-item-act del">Delete</button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Create New Framework -->
+        <div style="border-top:1px solid #f3f4f6;padding-top:14px;">
+            <p style="font-weight:600;font-size:0.85rem;margin:0 0 10px;">Create New Framework</p>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="create_framework">
+                <div style="display:flex;gap:8px;margin-bottom:6px;">
+                    <input type="text" name="name" placeholder="Name (e.g. ABC)" required class="lp-csl-input" style="flex:1;">
+                    <input type="text" name="prefix" placeholder="Prefix (e.g. ABC-SP)" required class="lp-csl-input" style="flex:1;">
+                </div>
+                <p style="font-size:0.7rem;color:#9ca3af;margin:0 0 8px;">Prefix is used in codes like ABC-SP1.C1</p>
+                <button type="submit" class="lp-csl-btn lp-csl-btn-primary" style="width:100%;">Create Framework</button>
+            </form>
+        </div>
+
+        <div style="margin-top:14px;text-align:right;">
+            <button type="button" class="lp-csl-btn lp-csl-btn-secondary" onclick="closeModal('fwManageModal')">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- ══ Edit Framework Modal ══ -->
+<div class="lp-overlay" id="fwEditModal">
+    <div class="lp-modal" style="max-width:400px;">
+        <p class="lp-modal-title">Edit Framework</p>
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="edit_framework">
+            <input type="hidden" name="fw_id" id="fwEditId">
+            <input type="text" name="name" id="fwEditName" placeholder="Name" required class="lp-csl-input" style="margin-bottom:8px;">
+            <input type="text" name="prefix" id="fwEditPrefix" placeholder="Prefix" required class="lp-csl-input" style="margin-bottom:8px;">
+            <div class="lp-modal-actions">
+                <button type="button" class="lp-btn-cancel" onclick="closeModal('fwEditModal')">Cancel</button>
+                <button type="submit" class="lp-btn-save">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ══ Import Pillars Modal ══ -->
+<div class="lp-overlay" id="fwImportModal">
+    <div class="lp-modal" style="max-width:400px;">
+        <p class="lp-modal-title">Import Pillars into <strong id="fwImportName"></strong></p>
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="import_pillars">
+            <input type="hidden" name="fw_id" id="fwImportId">
+            <p style="font-size:0.82rem;color:#6b7280;margin:0 0 10px;">Copy all pillars and sub-pillars from another framework:</p>
+            <select name="source_fw_id" required class="lp-csl-input" style="margin-bottom:10px;">
+                <option value="">Select source framework</option>
+                {% for fw in all_frameworks %}
+                <option value="{{ fw.id }}">{{ fw.name }} ({{ fw.pillars.count }} pillars)</option>
+                {% endfor %}
+            </select>
+            <div class="lp-modal-actions">
+                <button type="button" class="lp-btn-cancel" onclick="closeModal('fwImportModal')">Cancel</button>
+                <button type="submit" class="lp-btn-save">Import</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ══ CSL+ Edit Pillar Modal ══ -->
+<div class="lp-overlay" id="editPillarModal">
+    <div class="lp-modal">
+        <p class="lp-modal-title">Edit Pillar</p>
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="rename_pillar">
+            <input type="hidden" name="pillar_id" id="lpEditPillarId">
+            <div class="lp-modal-grid">
+                <div class="full">
+                    <input type="text" name="pillar_name" id="lpEditPillarName" placeholder="Pillar Name *" required />
+                </div>
+                <div class="full" style="display:flex;flex-wrap:wrap;gap:4px;">
+                    <label class="lp-color-label" data-color="teal" onclick="pickLpColor(this)"><input type="radio" name="pillar_color" value="teal" style="display:none;"><span class="lp-color-dot" style="background:#0d9488;"></span>Teal</label>
+                    <label class="lp-color-label" data-color="purple" onclick="pickLpColor(this)"><input type="radio" name="pillar_color" value="purple" style="display:none;"><span class="lp-color-dot" style="background:#7c3aed;"></span>Purple</label>
+                    <label class="lp-color-label" data-color="blue" onclick="pickLpColor(this)"><input type="radio" name="pillar_color" value="blue" style="display:none;"><span class="lp-color-dot" style="background:#2563eb;"></span>Blue</label>
+                    <label class="lp-color-label" data-color="orange" onclick="pickLpColor(this)"><input type="radio" name="pillar_color" value="orange" style="display:none;"><span class="lp-color-dot" style="background:#ea580c;"></span>Orange</label>
+                    <label class="lp-color-label" data-color="green" onclick="pickLpColor(this)"><input type="radio" name="pillar_color" value="green" style="display:none;"><span class="lp-color-dot" style="background:#16a34a;"></span>Green</label>
+                    <label class="lp-color-label" data-color="pink" onclick="pickLpColor(this)"><input type="radio" name="pillar_color" value="pink" style="display:none;"><span class="lp-color-dot" style="background:#ec4899;"></span>Pink</label>
+                    <label class="lp-color-label" data-color="indigo" onclick="pickLpColor(this)"><input type="radio" name="pillar_color" value="indigo" style="display:none;"><span class="lp-color-dot" style="background:#6366f1;"></span>Indigo</label>
+                    <label class="lp-color-label" data-color="amber" onclick="pickLpColor(this)"><input type="radio" name="pillar_color" value="amber" style="display:none;"><span class="lp-color-dot" style="background:#f59e0b;"></span>Amber</label>
+                </div>
+            </div>
+            <div class="lp-modal-actions">
+                <button type="button" class="lp-btn-cancel" onclick="document.getElementById('editPillarModal').classList.remove('show')">Cancel</button>
+                <button type="submit" class="lp-btn-save">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ══ KB Sub-Pillar Rename Modal ══ -->
+<div class="lp-overlay" id="kbSpEditModal">
+    <div class="lp-modal">
+        <p class="lp-modal-title">Rename Sub-Pillar</p>
+        <form method="post" id="kbSpEditForm">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="edit_subpillar">
+            <input type="hidden" name="sp_id" id="kbSpEditId">
+            <div class="lp-modal-grid">
+                <div class="full">
+                    <input type="text" name="sp_name" id="kbSpEditName" placeholder="Sub-pillar name *" required />
+                </div>
+            </div>
+            <div class="lp-modal-actions">
+                <button type="button" class="lp-btn-cancel" onclick="document.getElementById('kbSpEditModal').classList.remove('show')">Cancel</button>
+                <button type="submit" class="lp-btn-save">Save</button>
             </div>
         </form>
     </div>
@@ -894,6 +1292,73 @@ function closeEditModal() {
 }
 document.getElementById('editModal').addEventListener('click', e => {
     if (e.target === document.getElementById('editModal')) closeEditModal();
+});
+
+/* ── Toggle helper ── */
+function toggleEl(id) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+/* ── Color picker ── */
+function pickLpColor(label) {
+    const form = label.closest('form') || label.closest('.lp-fw-toggle') || label.parentElement;
+    form.querySelectorAll('.lp-color-label').forEach(l => l.classList.remove('selected'));
+    label.classList.add('selected');
+    label.querySelector('input').checked = true;
+}
+
+/* ── CSL+ Edit Pillar modal ── */
+function openLpEditPillar(id, name, color) {
+    document.getElementById('lpEditPillarId').value = id;
+    document.getElementById('lpEditPillarName').value = name;
+    const modal = document.getElementById('editPillarModal');
+    modal.querySelectorAll('.lp-color-label').forEach(l => {
+        l.classList.remove('selected');
+        if (l.dataset.color === color) {
+            l.classList.add('selected');
+            l.querySelector('input').checked = true;
+        }
+    });
+    modal.classList.add('show');
+}
+document.getElementById('editPillarModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('editPillarModal'))
+        document.getElementById('editPillarModal').classList.remove('show');
+});
+
+/* ── Framework manage modals ── */
+function openFwEdit(id, name, prefix) {
+    document.getElementById('fwEditId').value = id;
+    document.getElementById('fwEditName').value = name;
+    document.getElementById('fwEditPrefix').value = prefix;
+    closeModal('fwManageModal');
+    openModal('fwEditModal');
+}
+function openFwImport(id, name) {
+    document.getElementById('fwImportId').value = id;
+    document.getElementById('fwImportName').textContent = name;
+    closeModal('fwManageModal');
+    openModal('fwImportModal');
+}
+
+['fwManageModal','fwEditModal','fwImportModal'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('click', function(e) { if (e.target === el) closeModal(id); });
+});
+
+function openModal(id) { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+/* ── KB Sub-Pillar rename modal ── */
+function openKbSpEdit(id, name) {
+    document.getElementById('kbSpEditId').value = id;
+    document.getElementById('kbSpEditName').value = name;
+    document.getElementById('kbSpEditModal').classList.add('show');
+}
+document.getElementById('kbSpEditModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('kbSpEditModal'))
+        document.getElementById('kbSpEditModal').classList.remove('show');
 });
 </script>
 {% endblock %}

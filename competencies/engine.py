@@ -21,7 +21,7 @@ TOP_COMPETENCIES_COUNT      = 5
 # STEP 1: Collect final competency scores
 # ─────────────────────────────────────────────
 
-def get_competency_scores_for_project(student, project):
+def get_competency_scores_for_project(student, project, include_kb=False):
     """
     Returns a dict: { competency_id: final_score }
 
@@ -31,15 +31,51 @@ def get_competency_scores_for_project(student, project):
       - Merge: if same competency in both → average; else use whichever has it
     If no Plug-In:
       - Just average scores per competency across all assessments in project
+
+    By default, KB (Kaushal Bodh) competencies are EXCLUDED from the result.
+    Pass include_kb=True to get KB scores (for KB-only reports).
     """
     project_scores  = _scores_for_single_project(student, project)
     plugin          = project.plugins.filter(status='Active').first()
 
     if plugin:
         plugin_scores = _scores_for_single_project(student, plugin)
-        return _merge_scores(project_scores, plugin_scores)
+        merged = _merge_scores(project_scores, plugin_scores)
+    else:
+        merged = project_scores
 
-    return project_scores
+    if not include_kb:
+        merged = _exclude_kb_scores(merged)
+
+    return merged
+
+
+def _exclude_kb_scores(scores):
+    """Remove KB (Kaushal Bodh) competency scores from the dict."""
+    if not scores:
+        return scores
+    from .models import Competency
+    kb_comp_ids = set(
+        Competency.objects.filter(sub_pillar__pillar__is_kb=True)
+        .values_list('id', flat=True)
+    )
+    return {cid: s for cid, s in scores.items() if cid not in kb_comp_ids}
+
+
+def get_kb_scores_for_project(student, project):
+    """Get ONLY KB competency scores for a project (for KB report)."""
+    all_scores = _scores_for_single_project(student, project)
+    plugin = project.plugins.filter(status='Active').first()
+    if plugin:
+        plugin_scores = _scores_for_single_project(student, plugin)
+        all_scores = _merge_scores(all_scores, plugin_scores)
+
+    from .models import Competency
+    kb_comp_ids = set(
+        Competency.objects.filter(sub_pillar__pillar__is_kb=True)
+        .values_list('id', flat=True)
+    )
+    return {cid: s for cid, s in all_scores.items() if cid in kb_comp_ids}
 
 
 def _scores_for_single_project(student, project):
@@ -262,7 +298,7 @@ def get_annual_passport_scores(student):
 
     annual_scores = {}
     for project in projects:
-        scores = get_competency_scores_for_project(student, project)
+        scores = get_competency_scores_for_project(student, project)  # KB already excluded by default
         for comp_id, score in scores.items():
             if comp_id not in annual_scores:
                 # First time we see this competency = latest project (desc order)

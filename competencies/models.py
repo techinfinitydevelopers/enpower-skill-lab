@@ -2,6 +2,21 @@ from django.conf import settings
 from django.db import models
 
 
+class Framework(models.Model):
+    """Skill framework — each school follows one framework."""
+    name      = models.CharField(max_length=100, unique=True)  # e.g. "FSL", "CSL+"
+    prefix    = models.CharField(max_length=20, unique=True)   # e.g. "SP", "CSL-SP", "ABC-SP"
+    is_fixed  = models.BooleanField(default=False, help_text='Fixed frameworks have read-only pillars (e.g. FSL)')
+    order     = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['order']
+
+    def __str__(self):
+        return self.name
+
+
 STAGE_CHOICES = [
     ('Foundational', 'Foundational — Class 1–2'),
     ('Preparatory',  'Preparatory — Class 3–5'),
@@ -20,15 +35,25 @@ PILLAR_COLOR_CHOICES = [
     ('blue',   'Blue'),
     ('orange', 'Orange'),
     ('green',  'Green'),
+    ('red',    'Red'),
+    ('pink',   'Pink'),
+    ('indigo', 'Indigo'),
+    ('amber',  'Amber'),
 ]
 
 
 class Pillar(models.Model):
-    """5 main learning pillars of the neoRiSE framework."""
-    name   = models.CharField(max_length=100)
-    number = models.CharField(max_length=2)   # '01', '02' ...
-    color  = models.CharField(max_length=20, choices=PILLAR_COLOR_CHOICES)
-    order  = models.PositiveSmallIntegerField(default=0)
+    """Learning pillars — each belongs to a Framework."""
+    name      = models.CharField(max_length=100)
+    number    = models.CharField(max_length=10)
+    color     = models.CharField(max_length=20, choices=PILLAR_COLOR_CHOICES)
+    order     = models.PositiveSmallIntegerField(default=0)
+    framework_ref = models.ForeignKey(Framework, on_delete=models.SET_NULL, related_name='pillars', null=True, blank=True)
+    framework = models.CharField(max_length=10, default='FSL', blank=True)  # Legacy CharField — views use framework_ref
+    is_kb     = models.BooleanField(
+        default=False,
+        help_text='Kaushal Bodh pillar — scores only, excluded from passport/profiling calculations'
+    )
 
     class Meta:
         ordering = ['order']
@@ -47,10 +72,23 @@ class SubPillar(models.Model):
         ordering = ['sp_number']
 
     def __str__(self):
-        return f"SP{self.sp_number}: {self.name}"
+        return f"{self.code}: {self.name}"
 
     @property
     def code(self):
+        if self.pillar.is_kb:
+            kb_sps = list(SubPillar.objects.filter(pillar=self.pillar).order_by('sp_number').values_list('id', flat=True))
+            idx = kb_sps.index(self.id) + 1 if self.id in kb_sps else self.sp_number
+            return f"KB{idx}"
+        fw = self.pillar.framework_ref
+        if fw and not fw.is_fixed:
+            fw_sps = list(SubPillar.objects.filter(pillar__framework_ref=fw).order_by('sp_number').values_list('id', flat=True))
+            idx = fw_sps.index(self.id) + 1 if self.id in fw_sps else self.sp_number
+            prefix = fw.prefix
+            # Ensure prefix ends with separator before number
+            if not prefix.endswith('-') and not prefix.endswith('SP'):
+                prefix = f"{prefix}-SP"
+            return f"{prefix}{idx}"
         return f"SP{self.sp_number}"
 
 
@@ -108,6 +146,8 @@ class Project(models.Model):
     title           = models.CharField(max_length=200)
     project_type    = models.CharField(max_length=20, choices=PROJECT_TYPE_CHOICES, default='Capstone')
     grade           = models.CharField(max_length=20, choices=STAGE_CHOICES)
+    framework_ref   = models.ForeignKey(Framework, on_delete=models.SET_NULL, null=True, blank=True, related_name='projects')
+    framework       = models.CharField(max_length=10, default='FSL', blank=True)  # Legacy
     status          = models.CharField(max_length=10, choices=STATUS_CHOICES, default='Draft')
     sequence_number = models.PositiveSmallIntegerField(
         null=True, blank=True,
@@ -218,3 +258,103 @@ class ProjectReport(models.Model):
 
     def __str__(self):
         return f"{self.student} — {self.project} — Report"
+
+
+# ==================== ESL PRODUCT (Program) ====================
+
+class ESLProduct(models.Model):
+    """ESL Product / Program — e.g. Future Skills Lab, CSL Plus, CSL Foundation."""
+    name = models.CharField(max_length=200, verbose_name="Program Title")
+    description = models.TextField(blank=True, verbose_name="Description of the Program")
+    competencies_description = models.TextField(blank=True, verbose_name="Competencies", help_text="Competencies applicable at program level")
+    applicable_grades = models.JSONField(default=list, blank=True, verbose_name="Grades Applicable", help_text='e.g. [1,2,6,7,8]')
+    applicable_boards = models.JSONField(default=list, blank=True, verbose_name="Boards Applicable", help_text='e.g. ["CBSE","ICSE"]')
+    program_document = models.FileField(upload_to='esl_products/', null=True, blank=True, verbose_name="Program Document (SKU/Concept Note/Brochure)")
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='Draft')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "ESL Product"
+        verbose_name_plural = "ESL Products"
+
+    def __str__(self):
+        return self.name
+
+
+class ProductProject(models.Model):
+    """Project under an ESL Product — multiple projects per grade."""
+    esl_product = models.ForeignKey(ESLProduct, on_delete=models.CASCADE, related_name='projects')
+    project_number = models.PositiveSmallIntegerField(default=1)
+    name = models.CharField(max_length=200, verbose_name="Project Name")
+    description = models.TextField(blank=True, verbose_name="Project Description")
+    grade = models.CharField(max_length=5, blank=True, verbose_name="Grade")
+    order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ['esl_product', 'grade', 'project_number']
+
+    def __str__(self):
+        return f"{self.esl_product.name} — Project {self.project_number}: {self.name}"
+
+
+class ProjectSession(models.Model):
+    """Session under a ProductProject."""
+    product_project = models.ForeignKey(ProductProject, on_delete=models.CASCADE, related_name='sessions')
+    session_number = models.PositiveSmallIntegerField(default=1)
+    title = models.CharField(max_length=200, verbose_name="Session Title")
+    description = models.CharField(max_length=200, blank=True, verbose_name="Brief Session Descriptor")
+
+    class Meta:
+        ordering = ['product_project', 'session_number']
+
+    def __str__(self):
+        return f"Session {self.session_number}: {self.title}"
+
+
+# ==================== ANNOUNCEMENTS ====================
+
+class Announcement(models.Model):
+    ANNOUNCEMENT_TYPE_CHOICES = [
+        ('event', 'Event'),
+        ('newsletter', 'Newsletter'),
+        ('success_story', 'Student Success Story'),
+    ]
+    announcement_type = models.CharField(max_length=20, choices=ANNOUNCEMENT_TYPE_CHOICES)
+
+    # Common
+    is_published = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    # Event fields
+    esl_product = models.ForeignKey('ESLProduct', on_delete=models.SET_NULL, null=True, blank=True, related_name='announcements')
+    applicable_schools = models.ManyToManyField('schools.School', blank=True, related_name='announcements')
+    applicable_grades = models.JSONField(default=list, blank=True)
+    event_name = models.CharField(max_length=200, blank=True)
+    event_date = models.DateField(null=True, blank=True)
+    event_description = models.TextField(blank=True)
+    event_link = models.URLField(blank=True)
+    publish_to = models.JSONField(default=list, blank=True, help_text='e.g. ["school","student","parent"]')
+
+    # Newsletter fields
+    newsletter_date = models.DateField(null=True, blank=True)
+    newsletter_month = models.CharField(max_length=20, blank=True)
+    newsletter_file = models.FileField(upload_to='newsletters/', null=True, blank=True)
+    newsletter_weblink = models.URLField(blank=True)
+
+    # Success Story fields
+    story_student_name = models.CharField(max_length=100, blank=True)
+    story_grade = models.CharField(max_length=10, blank=True)
+    story_school = models.ForeignKey('schools.School', on_delete=models.SET_NULL, null=True, blank=True, related_name='success_stories')
+    story_text = models.CharField(max_length=500, blank=True)
+    story_photo_1 = models.ImageField(upload_to='success_stories/', null=True, blank=True)
+    story_photo_2 = models.ImageField(upload_to='success_stories/', null=True, blank=True)
+    story_youtube_link = models.URLField(blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.get_announcement_type_display()} — {self.event_name or self.story_student_name or 'Newsletter'}"

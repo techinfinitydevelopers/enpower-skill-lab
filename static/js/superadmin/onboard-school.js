@@ -108,24 +108,32 @@ const validators = {
             return '';
         }
     },
-    // Step 6: Administrative Information
-    billingEmail: {
+    // Step 5: Skill Program Information
+    skillProgram: {
         validate: (value) => {
-            if (!value.trim()) return 'Billing email is required';
-            const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-            if (!emailRegex.test(value)) return 'Please enter a valid email address';
+            if (!value) return 'Skill program selection is required';
             return '';
         }
     },
-    gstNumber: {
+    programAcademicYear: {
         validate: (value) => {
-            if (!value || value.trim() === '') return '';
-            if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(value.toUpperCase())) {
-                return 'Please enter a valid GST number';
-            }
+            if (!value) return 'Program academic year is required';
             return '';
         }
     },
+    srmId: {
+        validate: (value) => {
+            if (!value) return 'Please assign a School Relationship Manager';
+            return '';
+        }
+    },
+    trainerId: {
+        validate: (value) => {
+            if (!value) return 'Please assign a Trainer (Thinking Coach)';
+            return '';
+        }
+    },
+    // Step 6: Fees & Commercial (no required validators — all optional)
     // Step 8: Emergency Information
     emergencyContactPerson: {
         validate: (value) => {
@@ -265,27 +273,29 @@ function autoFillForm() {
     document.getElementById('skillSubjects').value = 'Computer Science, AI/ML, Robotics, Digital Marketing';
     document.getElementById('remedialPrograms').value = 'After-school tutoring, Weekend classes, Online support';
     
-    // Step 5: Skill Lab
-    document.getElementById('skillLabRegId').value = 'SL-' + Math.floor(10000 + Math.random() * 90000);
-    document.getElementById('labUsageHours').value = Math.floor(10 + Math.random() * 30);
-    document.getElementById('skillsOffered').value = 'Coding, Robotics, AI, 3D Printing, Electronics';
-    document.getElementById('batchTimings').value = '9AM-11AM, 2PM-4PM';
-    document.getElementById('cslIntegrationStatus').value = ['integrated', 'pending', 'not-applicable'][Math.floor(Math.random() * 3)];
-    document.getElementById('trainersAssigned').value = generateRandomName() + ', ' + generateRandomName();
-    document.getElementById('studentGroupsLinked').value = 'Grade 9-10, Grade 11-12';
-    document.getElementById('cslProjectList').value = 'Smart City, Green Energy, Water Conservation';
-    document.getElementById('assessmentSystemLinked').value = ['yes', 'no'][Math.floor(Math.random() * 2)];
+    // Step 5: Skill Program Information
+    document.getElementById('skillProgram').value = ['fsl', 'csl_plus_pc', 'csl_plus_tc', 'csl_foundation_pc', 'csl_foundation'][Math.floor(Math.random() * 5)];
+    document.getElementById('programAcademicYear').value = ['2025-26', '2026-27'][Math.floor(Math.random() * 2)];
+    // SRM and Trainer — select first option if available
+    const srmSelect = document.getElementById('srmId');
+    if (srmSelect && srmSelect.options.length > 1) srmSelect.selectedIndex = 1;
+    const trainerSelect = document.getElementById('trainerId');
+    if (trainerSelect && trainerSelect.options.length > 1) trainerSelect.selectedIndex = 1;
+    // Grade-wise students
+    for (let g = 1; g <= 12; g++) {
+        const el = document.getElementById('grade_' + g + '_students');
+        if (el) el.value = Math.floor(30 + Math.random() * 60);
+    }
     
-    // Step 6: Administrative
-    document.getElementById('billingEmail').value = 'billing@' + generateRandomEmail(schoolName).split('@')[1];
-    document.getElementById('gstNumber').value = '22AAAAA' + Math.floor(1000 + Math.random() * 9000) + 'A1Z5';
-    document.getElementById('paymentPreferences').value = ['bank-transfer', 'cheque', 'online', 'upi'][Math.floor(Math.random() * 4)];
-    document.getElementById('financeContact').value = generateRandomName();
-    document.getElementById('adminCoordinatorName').value = generateRandomName();
-    document.getElementById('adminCoordinatorPhone').value = generateRandomPhone();
-    document.getElementById('academicYearCycle').value = 'April - March';
-    document.getElementById('workshopApprovalStatus').value = ['approved', 'pending', 'not-required'][Math.floor(Math.random() * 3)];
-    document.getElementById('digitalReportsConsent').value = ['yes', 'no'][Math.floor(Math.random() * 2)];
+    // Step 6: Fees & Commercial
+    document.getElementById('labFeesWithGst').value = Math.floor(30000 + Math.random() * 70000);
+    document.getElementById('programFeesWithGst').value = Math.floor(50000 + Math.random() * 100000);
+    document.getElementById('paymentTerms').value = ['quarterly', 'half_yearly', 'annual'][Math.floor(Math.random() * 3)];
+    document.getElementById('tceSalesSpocName').value = generateRandomName();
+    document.getElementById('tceSalesSpocContact').value = generateRandomPhone();
+    // Auto-fill school email from Step 1
+    const sec6Email = document.getElementById('schoolEmailSec6');
+    if (sec6Email) sec6Email.value = document.getElementById('schoolEmail').value;
     
     // Step 7: Compliance (file uploads can't be auto-filled)
     document.getElementById('labSafetyCompliance').value = ['compliant', 'non-compliant', 'pending'][Math.floor(Math.random() * 3)];
@@ -297,12 +307,14 @@ function autoFillForm() {
     document.getElementById('nearestHospital').value = city + ' General Hospital';
     document.getElementById('evacuationPlan').value = ['documented', 'in-progress', 'not-available'][Math.floor(Math.random() * 3)];
     
-    // Step 9: Additional
-    document.getElementById('awards').value = 'Best School Award 2023, Excellence in Education 2022';
+    // Step 9: Additional Information
+    document.getElementById('exceptionsForSchool').value = 'No lab sessions on Saturdays. Extra coaching hours for Grade 10.';
     document.getElementById('notableAlumni').value = 'Dr. ' + generateRandomName() + ', Prof. ' + generateRandomName();
-    document.getElementById('performanceTrends').value = Math.floor(85 + Math.random() * 15) + '% pass rate';
-    document.getElementById('socialMediaLinks').value = 'facebook.com/school, instagram.com/school';
-    document.getElementById('eventsCalendar').value = 'Annual Day - March, Sports Day - December, Science Fair - October';
+    // Add dummy events
+    addEventRow('2026-08-15', 'Independence Day Celebration');
+    addEventRow('2026-12-20', 'Annual Sports Day');
+    addEventRow('2026-10-10', 'Science Fair');
+    syncEventsToHidden();
     
     alert('✅ Form auto-filled with random dummy data!');
 }
@@ -377,6 +389,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             // If validation passes, allow normal form submission to Django
             saveCurrentStepData();
+            syncEventsToHidden();
             console.log('Form is valid, submitting to Django...');
             // Form will submit normally to the action URL
         });
@@ -405,7 +418,56 @@ document.addEventListener('DOMContentLoaded', function() {
             e.target.value = value;
         });
     }
+
+    // Add Event button handler
+    const addEventBtn = document.getElementById('addEventBtn');
+    if (addEventBtn) {
+        addEventBtn.addEventListener('click', function() {
+            addEventRow('', '');
+        });
+    }
 });
+
+// ---- Events & Workshop Calendar helpers ----
+function addEventRow(dateVal, eventVal) {
+    const container = document.getElementById('eventsContainer');
+    if (!container) return;
+
+    const row = document.createElement('div');
+    row.className = 'event-row';
+    row.style.cssText = 'display: flex; align-items: center; gap: 10px; margin-bottom: 8px;';
+    row.innerHTML = `
+        <input type="date" class="event-date" value="${dateVal}" style="padding: 8px 12px; border: 1px solid #d1d1d6; border-radius: 8px; font-size: 13px; min-width: 160px;">
+        <input type="text" class="event-name" value="${eventVal}" placeholder="Event / Workshop name" style="flex: 1; padding: 8px 12px; border: 1px solid #d1d1d6; border-radius: 8px; font-size: 13px;">
+        <button type="button" onclick="removeEventRow(this)" style="padding: 6px 10px; background: #ff3b30; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; line-height: 1;">×</button>
+    `;
+    container.appendChild(row);
+
+    // Sync on change
+    row.querySelectorAll('input').forEach(inp => {
+        inp.addEventListener('change', syncEventsToHidden);
+        inp.addEventListener('input', syncEventsToHidden);
+    });
+}
+
+function removeEventRow(btn) {
+    btn.closest('.event-row').remove();
+    syncEventsToHidden();
+}
+
+function syncEventsToHidden() {
+    const rows = document.querySelectorAll('#eventsContainer .event-row');
+    const events = [];
+    rows.forEach(row => {
+        const date = row.querySelector('.event-date').value;
+        const name = row.querySelector('.event-name').value.trim();
+        if (date || name) {
+            events.push({ date: date, event: name });
+        }
+    });
+    const hidden = document.getElementById('eventsWorkshopCalendar');
+    if (hidden) hidden.value = JSON.stringify(events);
+}
 
 function updateStepDisplay() {
     // Hide all steps
@@ -420,6 +482,13 @@ function updateStepDisplay() {
     const currentStepElement = document.getElementById(`step${currentStep}`);
     if (currentStepElement) {
         currentStepElement.style.display = 'block';
+    }
+
+    // Auto-sync school email from Step 1 to Step 6
+    if (currentStep === 6) {
+        const emailSrc = document.getElementById('schoolEmail');
+        const emailDst = document.getElementById('schoolEmailSec6');
+        if (emailSrc && emailDst) emailDst.value = emailSrc.value;
     }
 
     // Update stepper UI

@@ -23,6 +23,15 @@ class School(models.Model):
     )
     
     # ==================== A. SCHOOL BASIC INFORMATION ====================
+    framework_ref = models.ForeignKey(
+        'competencies.Framework',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='schools',
+        verbose_name="Skill Framework",
+        help_text="Select which skill framework this school follows"
+    )
+    framework_type = models.CharField(max_length=10, default='FSL', blank=True)  # Legacy
     school_name = models.CharField(
         max_length=200,
         verbose_name="School Name",
@@ -327,7 +336,57 @@ class School(models.Model):
         verbose_name="Remedial Programs Available"
     )
     
-    # ==================== E. SKILL LAB INTEGRATION ====================
+    # ==================== E. SKILL PROGRAM INFORMATION ====================
+    SKILL_PROGRAM_CHOICES = [
+        ('fsl', 'Future Skills Lab'),
+        ('csl_plus_pc', 'CSL Plus with PC'),
+        ('csl_plus_tc', 'CSL Plus with TC'),
+        ('csl_foundation_pc', 'CSL Foundation with PC'),
+        ('csl_foundation', 'CSL Foundation'),
+    ]
+    skill_program = models.CharField(
+        max_length=20,
+        choices=SKILL_PROGRAM_CHOICES,
+        null=True,
+        blank=True,
+        verbose_name="Skill Program (ESL Product)",
+        help_text="Select the ESL product assigned to this school"
+    )
+    program_academic_year = models.CharField(
+        max_length=20,
+        null=True,
+        blank=True,
+        verbose_name="Program Academic Year",
+        help_text="e.g. 2026-27"
+    )
+    srm = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='srm_schools',
+        limit_choices_to={'role': 'PROGRAM_COORDINATOR'},
+        verbose_name="School Relationship Manager (SRM)",
+        help_text="Assign a Program Coordinator as SRM"
+    )
+    trainer_assigned = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='trainer_schools',
+        limit_choices_to={'role': 'THINKING_COACH'},
+        verbose_name="Trainer Assigned",
+        help_text="Assign a Thinking Coach as trainer"
+    )
+    grade_wise_students = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name="Grade-wise Number of Students",
+        help_text="JSON: {\"1\": 60, \"2\": 55, ...}"
+    )
+
+    # ==================== E-LEGACY. SKILL LAB INTEGRATION (kept for backward compat) ====================
     skill_lab_reg_id = models.CharField(
         max_length=50,
         null=True,
@@ -360,7 +419,7 @@ class School(models.Model):
         blank=True,
         verbose_name="Student Groups Linked"
     )
-    
+
     CSL_INTEGRATION_CHOICES = [
         ('integrated', 'Integrated'),
         ('pending', 'Pending'),
@@ -378,7 +437,7 @@ class School(models.Model):
         blank=True,
         verbose_name="CSL Project List Selected"
     )
-    
+
     assessment_system_linked = models.CharField(
         max_length=10,
         choices=CSL_AVAILABILITY_CHOICES,
@@ -387,8 +446,66 @@ class School(models.Model):
         verbose_name="Assessment & Reporting System Linked"
     )
     
-    # ==================== F. ADMINISTRATIVE INFORMATION ====================
+    # ==================== F. FEES & COMMERCIAL INFORMATION ====================
+    lab_fees_with_gst = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="Lab Fees (with GST)",
+        help_text="Total lab fees including GST"
+    )
+    program_fees_with_gst = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="Program Fees (with GST)",
+        help_text="Total program fees including GST"
+    )
+
+    PAYMENT_TERMS_CHOICES = [
+        ('quarterly', 'Quarterly'),
+        ('half_yearly', 'Half Yearly'),
+        ('annual', 'Annual'),
+    ]
+    payment_terms = models.CharField(
+        max_length=20,
+        choices=PAYMENT_TERMS_CHOICES,
+        null=True,
+        blank=True,
+        verbose_name="Payment Terms"
+    )
+
+    tce_sales_spoc_name = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True,
+        verbose_name="TCE Sales SPOC Name"
+    )
+    tce_sales_spoc_contact = models.CharField(
+        max_length=15,
+        null=True,
+        blank=True,
+        verbose_name="TCE Sales SPOC Contact"
+    )
+    signed_agreement = models.FileField(
+        upload_to='school_agreements/',
+        null=True,
+        blank=True,
+        verbose_name="Signed TCE School Agreement"
+    )
+    go_live_certificate = models.FileField(
+        upload_to='go_live_certs/',
+        null=True,
+        blank=True,
+        verbose_name="Go-Live Certificate"
+    )
+
+    # ==================== F-LEGACY. ADMINISTRATIVE INFORMATION (kept for existing data) ====================
     billing_email = models.EmailField(
+        null=True,
+        blank=True,
         verbose_name="Billing Email"
     )
     gst_number = models.CharField(
@@ -401,7 +518,7 @@ class School(models.Model):
         )],
         verbose_name="GST Number"
     )
-    
+
     PAYMENT_CHOICES = [
         ('bank-transfer', 'Bank Transfer'),
         ('cheque', 'Cheque'),
@@ -415,7 +532,7 @@ class School(models.Model):
         blank=True,
         verbose_name="Payment Preferences"
     )
-    
+
     finance_contact = models.CharField(
         max_length=100,
         null=True,
@@ -442,7 +559,7 @@ class School(models.Model):
         verbose_name="Academic Year Cycle",
         help_text="e.g., April - March"
     )
-    
+
     WORKSHOP_APPROVAL_CHOICES = [
         ('approved', 'Approved'),
         ('pending', 'Pending'),
@@ -455,7 +572,7 @@ class School(models.Model):
         blank=True,
         verbose_name="Approval Status for Workshops & Trainings"
     )
-    
+
     digital_reports_consent = models.CharField(
         max_length=10,
         choices=CSL_AVAILABILITY_CHOICES,
@@ -554,16 +671,30 @@ class School(models.Model):
         verbose_name="Safety Protocols & Evacuation Plan"
     )
     
-    # ==================== I. ADDITIONAL DATA (OPTIONAL) ====================
-    awards = models.TextField(
+    # ==================== I. ADDITIONAL DATA ====================
+    exceptions_for_school = models.TextField(
         null=True,
         blank=True,
-        verbose_name="Awards & Recognitions"
+        verbose_name="Exceptions for this School",
+        help_text="Any special exceptions or notes for this school"
+    )
+    events_workshop_calendar = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name="Events & Workshop Calendar",
+        help_text="List of events: [{\"date\": \"2026-08-15\", \"event\": \"Independence Day\"}, ...]"
     )
     notable_alumni = models.TextField(
         null=True,
         blank=True,
         verbose_name="Notable Alumni"
+    )
+
+    # I-LEGACY (kept for existing data)
+    awards = models.TextField(
+        null=True,
+        blank=True,
+        verbose_name="Awards & Recognitions"
     )
     performance_trends = models.TextField(
         null=True,
@@ -578,7 +709,7 @@ class School(models.Model):
     events_calendar = models.TextField(
         null=True,
         blank=True,
-        verbose_name="Events & Workshops Calendar"
+        verbose_name="Events & Workshops Calendar (Legacy)"
     )
     
     # ==================== SYSTEM FIELDS ====================

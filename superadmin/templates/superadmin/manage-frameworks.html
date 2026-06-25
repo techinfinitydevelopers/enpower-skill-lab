@@ -1,0 +1,230 @@
+{% extends 'superadmin/base.html' %}
+{% load static %}
+
+{% block title %}Manage Frameworks — Super Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+.mf-wrap { max-width: 900px; margin: 0 auto; padding: 28px; font-family: 'Poppins', sans-serif; }
+.mf-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+.mf-title { font-size: 1.4rem; font-weight: 700; color: #1d1d1f; margin: 0; }
+.mf-subtitle { font-size: 0.85rem; color: #9ca3af; margin: 4px 0 0; }
+.mf-btn-create {
+    display: flex; align-items: center; gap: 6px; padding: 10px 20px;
+    background: #5A1F6E; color: #fff; border: none; border-radius: 10px;
+    font-size: 0.85rem; font-weight: 500; cursor: pointer;
+}
+.mf-btn-create:hover { background: #4a1860; }
+
+/* Cards */
+.mf-grid { display: flex; flex-direction: column; gap: 14px; }
+.mf-card {
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 12px;
+    padding: 20px; display: flex; align-items: center; gap: 16px;
+    transition: box-shadow .15s;
+}
+.mf-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.06); }
+
+.mf-icon {
+    width: 48px; height: 48px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem; font-weight: 700; color: #fff; flex-shrink: 0;
+}
+.mf-info { flex: 1; min-width: 0; }
+.mf-name { font-size: 1rem; font-weight: 700; color: #1d1d1f; margin: 0; }
+.mf-meta { font-size: 0.8rem; color: #9ca3af; margin: 2px 0 0; display: flex; gap: 12px; flex-wrap: wrap; }
+.mf-badge {
+    display: inline-block; padding: 2px 10px; border-radius: 20px;
+    font-size: 0.7rem; font-weight: 600;
+}
+.mf-badge-fixed { background: #f0fdf4; color: #15803d; }
+.mf-badge-editable { background: #eef2ff; color: #6366f1; }
+
+.mf-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.mf-act {
+    padding: 6px 14px; border-radius: 8px; font-size: 0.78rem;
+    font-weight: 500; cursor: pointer; border: 1px solid #e5e7eb;
+    background: #fff; color: #374151; transition: all .15s;
+}
+.mf-act:hover { background: #f9fafb; }
+.mf-act-del { color: #dc2626; border-color: #fecaca; }
+.mf-act-del:hover { background: #fef2f2; }
+.mf-act-import { color: #6366f1; border-color: #c7d2fe; }
+.mf-act-import:hover { background: #eef2ff; }
+
+/* Modal */
+.mf-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.4);
+    display: none; align-items: center; justify-content: center; z-index: 9999;
+}
+.mf-overlay.show { display: flex; }
+.mf-modal {
+    background: #fff; border-radius: 14px; padding: 24px;
+    width: 100%; max-width: 440px; box-shadow: 0 20px 60px rgba(0,0,0,.15);
+}
+.mf-modal-title { font-weight: 700; font-size: 1.05rem; margin: 0 0 16px; }
+.mf-input {
+    width: 100%; padding: 10px 14px; border: 1px solid #e5e7eb;
+    border-radius: 8px; font-size: 0.88rem; outline: none; margin-bottom: 10px;
+    font-family: 'Poppins', sans-serif;
+}
+.mf-input:focus { border-color: #5A1F6E; }
+.mf-hint { font-size: 0.75rem; color: #9ca3af; margin: -6px 0 10px; }
+.mf-modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+.mf-modal-btn {
+    padding: 8px 20px; border-radius: 8px; font-size: 0.82rem;
+    font-weight: 500; cursor: pointer; border: none;
+}
+.mf-modal-save { background: #5A1F6E; color: #fff; }
+.mf-modal-save:hover { background: #4a1860; }
+.mf-modal-cancel { background: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; }
+
+/* Empty */
+.mf-empty { text-align: center; padding: 60px 20px; color: #9ca3af; }
+.mf-empty h3 { color: #374151; margin: 12px 0 4px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mf-wrap">
+
+    <div class="mf-header">
+        <div>
+            <h1 class="mf-title">Manage Frameworks</h1>
+            <p class="mf-subtitle">Create and manage skill frameworks for different school programs</p>
+        </div>
+        <button class="mf-btn-create" onclick="openModal('createModal')">
+            <span class="material-symbols-outlined">add</span>
+            New Framework
+        </button>
+    </div>
+
+    <div class="mf-grid">
+        {% for fw in frameworks %}
+        <div class="mf-card">
+            <div class="mf-icon" style="background:{% if fw.is_fixed %}#5A1F6E{% else %}#6366f1{% endif %};">
+                {{ fw.name|truncatechars:3 }}
+            </div>
+            <div class="mf-info">
+                <p class="mf-name">
+                    {{ fw.name }}
+                    <span class="mf-badge {% if fw.is_fixed %}mf-badge-fixed{% else %}mf-badge-editable{% endif %}">
+                        {% if fw.is_fixed %}Fixed{% else %}Editable{% endif %}
+                    </span>
+                </p>
+                <div class="mf-meta">
+                    <span>Prefix: <strong>{{ fw.prefix }}</strong></span>
+                    <span>Pillars: <strong>{{ fw.pillars.count }}</strong></span>
+                    <span>Schools: <strong>{{ fw.schools.count }}</strong></span>
+                </div>
+            </div>
+            <div class="mf-actions">
+                {% if not fw.is_fixed %}
+                <button class="mf-act" onclick="openEditModal({{ fw.id }}, '{{ fw.name|escapejs }}', '{{ fw.prefix|escapejs }}')">Edit</button>
+                <button class="mf-act mf-act-import" onclick="openImportModal({{ fw.id }}, '{{ fw.name|escapejs }}')">Import Pillars</button>
+                <form method="post" style="display:contents;" onsubmit="return confirm('Delete &quot;{{ fw.name|escapejs }}&quot;? All its pillars, sub-pillars, and competencies will be deleted.');">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="delete">
+                    <input type="hidden" name="fw_id" value="{{ fw.id }}">
+                    <button type="submit" class="mf-act mf-act-del">Delete</button>
+                </form>
+                {% else %}
+                <span style="font-size:0.78rem;color:#9ca3af;">Protected</span>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="mf-empty">
+            <span class="material-symbols-outlined" style="font-size:3rem;">widgets</span>
+            <h3>No frameworks</h3>
+            <p>Click "New Framework" to create one.</p>
+        </div>
+        {% endfor %}
+    </div>
+
+</div>
+
+<!-- Create Modal -->
+<div class="mf-overlay" id="createModal">
+    <div class="mf-modal">
+        <p class="mf-modal-title">Create New Framework</p>
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="create">
+            <input type="text" name="name" placeholder="Framework Name (e.g. ABC)" required class="mf-input">
+            <input type="text" name="prefix" placeholder="Code Prefix (e.g. ABC-SP)" required class="mf-input">
+            <p class="mf-hint">Prefix is used in competency codes. E.g. prefix "ABC-SP" gives codes like ABC-SP1.C1, ABC-SP2.C1</p>
+            <div class="mf-modal-actions">
+                <button type="button" class="mf-modal-btn mf-modal-cancel" onclick="closeModal('createModal')">Cancel</button>
+                <button type="submit" class="mf-modal-btn mf-modal-save">Create</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="mf-overlay" id="editModal">
+    <div class="mf-modal">
+        <p class="mf-modal-title">Edit Framework</p>
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="edit">
+            <input type="hidden" name="fw_id" id="editFwId">
+            <input type="text" name="name" id="editFwName" placeholder="Framework Name" required class="mf-input">
+            <input type="text" name="prefix" id="editFwPrefix" placeholder="Code Prefix" required class="mf-input">
+            <div class="mf-modal-actions">
+                <button type="button" class="mf-modal-btn mf-modal-cancel" onclick="closeModal('editModal')">Cancel</button>
+                <button type="submit" class="mf-modal-btn mf-modal-save">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Import Pillars Modal -->
+<div class="mf-overlay" id="importModal">
+    <div class="mf-modal">
+        <p class="mf-modal-title">Import Pillars into <span id="importFwName"></span></p>
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="import_pillars">
+            <input type="hidden" name="fw_id" id="importFwId">
+            <p style="font-size:0.85rem;color:#6b7280;margin:0 0 12px;">Copy all pillars and sub-pillars from another framework:</p>
+            <select name="source_fw_id" required class="mf-input">
+                <option value="">Select source framework</option>
+                {% for fw in frameworks %}
+                <option value="{{ fw.id }}">{{ fw.name }} ({{ fw.pillars.count }} pillars)</option>
+                {% endfor %}
+            </select>
+            <div class="mf-modal-actions">
+                <button type="button" class="mf-modal-btn mf-modal-cancel" onclick="closeModal('importModal')">Cancel</button>
+                <button type="submit" class="mf-modal-btn mf-modal-save">Import</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function openModal(id) { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+document.querySelectorAll('.mf-overlay').forEach(ov => {
+    ov.addEventListener('click', e => { if (e.target === ov) ov.classList.remove('show'); });
+});
+
+function openEditModal(id, name, prefix) {
+    document.getElementById('editFwId').value = id;
+    document.getElementById('editFwName').value = name;
+    document.getElementById('editFwPrefix').value = prefix;
+    openModal('editModal');
+}
+
+function openImportModal(id, name) {
+    document.getElementById('importFwId').value = id;
+    document.getElementById('importFwName').textContent = name;
+    openModal('importModal');
+}
+</script>
+{% endblock %}

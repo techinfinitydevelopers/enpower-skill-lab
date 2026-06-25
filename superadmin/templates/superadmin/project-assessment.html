@@ -222,7 +222,7 @@
                         <span class="cur">{{ active_project.title|truncatechars:30 }}</span>
                     </div>
                     <h1 class="pa-title">{{ active_project.title }}</h1>
-                    <p class="pa-subtitle">{{ active_project.grade }} · {{ active_project.project_type }} · {{ active_project.assessments.count }} assessment{{ active_project.assessments.count|pluralize }}</p>
+                    <p class="pa-subtitle">{{ active_project.get_framework_display }} · {{ active_project.grade }} · {{ active_project.project_type }} · {{ active_project.assessments.count }} assessment{{ active_project.assessments.count|pluralize }}</p>
                 </div>
             </div>
             <form method="post" id="saveProjectForm" style="display:inline;">
@@ -245,6 +245,14 @@
                 <div class="pa-field">
                     <label>Project Title</label>
                     <input type="text" name="title" form="saveProjectForm" value="{{ active_project.title }}" placeholder="Project title" required />
+                </div>
+                <div class="pa-field">
+                    <label>Framework</label>
+                    <select name="framework" form="saveProjectForm" onchange="location.href='?project={{ active_project.id }}'">
+                        {% for fw in all_frameworks %}
+                        <option value="{{ fw.name }}" {% if active_project.framework_ref_id == fw.id %}selected{% endif %}>{{ fw.name }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
                 <div class="pa-field">
                     <label>Grade / Stage</label>
@@ -509,6 +517,14 @@
                 <div class="pa-field">
                     <label>Project Title</label>
                     <input type="text" name="title" placeholder="e.g. Sustainable Urban Development" required />
+                </div>
+                <div class="pa-field">
+                    <label>Framework</label>
+                    <select name="framework" id="modalFramework" onchange="onFrameworkChange()">
+                        {% for fw in all_frameworks %}
+                        <option value="{{ fw.name }}">{{ fw.name }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
                 <div class="two-col">
                     <div class="pa-field">

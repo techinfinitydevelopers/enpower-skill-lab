@@ -34,13 +34,24 @@ def teacher_dashboard(request):
 @login_required
 @user_passes_test(is_teacher)
 def api_projects_by_grade(request):
-    """AJAX: return active projects for a given grade/stage"""
+    """AJAX: return active projects for a given grade/stage, filtered by teacher's school framework"""
     from competencies.models import Project
     grade = request.GET.get('grade', '')
     if not grade:
         return JsonResponse({'projects': []})
+
+    # Get teacher's school framework
+    fw_obj = None
+    if hasattr(request.user, 'teacher_profile') and request.user.teacher_profile:
+        school = request.user.teacher_profile.school
+        if school and school.framework_ref:
+            fw_obj = school.framework_ref
+
+    qs = Project.objects.filter(grade=grade, status='Active')
+    if fw_obj:
+        qs = qs.filter(framework_ref=fw_obj)
     projects = list(
-        Project.objects.filter(grade=grade, status='Active')
+        qs
         .exclude(project_type='Plug In')
         .order_by('title')
         .values('id', 'title', 'project_type')

@@ -59,7 +59,7 @@
         <!-- Sidebar -->
         <aside id="sidebar" class="sidebar">
             <div class="sidebar-header">
-                <img src="{% static 'assets/images/enpower-logo (1).png' %}" alt="Enpower Logo" class="sidebar-logo" />
+                <img src="{% static 'assets/images/enpower-logo (1).png' %}" alt="Enpower Logo" class="sidebar-logo" style="height:150px;width:180px;object-fit:contain;" />
                 <button id="closeSidebar" class="sidebar-close">
                     <span class="material-symbols-outlined">close</span>
                 </button>
@@ -198,6 +198,10 @@
                             <span class="material-symbols-outlined">assignment</span>
                             Project &amp; Assessment
                         </a>
+                        <a href="{% url 'esl_products' %}" id="nav-esl-products">
+                            <span class="material-symbols-outlined">category</span>
+                            ESL Products
+                        </a>
                         <a href="academic-year-locking.html" id="nav-academic-year-locking">
                             <span class="material-symbols-outlined">lock</span>
                             Academic Year Locking
@@ -315,6 +319,12 @@
                         </a>
                     </div>
                 </div>
+
+                <!-- Announcements -->
+                <a href="{% url 'announcements_list' %}" id="nav-announcements" class="sidebar-nav-link">
+                    <span class="material-symbols-outlined">campaign</span>
+                    Announcements
+                </a>
             </nav>
         </aside>
 
@@ -769,6 +779,7 @@
                 '/super-admin/class/': 'nav-class-list',
                 '/super-admin/add-class/': 'nav-add-class',
                 '/super-admin/bulk-upload/': 'nav-bulk-upload',
+                '/super-admin/announcements/': 'nav-announcements',
             };
 
             let matched = false;
