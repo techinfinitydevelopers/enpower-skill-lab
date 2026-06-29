@@ -269,11 +269,15 @@
                     </a>
                     <div class="sidebar-dropdown-menu">
                         <a href="#" id="nav-teacher-list"><span class="material-symbols-outlined">psychology</span>Thinking Coaches</a>
-                        <a href="#" id="nav-add-teacher"><span class="material-symbols-outlined">person_add</span>Onboard Thinking Coaches</a>
                         <a href="{% url 'school_admin_student_list' %}" id="nav-student-list"><span class="material-symbols-outlined">school</span>Student List</a>
-                        <a href="{% url 'school_admin_onboard_student' %}" id="nav-add-student"><span class="material-symbols-outlined">person_add</span>Onboard Student</a>
                         <a href="{% url 'school_admin_parent_list' %}" id="nav-parent-list"><span class="material-symbols-outlined">family_restroom</span>Parent List</a>
+                        {% comment %}
+                        School Admin is VIEW-ONLY (principal, PPT slide 51).
+                        User-onboarding nav links removed. Backend views/URLs kept intact.
+                        <a href="#" id="nav-add-teacher"><span class="material-symbols-outlined">person_add</span>Onboard Thinking Coaches</a>
+                        <a href="{% url 'school_admin_onboard_student' %}" id="nav-add-student"><span class="material-symbols-outlined">person_add</span>Onboard Student</a>
                         <a href="{% url 'school_admin_onboard_parent' %}" id="nav-add-parent"><span class="material-symbols-outlined">person_add</span>Onboard Parent</a>
+                        {% endcomment %}
                     </div>
                 </div>
                 <div class="sidebar-dropdown">

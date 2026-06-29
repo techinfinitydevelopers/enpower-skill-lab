@@ -1053,3 +1053,515 @@ def api_generate_report(request):
         'message': f'Report generated for {student.first_name} {student.last_name}',
         'report_id': report.id,
     })
+
+
+# ============================================================
+# ESL Dashboard — Thinking Coach features (slides 14-17)
+# Additive. Uses models in attendance/models.py. No model changes.
+# ============================================================
+
+def _teacher_school(user):
+    """Return the teacher's assigned school (or None)."""
+    tp = getattr(user, 'teacher_profile', None)
+    return tp.school if tp else None
+
+
+def _active_projects_for_teacher(user):
+    """Active projects filtered by the teacher's school framework (if any)."""
+    from competencies.models import Project
+    qs = Project.objects.filter(status='Active').exclude(project_type='Plug In')
+    school = _teacher_school(user)
+    if school and getattr(school, 'framework_ref', None):
+        qs = qs.filter(framework_ref=school.framework_ref)
+    return qs.order_by('title')
+
+
+def _class_students(school, grade, division):
+    """Active students for a school + numeric grade + division."""
+    qs = Student.objects.filter(
+        student_class=str(grade),
+        division=division,
+        is_active=True,
+    )
+    if school:
+        qs = qs.filter(school=school)
+    return qs.order_by('first_name', 'last_name')
+
+
+# ---------- SLIDE 14: Attendance (classroom + session based) ----------
+
+def _teacher_timetables(user):
+    """Distinct Timetables visible to this coach: own timetables + school's, de-duped."""
+    from attendance.models import Timetable
+    school = _teacher_school(user)
+    q = Timetable.objects.filter(thinking_coach=user)
+    if school:
+        from django.db.models import Q
+        q = Timetable.objects.filter(Q(thinking_coach=user) | Q(school=school))
+    return q.distinct().order_by('grade', 'division', 'program')
+
+
+def _classroom_label(tt):
+    return f"{tt.program or '—'} {tt.grade} – {tt.division}"
+
+
+def _classroom_dict(tt):
+    return {
+        'id': tt.id,
+        'label': _classroom_label(tt),
+        'program': tt.program or '',
+        'grade': tt.grade,
+        'division': tt.division,
+    }
+
+
+def _resolve_teacher_timetable(user, tt_id):
+    """Return a Timetable the coach is allowed to see, or None."""
+    from attendance.models import Timetable
+    if not tt_id:
+        return None
+    try:
+        tt = Timetable.objects.get(id=int(tt_id))
+    except (Timetable.DoesNotExist, ValueError, TypeError):
+        return None
+    school = _teacher_school(user)
+    if tt.thinking_coach_id == user.id:
+        return tt
+    if school and tt.school_id == school.id:
+        return tt
+    return None
+
+
+def _generate_sessions(tt, cap=60):
+    """Build session dicts (one per matching weekday date x slot) within the
+    timetable date range. Returns [] defensively if range/slots are missing."""
+    from datetime import timedelta
+    if not tt or not tt.start_date or not tt.end_date or tt.end_date < tt.start_date:
+        return []
+    day_index = {'mon': 0, 'tue': 1, 'wed': 2, 'thu': 3, 'fri': 4, 'sat': 5, 'sun': 6}
+    day_short = {0: 'MON', 1: 'TUE', 2: 'WED', 3: 'THU', 4: 'FRI', 5: 'SAT', 6: 'SUN'}
+    slots = list(tt.slots.all())
+    if not slots:
+        return []
+    sessions = []
+    cur = tt.start_date
+    while cur <= tt.end_date:
+        wd = cur.weekday()
+        for slot in slots:
+            if day_index.get(slot.day_of_week) != wd:
+                continue
+            st = slot.start_time
+            time_label = st.strftime('%I:%M %p').lstrip('0') if st else ''
+            sessions.append({
+                'date': cur.isoformat(),
+                'day_label': day_short[wd],
+                'date_label': cur.strftime('%b %d, %Y'),
+                'time_label': time_label,
+                'start_time': st.strftime('%H:%M') if st else '',
+                '_sort': (cur.isoformat(), st.strftime('%H:%M') if st else '00:00'),
+            })
+        cur += timedelta(days=1)
+    sessions.sort(key=lambda s: s['_sort'])
+    if len(sessions) > cap:
+        sessions = sessions[:cap]
+    for s in sessions:
+        s.pop('_sort', None)
+    return sessions
+
+
+def _student_dict(s):
+    initial = ((s.first_name or '').strip()[:1] or '?').upper()
+    name = f"{s.first_name or ''} {s.last_name or ''}".strip()
+    return {
+        'id': s.id,
+        'name': name,
+        'roll': s.roll_number or '',
+        'initial': initial,
+    }
+
+
+def _attendance_stats(records_map):
+    total = len(records_map)
+    present = sum(1 for v in records_map.values() if v == 'present')
+    absent = sum(1 for v in records_map.values() if v in ('absent', 'late'))
+    pct = round(present / total * 100) if total else 0
+    return {'total': total, 'present': present, 'absent': absent, 'attendance_pct': pct}
+
+
+@login_required
+@user_passes_test(is_teacher)
+def attendance_mark(request):
+    """Student Attendance page (classroom + session based)."""
+    classrooms = [_classroom_dict(tt) for tt in _teacher_timetables(request.user)]
+    return render(request, 'teacher/attendance-mark.html', {'classrooms': classrooms})
+
+
+@login_required
+@user_passes_test(is_teacher)
+def api_attendance_sessions(request):
+    """AJAX GET: generated class sessions for a classroom (timetable)."""
+    tt = _resolve_teacher_timetable(request.user, request.GET.get('classroom'))
+    if not tt:
+        return JsonResponse({'error': 'Classroom not found'}, status=404)
+    sessions = _generate_sessions(tt)
+    return JsonResponse({
+        'sessions': sessions,
+        'classroom': {
+            'label': _classroom_label(tt),
+            'program': tt.program or '',
+            'grade': tt.grade,
+            'division': tt.division,
+            'count': len(sessions),
+        },
+    })
+
+
+@login_required
+@user_passes_test(is_teacher)
+def api_attendance_students(request):
+    """AJAX GET: students + existing records for a classroom + date.
+
+    Backward compatible: accepts grade=&division=&date= (old callers)."""
+    from attendance.models import AttendanceSession, AttendanceRecord
+
+    tt = _resolve_teacher_timetable(request.user, request.GET.get('classroom'))
+    date = request.GET.get('date', '').strip()
+
+    if tt:
+        school, grade, division = tt.school, tt.grade, tt.division
+    else:
+        grade = request.GET.get('grade', '').strip()
+        division = request.GET.get('division', '').strip()
+        if not (grade and division):
+            return JsonResponse({'error': 'classroom (or grade+division) required'}, status=400)
+        school = _teacher_school(request.user)
+
+    if not date:
+        return JsonResponse({'error': 'date required'}, status=400)
+
+    students = list(_class_students(school, grade, division))
+    student_dicts = [_student_dict(s) for s in students]
+
+    session = AttendanceSession.objects.filter(
+        school=school, grade=str(grade), division=division, date=date
+    ).order_by('session_number', 'id').first()
+
+    records = {}
+    already_marked = False
+    class_status = 'held'
+    if session:
+        class_status = session.class_status or 'held'
+        for r in AttendanceRecord.objects.filter(session=session).values('student_id', 'status'):
+            records[str(r['student_id'])] = r['status']
+        already_marked = len(records) > 0
+
+    # Effective status per student (existing or default present) for live stats.
+    effective = {str(s['id']): records.get(str(s['id']), 'present') for s in student_dicts}
+    stats = _attendance_stats(effective)
+
+    time_label = ''
+    if session and session.start_time:
+        time_label = session.start_time.strftime('%I:%M %p').lstrip('0')
+
+    return JsonResponse({
+        'students': student_dicts,
+        'records': records,
+        'class_status': class_status,
+        'already_marked': already_marked,
+        'stats': stats,
+        'time_label': time_label,
+    })
+
+
+@login_required
+@user_passes_test(is_teacher)
+def api_save_attendance(request):
+    """AJAX POST: create/update AttendanceSession + AttendanceRecords.
+
+    Body JSON: {classroom (timetable id), date, time(HH:MM optional),
+    class_status('held'|'cancelled'), records:{student_id:'present'|'absent'}}.
+    Backward compatible: accepts grade/division instead of classroom."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    import json
+    from datetime import datetime
+    from attendance.models import AttendanceSession, AttendanceRecord
+
+    try:
+        data = json.loads(request.body)
+    except (ValueError, TypeError):
+        return JsonResponse({'error': 'Invalid data'}, status=400)
+
+    date = str(data.get('date', '')).strip()
+    class_status = str(data.get('class_status', 'held')).strip()
+    if class_status not in ('held', 'cancelled'):
+        class_status = 'held'
+    records = data.get('records', {}) or {}
+
+    tt = _resolve_teacher_timetable(request.user, data.get('classroom'))
+    if tt:
+        school, grade, division = tt.school, tt.grade, tt.division
+    else:
+        grade = str(data.get('grade', '')).strip()
+        division = str(data.get('division', '')).strip()
+        school = _teacher_school(request.user)
+        if not (grade and division):
+            return JsonResponse({'error': 'classroom (or grade+division) required'}, status=400)
+
+    if not date:
+        return JsonResponse({'error': 'date required'}, status=400)
+    if not school:
+        return JsonResponse({'error': 'No school assigned to your profile'}, status=400)
+
+    start_time = None
+    time_str = str(data.get('time', '')).strip()
+    if time_str:
+        try:
+            start_time = datetime.strptime(time_str, '%H:%M').time()
+        except ValueError:
+            start_time = None
+
+    defaults = {
+        'thinking_coach': request.user,
+        'class_status': class_status,
+        'timetable': tt,
+    }
+    if start_time is not None:
+        defaults['start_time'] = start_time
+
+    session, _ = AttendanceSession.objects.update_or_create(
+        school=school, grade=str(grade), division=division, date=date, session_number=None,
+        defaults=defaults,
+    )
+
+    valid_statuses = {'present', 'absent', 'late'}
+    saved = 0
+    effective = {}
+    for sid, status in records.items():
+        if status not in valid_statuses:
+            continue
+        try:
+            student = Student.objects.get(id=int(sid))
+        except (Student.DoesNotExist, ValueError, TypeError):
+            continue
+        if school and student.school_id != school.id:
+            continue
+        AttendanceRecord.objects.update_or_create(
+            session=session, student=student, defaults={'status': status},
+        )
+        effective[str(sid)] = status
+        saved += 1
+
+    return JsonResponse({
+        'ok': True,
+        'saved': saved,
+        'session_id': session.id,
+        'stats': _attendance_stats(effective),
+    })
+
+
+@login_required
+@user_passes_test(is_teacher)
+def attendance_list(request):
+    """Summary list of attendance sessions for the teacher's school."""
+    from attendance.models import AttendanceSession
+    from django.db.models import Count, Q
+
+    school = _teacher_school(request.user)
+    sessions = AttendanceSession.objects.filter(school=school) if school else AttendanceSession.objects.none()
+    sessions = sessions.select_related('project').annotate(
+        total=Count('records'),
+        present=Count('records', filter=Q(records__status='present')),
+        absent=Count('records', filter=Q(records__status='absent')),
+        late=Count('records', filter=Q(records__status='late')),
+    ).order_by('-date')[:100]
+
+    return render(request, 'teacher/attendance-list.html', {'sessions': sessions})
+
+
+# ---------- SLIDE 15: Daily Session Feedback ----------
+
+@login_required
+@user_passes_test(is_teacher)
+def daily_feedback(request):
+    """Daily session feedback form + recent list."""
+    from attendance.models import DailySessionFeedback, SessionPhoto, GRADE_CHOICES
+    from competencies.models import Project
+
+    school = _teacher_school(request.user)
+
+    if request.method == 'POST':
+        if not school:
+            messages.error(request, 'No school assigned to your profile.')
+            return redirect('teacher:daily_feedback')
+
+        grade    = request.POST.get('grade', '').strip()
+        division = request.POST.get('division', '').strip()
+        date     = request.POST.get('date', '').strip()
+        if not (grade and division and date):
+            messages.error(request, 'Grade, division and date are required.')
+            return redirect('teacher:daily_feedback')
+
+        def _rating(name):
+            v = request.POST.get(name, '').strip()
+            if v.isdigit() and 1 <= int(v) <= 5:
+                return int(v)
+            return None
+
+        def _intval(name):
+            v = request.POST.get(name, '').strip()
+            return int(v) if v.isdigit() else None
+
+        project = None
+        pid = request.POST.get('project') or None
+        if pid:
+            project = Project.objects.filter(id=pid).first()
+
+        fb = DailySessionFeedback.objects.create(
+            school=school,
+            grade=grade,
+            division=division,
+            date=date,
+            project=project,
+            session_number=_intval('session_number'),
+            session_title=request.POST.get('session_title', '').strip(),
+            session_description=request.POST.get('session_description', '').strip(),
+            thinking_coach=request.user,
+            rating_engagement=_rating('rating_engagement'),
+            rating_delivery_ease=_rating('rating_delivery_ease'),
+            rating_resources=_rating('rating_resources'),
+            rating_time_management=_rating('rating_time_management'),
+            is_project_completed=request.POST.get('is_project_completed') == 'on',
+        )
+
+        # Up to 3 photos
+        photos = request.FILES.getlist('photos')[:3]
+        for img in photos:
+            SessionPhoto.objects.create(feedback=fb, image=img)
+
+        messages.success(request, 'Daily session feedback saved successfully.')
+        return redirect('teacher:daily_feedback')
+
+    recent = DailySessionFeedback.objects.filter(school=school) if school else DailySessionFeedback.objects.none()
+    recent = recent.select_related('project').prefetch_related('photos').order_by('-date', '-created_at')[:20]
+
+    context = {
+        'grade_choices': GRADE_CHOICES,
+        'projects': _active_projects_for_teacher(request.user),
+        'recent': recent,
+    }
+    return render(request, 'teacher/daily-feedback.html', context)
+
+
+# ---------- SLIDE 16: Weekly Session Feedback ----------
+
+@login_required
+@user_passes_test(is_teacher)
+def weekly_feedback(request):
+    """Weekly qualitative feedback form + recent list."""
+    from attendance.models import WeeklySessionFeedback
+
+    school = _teacher_school(request.user)
+
+    if request.method == 'POST':
+        date_from = request.POST.get('date_from', '').strip()
+        date_to   = request.POST.get('date_to', '').strip()
+        if not (date_from and date_to):
+            messages.error(request, 'Date from and date to are required.')
+            return redirect('teacher:weekly_feedback')
+
+        WeeklySessionFeedback.objects.create(
+            thinking_coach=request.user,
+            school=school,
+            date_from=date_from,
+            date_to=date_to,
+            went_wrong=request.POST.get('went_wrong', '').strip()[:200],
+            went_well=request.POST.get('went_well', '').strip()[:200],
+            new_tried=request.POST.get('new_tried', '').strip()[:200],
+            lab_issue=request.POST.get('lab_issue') == 'yes',
+            lab_issue_detail=request.POST.get('lab_issue_detail', '').strip(),
+        )
+        messages.success(request, 'Weekly session feedback saved successfully.')
+        return redirect('teacher:weekly_feedback')
+
+    recent = WeeklySessionFeedback.objects.filter(thinking_coach=request.user).order_by('-date_from')[:20]
+    return render(request, 'teacher/weekly-feedback.html', {'recent': recent})
+
+
+# ---------- SLIDE 17: Student Project Upload ----------
+
+@login_required
+@user_passes_test(is_teacher)
+def student_project_upload(request):
+    """Student project upload form + recent list."""
+    from attendance.models import StudentProjectUpload, GRADE_CHOICES
+    from competencies.models import Project
+
+    school = _teacher_school(request.user)
+
+    if request.method == 'POST':
+        if not school:
+            messages.error(request, 'No school assigned to your profile.')
+            return redirect('teacher:student_project_upload')
+
+        grade    = request.POST.get('grade', '').strip()
+        division = request.POST.get('division', '').strip()
+        title    = request.POST.get('title', '').strip()
+        if not (grade and division and title):
+            messages.error(request, 'Grade, division and title are required.')
+            return redirect('teacher:student_project_upload')
+
+        project = None
+        pid = request.POST.get('project') or None
+        if pid:
+            project = Project.objects.filter(id=pid).first()
+
+        upload = StudentProjectUpload.objects.create(
+            school=school,
+            grade=grade,
+            division=division,
+            project=project,
+            title=title,
+            video_link=request.POST.get('video_link', '').strip(),
+            description=request.POST.get('description', '').strip(),
+            created_by=request.user,
+        )
+        if 'file' in request.FILES:
+            upload.file = request.FILES['file']
+            upload.save()
+
+        # Link selected students (must belong to teacher's school)
+        student_ids = request.POST.getlist('students')
+        if student_ids:
+            valid = Student.objects.filter(id__in=student_ids, school=school)
+            upload.students.set(valid)
+
+        messages.success(request, 'Student project uploaded successfully.')
+        return redirect('teacher:student_project_upload')
+
+    recent = StudentProjectUpload.objects.filter(school=school) if school else StudentProjectUpload.objects.none()
+    recent = recent.select_related('project').prefetch_related('students').order_by('-created_at')[:20]
+
+    context = {
+        'grade_choices': GRADE_CHOICES,
+        'projects': _active_projects_for_teacher(request.user),
+        'recent': recent,
+    }
+    return render(request, 'teacher/student-project-upload.html', context)
+
+
+@login_required
+@user_passes_test(is_teacher)
+def api_class_students(request):
+    """AJAX GET: active students for grade+division (for upload multiselect)."""
+    grade    = request.GET.get('grade', '').strip()
+    division = request.GET.get('division', '').strip()
+    if not (grade and division):
+        return JsonResponse({'students': []})
+    school = _teacher_school(request.user)
+    students = list(
+        _class_students(school, grade, division)
+        .values('id', 'first_name', 'last_name', 'student_class', 'division', 'gr_number')
+    )
+    return JsonResponse({'students': students})

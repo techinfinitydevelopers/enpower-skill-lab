@@ -310,6 +310,19 @@
                     </div>
                 </div>
                 <div class="sidebar-dropdown">
+                    <a href="#" class="sidebar-dropdown-toggle" id="sessions-dropdown">
+                        <span class="material-symbols-outlined">co_present</span>
+                        Sessions
+                        <span class="material-symbols-outlined dropdown-icon">expand_more</span>
+                    </a>
+                    <div class="sidebar-dropdown-menu">
+                        <a href="{% url 'teacher:attendance_mark' %}" id="nav-attendance"><span class="material-symbols-outlined">how_to_reg</span>Attendance</a>
+                        <a href="{% url 'teacher:daily_feedback' %}" id="nav-daily-feedback"><span class="material-symbols-outlined">rate_review</span>Daily Session Feedback</a>
+                        <a href="{% url 'teacher:weekly_feedback' %}" id="nav-weekly-feedback"><span class="material-symbols-outlined">calendar_view_week</span>Weekly Session Feedback</a>
+                        <a href="{% url 'teacher:student_project_upload' %}" id="nav-student-project-upload"><span class="material-symbols-outlined">cloud_upload</span>Student Project Upload</a>
+                    </div>
+                </div>
+                <div class="sidebar-dropdown">
                     <a href="#" class="sidebar-dropdown-toggle" id="events-dropdown">
                         <span class="material-symbols-outlined">event</span>
                         Events

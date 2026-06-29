@@ -1,0 +1,135 @@
+{% extends 'coordinator/base.html' %}
+{% load static %}
+
+{% block title %}Schedule Details - Program Coordinator{% endblock %}
+
+{% block extra_css %}
+<style>
+    .sm-wrap { --pri:#5A1F6E; --pri-light:rgba(90,31,110,0.08); }
+    .sm-wrap * { font-family:'Poppins',sans-serif; }
+    .sm-wrap .material-symbols-outlined { font-family:'Material Symbols Outlined'; }
+    .sm-card { background:#fff; border:1px solid #ede9f4; border-radius:14px; box-shadow:0 1px 3px rgba(0,0,0,.05); }
+    .sm-lbl { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:#94a3b8; margin-bottom:4px; display:block; }
+    .sm-val { font-size:14px; color:#1e1b4b; font-weight:600; }
+    .sm-val.muted { color:#94a3b8; font-weight:500; }
+    .sm-btn { background:var(--pri); color:#fff; border:none; border-radius:10px; padding:10px 22px; font-size:14px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:8px; text-decoration:none; }
+    .sm-btn:hover { opacity:.92; color:#fff; }
+    .sm-btn-ghost { background:#fff; color:var(--pri); border:1.5px solid var(--pri); border-radius:10px; padding:10px 18px; font-size:14px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px; text-decoration:none; }
+    .sm-btn-ghost:hover { background:var(--pri-light); color:var(--pri); }
+    .sm-btn-del { background:#fff; color:#f59e0b; border:1.5px solid #f59e0b; border-radius:10px; padding:10px 18px; font-size:14px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
+    .sm-btn-del:hover { background:#f59e0b; color:#fff; }
+    .sm-table { width:100%; border-collapse:collapse; min-width:480px; }
+    .sm-table thead th { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#94a3b8; padding:12px 14px; text-align:left; background:#faf8fc; border-bottom:1px solid #ede9f4; }
+    .sm-table tbody td { padding:12px 14px; font-size:13.5px; color:#374151; border-bottom:1px solid #f1f5f9; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="sm-wrap py-4 py-lg-5">
+  <div class="container-xl" style="max-width:980px;">
+
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <a href="{% url 'coordinator:timetable_list' %}" class="text-decoration-none text-muted d-inline-flex align-items-center">
+        <span class="material-symbols-outlined">arrow_back</span>
+      </a>
+      <div>
+        <h1 class="h4 mb-1 fw-bold" style="color:#1e1b4b;">Schedule Details</h1>
+        <p class="mb-0 text-muted" style="font-size:.875rem;">{{ timetable.school.school_name }} — Grade {{ timetable.grade }}{{ timetable.division }}</p>
+      </div>
+    </div>
+
+    <div class="sm-card p-4 p-lg-4 mb-4">
+      <div class="d-flex align-items-center gap-2 mb-4">
+        <span class="material-symbols-outlined" style="color:var(--pri);">calendar_month</span>
+        <h2 class="h6 mb-0 fw-bold" style="color:#1e1b4b;">Schedule Overview</h2>
+      </div>
+
+      <div class="row g-4">
+        <div class="col-md-6">
+          <span class="sm-lbl">School</span>
+          <div class="sm-val">{{ timetable.school.school_name }}</div>
+        </div>
+        <div class="col-md-6">
+          <span class="sm-lbl">School Code</span>
+          <div class="sm-val {% if not timetable.school.school_code %}muted{% endif %}">{{ timetable.school.school_code|default:"—" }}</div>
+        </div>
+        <div class="col-md-6">
+          <span class="sm-lbl">Thinking Coach</span>
+          <div class="sm-val {% if not timetable.thinking_coach %}muted{% endif %}">
+            {% if timetable.thinking_coach %}{{ timetable.thinking_coach.get_full_name|default:timetable.thinking_coach.username }}{% else %}— Not assigned{% endif %}
+          </div>
+        </div>
+        <div class="col-md-6">
+          <span class="sm-lbl">Grade / Section</span>
+          <div class="sm-val">Grade {{ timetable.grade }} - {{ timetable.division }}</div>
+        </div>
+        <div class="col-md-6">
+          <span class="sm-lbl">Program</span>
+          <div class="sm-val {% if not timetable.program %}muted{% endif %}">{{ timetable.program|default:"—" }}</div>
+        </div>
+        <div class="col-md-6">
+          <span class="sm-lbl">Academic Year</span>
+          <div class="sm-val">{{ timetable.academic_year }}</div>
+        </div>
+        <div class="col-md-6">
+          <span class="sm-lbl">Start Date</span>
+          <div class="sm-val {% if not timetable.start_date %}muted{% endif %}">{% if timetable.start_date %}{{ timetable.start_date|date:"d M Y" }}{% else %}—{% endif %}</div>
+        </div>
+        <div class="col-md-6">
+          <span class="sm-lbl">End Date</span>
+          <div class="sm-val {% if not timetable.end_date %}muted{% endif %}">{% if timetable.end_date %}{{ timetable.end_date|date:"d M Y" }}{% else %}—{% endif %}</div>
+        </div>
+        <div class="col-md-6">
+          <span class="sm-lbl">Schedule File</span>
+          <div class="sm-val">
+            {% if timetable.schedule_file %}
+            <a href="{{ timetable.schedule_file.url }}" target="_blank" class="text-decoration-none d-inline-flex align-items-center gap-1" style="color:var(--pri);">
+              <span class="material-symbols-outlined" style="font-size:18px;">description</span>View File
+            </a>
+            {% else %}<span class="muted">—</span>{% endif %}
+          </div>
+        </div>
+        <div class="col-12">
+          <span class="sm-lbl">Notes</span>
+          <div class="sm-val {% if not timetable.notes %}muted{% endif %}">{{ timetable.notes|default:"—"|linebreaksbr }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sm-card p-4 p-lg-4 mb-4">
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <span class="material-symbols-outlined" style="color:var(--pri);">schedule</span>
+        <h2 class="h6 mb-0 fw-bold" style="color:#1e1b4b;">Class Time Slots</h2>
+      </div>
+      <div class="table-responsive" style="overflow-x:auto;">
+        <table class="sm-table">
+          <thead>
+            <tr><th>Day</th><th>Timings</th><th>Note</th></tr>
+          </thead>
+          <tbody>
+            {% for slot in slot_rows %}
+            <tr>
+              <td>{{ slot.day }}</td>
+              <td>{{ slot.timings }}</td>
+              <td>{{ slot.note|default:"—" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3" style="text-align:center; color:#94a3b8; padding:24px;">No time slots defined for this schedule.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2">
+      <a href="{% url 'coordinator:timetable_edit' timetable.id %}" class="sm-btn"><span class="material-symbols-outlined" style="font-size:18px;">edit</span>Edit</a>
+      <form method="post" action="{% url 'coordinator:timetable_delete' timetable.id %}" onsubmit="return confirm('Delete this schedule? This cannot be undone.');">
+        {% csrf_token %}
+        <button type="submit" class="sm-btn-del"><span class="material-symbols-outlined" style="font-size:18px;">delete</span>Delete</button>
+      </form>
+      <a href="{% url 'coordinator:timetable_list' %}" class="sm-btn-ghost"><span class="material-symbols-outlined" style="font-size:18px;">arrow_back</span>Back</a>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

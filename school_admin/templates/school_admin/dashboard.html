@@ -16,35 +16,29 @@
     </button>
 </div>
 
+{% if not school %}
+<!-- Empty state: no school linked to this admin -->
+<div class="card-custom mt-4">
+    <h3 class="card-custom-title">No School Linked</h3>
+    <p class="text-muted mt-2">Your account is not linked to a school yet. Please contact the administrator to assign a school before dashboard data can be shown.</p>
+</div>
+{% else %}
+
 <!-- Stats Cards -->
 <div class="stats-grid">
     <div class="stat-card">
         <div class="stat-card-header">
-            <p>Total Students</p>
+            <p>Total Active Students</p>
             <span class="material-symbols-outlined">groups</span>
         </div>
-        <p class="stat-card-value">1,234</p>
+        <p class="stat-card-value">{{ total_students }}</p>
     </div>
     <div class="stat-card">
         <div class="stat-card-header">
-            <p>Avg Student Performance</p>
-            <span class="material-symbols-outlined">trending_up</span>
+            <p>Grades Tracked</p>
+            <span class="material-symbols-outlined">school</span>
         </div>
-        <p class="stat-card-value">88%</p>
-    </div>
-    <div class="stat-card">
-        <div class="stat-card-header">
-            <p>Attendance Rate</p>
-            <span class="material-symbols-outlined">event_available</span>
-        </div>
-        <p class="stat-card-value">95%</p>
-    </div>
-    <div class="stat-card">
-        <div class="stat-card-header">
-            <p>Assessments Completed</p>
-            <span class="material-symbols-outlined">checklist</span>
-        </div>
-        <p class="stat-card-value">75%</p>
+        <p class="stat-card-value">{{ grade_distribution|length }}</p>
     </div>
 </div>
 
@@ -57,7 +51,7 @@
             </div>
             <div>
                 <p class="label">School Name</p>
-                <p class="value">Enpower Skill Lab High</p>
+                <p class="value">{{ school.school_name }}</p>
             </div>
         </div>
         <div class="school-info-item">
@@ -66,20 +60,126 @@
             </div>
             <div>
                 <p class="label">School Code / ID</p>
-                <p class="value">ESL-HS-001</p>
+                <p class="value">{{ school.school_code|default:"—" }}</p>
             </div>
         </div>
         <div class="school-info-item">
             <div class="school-info-icon">
-                <span class="material-symbols-outlined">psychology</span>
+                <span class="material-symbols-outlined">groups</span>
             </div>
             <div>
-                <p class="label">Assigned Thinking Coach</p>
-                <p class="value">Amelia Earhart</p>
+                <p class="label">Total Active Students</p>
+                <p class="value">{{ total_students }}</p>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Per-Grade Real Data (PPT slides 50-51) -->
+<div class="main-content-grid">
+    <div class="left-column">
+        <!-- Grade-wise Student Distribution -->
+        <div class="card-custom">
+            <h3 class="card-custom-title">Student Distribution by Grade</h3>
+            <div class="table-responsive-wrapper">
+                <table class="table-custom mt-4">
+                    <thead>
+                        <tr><th>Grade</th><th>Active Students</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for row in grade_distribution %}
+                        <tr>
+                            <td>Grade {{ row.grade }}</td>
+                            <td><span class="bold-value">{{ row.count }}</span></td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="2" class="text-muted">No student data available yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Grade-wise Attendance (this month) -->
+        <div class="card-custom mt-4">
+            <h3 class="card-custom-title">Monthly Attendance by Grade</h3>
+            <div class="table-responsive-wrapper">
+                <table class="table-custom mt-4">
+                    <thead>
+                        <tr><th>Grade</th><th>Attendance %</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for row in grade_attendance %}
+                        <tr>
+                            <td>Grade {{ row.grade }}</td>
+                            <td><span class="bold-value">{{ row.percent }}%</span></td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="2" class="text-muted">No attendance recorded this month.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Grade-wise Project Completion -->
+        <div class="card-custom mt-4">
+            <h3 class="card-custom-title">Project Completion by Grade</h3>
+            <div class="table-responsive-wrapper">
+                <table class="table-custom mt-4">
+                    <thead>
+                        <tr><th>Grade</th><th>Completed</th><th>Total</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for row in grade_project_completion %}
+                        <tr>
+                            <td>Grade {{ row.grade }}</td>
+                            <td><span class="bold-value">{{ row.completed }}</span></td>
+                            <td>{{ row.total }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="3" class="text-muted">No completed projects yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Top Skill Profiles by Grade -->
+    <div class="right-column">
+        <div class="card-custom">
+            <h3 class="card-custom-title-sm">Top Skill Profiles by Grade</h3>
+            <div class="quick-actions-list mt-4">
+                {% for row in grade_top_profiles %}
+                <div class="card-custom" style="padding:1rem;">
+                    <p class="metric-label">Grade {{ row.grade }}</p>
+                    {% if row.profiles %}
+                    <ol style="margin:0.5rem 0 0 1.25rem;">
+                        {% for name in row.profiles %}
+                        <li class="metric-value" style="font-size:0.95rem;">{{ name }}</li>
+                        {% endfor %}
+                    </ol>
+                    {% else %}
+                    <p class="text-muted">No profiles generated yet.</p>
+                    {% endif %}
+                </div>
+                {% empty %}
+                <p class="text-muted">No profile data available yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endif %}
+
+{% comment %}
+=============================================================================
+LEGACY HARDCODED MOCKUP BELOW — kept commented out for design reference only.
+School Admin is VIEW-ONLY (principal, PPT slide 51); the "Add Student" /
+"Add Parent" onboarding Quick Actions have been removed from the dashboard.
+=============================================================================
 
 <!-- Main Content Area -->
 <div class="main-content-grid">
@@ -325,4 +425,5 @@
         </table>
     </div>
 </div>
+{% endcomment %}
 {% endblock %}

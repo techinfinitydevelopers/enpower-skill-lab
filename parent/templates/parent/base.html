@@ -1044,98 +1044,66 @@
                     Dashboard
                 </a>
 
-                <!-- Child Profiles -->
+                <!-- Student Profiles -->
                 <div class="sidebar-dropdown">
-                    <a href="#" class="sidebar-dropdown-toggle" id="child-profiles-dropdown">
+                    <a href="#" class="sidebar-dropdown-toggle" id="student-profiles-dropdown">
                         <span class="material-symbols-outlined">child_care</span>
-                        Child Profiles
+                        Student Profiles
                         <span class="material-symbols-outlined dropdown-icon">expand_more</span>
                     </a>
                     <div class="sidebar-dropdown-menu">
                         <a href="#" id="nav-switch-child">
                             <span class="material-symbols-outlined">swap_horiz</span>
-                            Switch Child
+                            Switch Student
                         </a>
                         <a href="#" id="nav-child-performance">
                             <span class="material-symbols-outlined">analytics</span>
-                            Child Performance Summary
+                            Student Performance Summary
                         </a>
                     </div>
                 </div>
 
+                <!-- Events (kept per PPT slide 48) -->
+                <a href="{% url 'parent_dashboard' %}#eventsSection" id="nav-events" class="sidebar-nav-link">
+                    <span class="material-symbols-outlined">event_available</span>
+                    Events
+                </a>
 
-                <!-- Assessments -->
-                <div class="sidebar-dropdown">
-                    <a href="#" class="sidebar-dropdown-toggle" id="assessments-dropdown">
-                        <span class="material-symbols-outlined">quiz</span>
-                        Assessments
-                        <span class="material-symbols-outlined dropdown-icon">expand_more</span>
-                    </a>
-                    <div class="sidebar-dropdown-menu">
-                        <a href="#" id="nav-skill-passport">
-                            <span class="material-symbols-outlined">workspace_premium</span>
-                            Skill Passport
-                        </a>
-                        <a href="#" id="nav-assessment-summary">
-                            <span class="material-symbols-outlined">summarize</span>
-                            Assessment Summary
-                        </a>
-                    </div>
-                </div>
+                <!-- Announcements (kept per PPT slide 48) -->
+                <a href="{% url 'parent_dashboard' %}#eventsSection" id="nav-announcements" class="sidebar-nav-link">
+                    <span class="material-symbols-outlined">campaign</span>
+                    Announcements
+                </a>
 
-                <!-- LMS -->
-                <div class="sidebar-dropdown">
-                    <a href="#" class="sidebar-dropdown-toggle" id="lms-dropdown">
-                        <span class="material-symbols-outlined">library_books</span>
-                        LMS
-                        <span class="material-symbols-outlined dropdown-icon">expand_more</span>
-                    </a>
-                    <div class="sidebar-dropdown-menu">
-                        <a href="#" id="nav-lesson-progress">
-                            <span class="material-symbols-outlined">trending_up</span>
-                            Lesson Progress
-                        </a>
-                        <a href="#" id="nav-suggested-lessons">
-                            <span class="material-symbols-outlined">recommend</span>
-                            Suggested Lessons
-                        </a>
-                    </div>
-                </div>
+                <!-- Newsletter -->
+                <a href="{% url 'parent_dashboard' %}#newsletterSection" id="nav-newsletter" class="sidebar-nav-link">
+                    <span class="material-symbols-outlined">newspaper</span>
+                    Newsletter
+                </a>
 
-                <!-- Reports -->
+                <!-- Success Story -->
+                <a href="{% url 'parent_dashboard' %}#successStorySection" id="nav-success-story" class="sidebar-nav-link">
+                    <span class="material-symbols-outlined">emoji_events</span>
+                    Success Story
+                </a>
+
+                <!-- View Projects -->
+                <a href="{% url 'parent_dashboard' %}#projectsSection" id="nav-view-projects" class="sidebar-nav-link">
+                    <span class="material-symbols-outlined">workspace_premium</span>
+                    View Projects
+                </a>
+
+                <!-- Portfolio -->
                 <div class="sidebar-dropdown">
-                    <a href="#" class="sidebar-dropdown-toggle" id="reports-dropdown">
+                    <a href="#" class="sidebar-dropdown-toggle" id="portfolio-dropdown">
                         <span class="material-symbols-outlined">assessment</span>
-                        Reports
+                        Portfolio
                         <span class="material-symbols-outlined dropdown-icon">expand_more</span>
                     </a>
                     <div class="sidebar-dropdown-menu">
-                        <a href="#" id="nav-download-report">
-                            <span class="material-symbols-outlined">file_download</span>
-                            Download Report
-                        </a>
-                    </div>
-                </div>
-
-                <!-- Events & Notices -->
-                <div class="sidebar-dropdown">
-                    <a href="#" class="sidebar-dropdown-toggle" id="events-notices-dropdown">
-                        <span class="material-symbols-outlined">event</span>
-                        Events & Notices
-                        <span class="material-symbols-outlined dropdown-icon">expand_more</span>
-                    </a>
-                    <div class="sidebar-dropdown-menu">
-                        <a href="#" id="nav-notices">
-                            <span class="material-symbols-outlined">notifications</span>
-                            Notices
-                        </a>
-                        <a href="#" id="nav-events">
-                            <span class="material-symbols-outlined">event_available</span>
-                            Events
-                        </a>
-                        <a href="#" id="nav-announcements">
-                            <span class="material-symbols-outlined">campaign</span>
-                            Announcements
+                        <a href="#" id="nav-annual-skill-report">
+                            <span class="material-symbols-outlined">workspace_premium</span>
+                            Annual Skill Report
                         </a>
                     </div>
                 </div>

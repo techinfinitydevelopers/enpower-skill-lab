@@ -1,0 +1,135 @@
+{% extends 'teacher/base.html' %}
+{% load static %}
+
+{% block title %}Student Project Upload — Thinking Coach{% endblock %}
+
+{% block extra_css %}
+<style>
+    .pu * { font-family: 'Poppins', sans-serif !important; }
+    .pu .material-symbols-outlined { font-family: 'Material Symbols Outlined' !important; }
+    .pu .card { background:#fff; border-radius:0.75rem; border:1px solid #ede9f4; box-shadow:0 1px 3px rgba(0,0,0,0.06); }
+    .pu .lbl { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:#94a3b8; margin-bottom:6px; display:block; }
+    .pu .ctrl { width:100%; padding:10px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px; color:#374151; outline:none; background:#fff; }
+    .pu .ctrl:focus { border-color:#5A1F6E; }
+    .pu textarea.ctrl { min-height:80px; resize:vertical; }
+    .pu .btn-primary { background:#5A1F6E; color:#fff; border:none; border-radius:9px; padding:12px 28px; font-size:14px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:8px; }
+    .pu .btn-primary:hover { opacity:0.9; }
+    .pu .studentbox { border:1.5px solid #e2e8f0; border-radius:8px; max-height:220px; overflow-y:auto; padding:8px; }
+    .pu .studentbox label { display:flex; align-items:center; gap:8px; padding:7px 8px; border-radius:6px; font-size:14px; color:#1e1b4b; cursor:pointer; }
+    .pu .studentbox label:hover { background:#f8f7fc; }
+    .pu .recent-item { padding:14px 16px; border:1px solid #f1f5f9; border-radius:10px; margin-bottom:10px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pu" style="max-width:900px; margin:0 auto;">
+    <div style="margin-bottom:20px;">
+        <h1 style="font-size:22px; font-weight:700; color:#1e1b4b;">Student Project Upload</h1>
+        <p style="font-size:13px; color:#94a3b8; margin-top:2px;">Upload student project work (file or video link).</p>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="card" style="padding:24px; margin-bottom:28px;">
+        {% csrf_token %}
+        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; margin-bottom:18px;">
+            <div>
+                <label class="lbl">Grade *</label>
+                <select name="grade" id="grade" class="ctrl" required>
+                    <option value="">Select grade</option>
+                    {% for value, label in grade_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="lbl">Division *</label>
+                <input name="division" id="division" class="ctrl" placeholder="e.g. A" required>
+            </div>
+            <div>
+                <label class="lbl">Project</label>
+                <select name="project" class="ctrl">
+                    <option value="">— None —</option>
+                    {% for p in projects %}<option value="{{ p.id }}">{{ p.title }}</option>{% endfor %}
+                </select>
+            </div>
+            <div style="grid-column:1 / -1;">
+                <label class="lbl">Title *</label>
+                <input name="title" class="ctrl" maxlength="200" required>
+            </div>
+            <div>
+                <label class="lbl">File (img / ppt / pdf / doc)</label>
+                <input name="file" type="file" accept=".png,.jpg,.jpeg,.gif,.ppt,.pptx,.pdf,.doc,.docx" class="ctrl">
+            </div>
+            <div>
+                <label class="lbl">OR Video Link</label>
+                <input name="video_link" type="url" class="ctrl" placeholder="https://...">
+            </div>
+            <div style="grid-column:1 / -1;">
+                <label class="lbl">Description</label>
+                <textarea name="description" class="ctrl"></textarea>
+            </div>
+        </div>
+
+        <div style="margin-bottom:20px;">
+            <label class="lbl">Students <span style="text-transform:none; font-weight:500; color:#cbd5e1;">(select grade &amp; division, then choose)</span></label>
+            <div class="studentbox" id="studentbox">
+                <p style="font-size:13px; color:#94a3b8; padding:8px;">Select grade and division to load students.</p>
+            </div>
+        </div>
+
+        <button type="submit" class="btn-primary"><span class="material-symbols-outlined" style="font-size:18px;">cloud_upload</span>Upload Project</button>
+    </form>
+
+    <div style="margin-bottom:14px;">
+        <h2 style="font-size:16px; font-weight:700; color:#1e1b4b;">Recent Uploads</h2>
+    </div>
+    <div class="card" style="padding:18px;">
+        {% for u in recent %}
+        <div class="recent-item">
+            <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+                <div style="font-size:14px; font-weight:700; color:#1e1b4b;">{{ u.title }}</div>
+                <div style="font-size:12px; color:#94a3b8;">Grade {{ u.grade }} {{ u.division }} · {{ u.created_at|date:"d M Y" }}</div>
+            </div>
+            {% if u.project %}<div style="font-size:12px; color:#7c3aed; margin-top:3px;">{{ u.project.title }}</div>{% endif %}
+            {% if u.description %}<div style="font-size:13px; color:#6b7280; margin-top:6px;">{{ u.description }}</div>{% endif %}
+            <div style="display:flex; gap:14px; margin-top:8px; font-size:12px;">
+                {% if u.file %}<a href="{{ u.file.url }}" target="_blank" style="color:#5A1F6E; font-weight:600; text-decoration:none;"><span class="material-symbols-outlined" style="font-size:14px; vertical-align:middle;">description</span> File</a>{% endif %}
+                {% if u.video_link %}<a href="{{ u.video_link }}" target="_blank" style="color:#5A1F6E; font-weight:600; text-decoration:none;"><span class="material-symbols-outlined" style="font-size:14px; vertical-align:middle;">play_circle</span> Video</a>{% endif %}
+                <span style="color:#94a3b8;">{{ u.students.count }} student(s)</span>
+            </div>
+        </div>
+        {% empty %}
+        <p style="text-align:center; padding:24px; color:#94a3b8; font-size:14px;">No uploads yet.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const STUDENTS_URL = "{% url 'teacher:api_class_students' %}";
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function loadStudents() {
+    const grade = document.getElementById('grade').value;
+    const division = document.getElementById('division').value.trim();
+    const box = document.getElementById('studentbox');
+    if (!grade || !division) { box.innerHTML = '<p style="font-size:13px; color:#94a3b8; padding:8px;">Select grade and division to load students.</p>'; return; }
+    box.innerHTML = '<p style="font-size:13px; color:#94a3b8; padding:8px;">Loading...</p>';
+    fetch(`${STUDENTS_URL}?grade=${encodeURIComponent(grade)}&division=${encodeURIComponent(division)}&_=${Date.now()}`, {cache:'no-store'})
+        .then(r => r.json())
+        .then(d => {
+            if (!d.students || d.students.length === 0) {
+                box.innerHTML = '<p style="font-size:13px; color:#94a3b8; padding:8px;">No active students found.</p>'; return;
+            }
+            box.innerHTML = d.students.map(s =>
+                `<label><input type="checkbox" name="students" value="${s.id}" style="width:16px; height:16px;"> ${esc(s.first_name)} ${esc(s.last_name)} <span style="color:#cbd5e1; font-size:12px;">(${esc(s.gr_number||'')})</span></label>`
+            ).join('');
+        });
+}
+document.getElementById('grade').addEventListener('change', loadStudents);
+document.getElementById('division').addEventListener('blur', loadStudents);
+
+document.addEventListener('DOMContentLoaded', function(){
+    const link = document.getElementById('nav-student-project-upload');
+    if (link) { link.classList.add('active'); link.closest('.sidebar-dropdown').classList.add('active'); }
+});
+</script>
+{% endblock %}

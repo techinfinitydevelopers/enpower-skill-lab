@@ -1,0 +1,221 @@
+{% extends 'student/base.html' %}
+{% load static %}
+{% block title %}Annual Skill Passport — Student{% endblock %}
+
+{% block extra_css %}
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+        theme: {
+            extend: {
+                colors: { "primary": "#5A1F6E" },
+                fontFamily: { "display": ["Poppins", "sans-serif"] },
+            },
+        },
+    }
+</script>
+<style>
+    .ap * { font-family: 'Poppins', sans-serif !important; }
+    .ap .material-symbols-outlined { font-family: 'Material Symbols Outlined' !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ap max-w-[1100px] mx-auto">
+
+    <!-- Back link -->
+    <a href="{% url 'student:student_reports' %}" style="display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:500; color:#6b7280; text-decoration:none; margin-bottom:20px;"
+       onmouseover="this.style.color='#5A1F6E'" onmouseout="this.style.color='#6b7280'">
+        <span class="material-symbols-outlined" style="font-size:16px;">arrow_back</span>
+        Back to Reports
+    </a>
+
+    <!-- Header -->
+    <div style="margin-bottom:32px;">
+        <div style="display:inline-flex; align-items:center; gap:6px; padding:4px 14px; border-radius:999px; background:rgba(90,31,110,0.08); color:#5A1F6E; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:12px;">
+            <span class="material-symbols-outlined" style="font-size:14px;">verified</span>
+            Annual Skill Passport
+        </div>
+        <h1 style="font-size:32px; font-weight:800; color:#1e1b4b; margin:0 0 6px;">
+            {% if student %}{{ student.full_name|default:user.get_full_name|default:user.username }}{% else %}{{ user.get_full_name|default:user.username }}{% endif %}
+        </h1>
+        <p style="font-size:14px; color:#94a3b8; margin:0;">Your competencies across all projects this year — your strongest skills and what to grow next.</p>
+    </div>
+
+    {% if has_data %}
+
+    <!-- Skill Profiles (light) -->
+    {% if top_3_profiles %}
+    <div style="background:#fff; border-radius:16px; border:1px solid #ede9f4; padding:24px; margin-bottom:24px;">
+        <h2 style="font-size:16px; font-weight:700; color:#1e1b4b; margin:0 0 16px; display:flex; align-items:center; gap:8px;">
+            <span class="material-symbols-outlined" style="font-size:20px; color:#5A1F6E;">person_celebrate</span>
+            Your Skill Profiles
+        </h2>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px;">
+            {% for p in top_3_profiles %}
+            <div style="padding:16px; border-radius:12px; border:1.5px solid {% if forloop.first %}rgba(90,31,110,0.3){% else %}#e5e7eb{% endif %}; background:{% if forloop.first %}rgba(90,31,110,0.06){% else %}#f9fafb{% endif %};">
+                <div style="font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:{% if forloop.first %}#5A1F6E{% else %}#9ca3af{% endif %}; margin-bottom:6px;">
+                    {% if forloop.first %}Best Match{% elif forloop.counter == 2 %}2nd{% else %}3rd{% endif %}
+                </div>
+                <div style="font-size:15px; font-weight:700; color:#1e1b4b;">{{ p.profile_name }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6" style="margin-bottom:24px;">
+
+        <!-- Left: Top Competencies -->
+        {% if top_5_competencies %}
+        <div class="lg:col-span-5">
+            <div style="background:#fff; border-radius:16px; border:1px solid #ede9f4; padding:24px; height:100%;">
+                <h2 style="font-size:16px; font-weight:700; color:#1e1b4b; margin:0 0 16px; display:flex; align-items:center; gap:8px;">
+                    <span class="material-symbols-outlined" style="font-size:20px; color:#5A1F6E;">trending_up</span>
+                    My Top Skills
+                </h2>
+                <div style="display:flex; flex-direction:column; gap:10px;">
+                    {% for c in top_5_competencies %}
+                    <div style="display:flex; align-items:center; gap:12px; padding:14px 16px; background:#f9fafb; border-radius:10px; border:1px solid #e5e7eb;">
+                        <div style="width:40px; height:40px; border-radius:10px; background:rgba(90,31,110,0.08); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                            <span class="material-symbols-outlined" style="font-size:18px; color:#5A1F6E;">lightbulb</span>
+                        </div>
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-size:10px; font-weight:700; color:#5A1F6E; text-transform:uppercase; letter-spacing:0.05em;">{{ c.competency_code }}</div>
+                            <div style="font-size:13px; font-weight:600; color:#1e1b4b; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ c.competency_name }}</div>
+                        </div>
+                        <span style="padding:4px 10px; border-radius:999px; font-size:12px; font-weight:700; background:rgba(90,31,110,0.1); color:#5A1F6E; white-space:nowrap; flex-shrink:0;">{{ c.score }}/10</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Right: Skill Profile by category -->
+        <div class="lg:col-span-7">
+            <div style="background:#fff; border-radius:16px; border:1px solid #ede9f4; padding:24px; height:100%;">
+                <h2 style="font-size:16px; font-weight:700; color:#1e1b4b; margin:0 0 16px; display:flex; align-items:center; gap:8px;">
+                    <span class="material-symbols-outlined" style="font-size:20px; color:#5A1F6E;">analytics</span>
+                    Skill Profile
+                </h2>
+                <div style="display:flex; flex-direction:column; gap:12px;">
+
+                    {% if very_strong %}
+                    <div style="padding:16px 18px; border-radius:12px; border-left:4px solid #5A1F6E; background:#f9f8fc;">
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+                            <span class="material-symbols-outlined" style="font-size:18px; color:#5A1F6E;">stars</span>
+                            <span style="font-size:14px; font-weight:700; color:#1e1b4b;">Very Strong (8–10)</span>
+                        </div>
+                        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                            {% for c in very_strong %}
+                            <span style="padding:6px 14px; border-radius:8px; font-size:12px; font-weight:600; background:rgba(90,31,110,0.08); color:#374151; border:1px solid rgba(90,31,110,0.15);">{{ c.competency_name }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if strong %}
+                    <div style="padding:16px 18px; border-radius:12px; border-left:4px solid #34d399; background:#f0fdf9;">
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+                            <span class="material-symbols-outlined" style="font-size:18px; color:#10b981;">check_circle</span>
+                            <span style="font-size:14px; font-weight:700; color:#1e1b4b;">Strong (6–7)</span>
+                        </div>
+                        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                            {% for c in strong %}
+                            <span style="padding:6px 14px; border-radius:8px; font-size:12px; font-weight:600; background:#ecfdf5; color:#374151; border:1px solid #bbf7d0;">{{ c.competency_name }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if emerging %}
+                    <div style="padding:16px 18px; border-radius:12px; border-left:4px solid #fbbf24; background:#fffdf0;">
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+                            <span class="material-symbols-outlined" style="font-size:18px; color:#f59e0b;">trending_up</span>
+                            <span style="font-size:14px; font-weight:700; color:#1e1b4b;">Emerging (4–5)</span>
+                        </div>
+                        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                            {% for c in emerging %}
+                            <span style="padding:6px 14px; border-radius:8px; font-size:12px; font-weight:600; background:#fefce8; color:#374151; border:1px solid #fde68a;">{{ c.competency_name }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if not very_strong and not strong and not emerging %}
+                    <p style="font-size:13px; color:#94a3b8; text-align:center; padding:20px 0;">No competency data available.</p>
+                    {% endif %}
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Skills to Work On + Full Score List -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6" style="margin-bottom:24px;">
+
+        <!-- Skills to Work On -->
+        {% if skills_to_work_on %}
+        <div style="background:#fff; border-radius:16px; border:1px solid #ede9f4; padding:24px;">
+            <h2 style="font-size:16px; font-weight:700; color:#1e1b4b; margin:0 0 16px; display:flex; align-items:center; gap:8px;">
+                <span class="material-symbols-outlined" style="font-size:20px; color:#f59e0b;">construction</span>
+                Skills to Work On
+            </h2>
+            <div style="display:flex; flex-direction:column; gap:12px;">
+                {% for c in skills_to_work_on %}
+                <div style="display:flex; align-items:flex-start; gap:12px;">
+                    <div style="width:40px; height:40px; border-radius:50%; background:#fef3c7; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                        <span class="material-symbols-outlined" style="font-size:18px; color:#d97706;">build</span>
+                    </div>
+                    <div>
+                        <div style="font-size:10px; font-weight:700; color:#d97706; text-transform:uppercase; letter-spacing:0.05em;">{{ c.competency_code }}</div>
+                        <div style="font-size:13px; font-weight:600; color:#1e1b4b; margin-top:1px;">{{ c.competency_name }}</div>
+                        <div style="font-size:12px; color:#94a3b8; margin-top:2px;">Score: {{ c.score }}/10</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Full Competency Score List -->
+        <div style="background:#fff; border-radius:16px; border:1px solid #ede9f4; padding:24px;">
+            <h2 style="font-size:16px; font-weight:700; color:#1e1b4b; margin:0 0 16px; display:flex; align-items:center; gap:8px;">
+                <span class="material-symbols-outlined" style="font-size:20px; color:#5A1F6E;">list_alt</span>
+                All Competencies
+            </h2>
+            {% if all_competency_scores %}
+            <div style="display:flex; flex-direction:column; gap:8px; max-height:420px; overflow-y:auto;">
+                {% for c in all_competency_scores %}
+                <div style="display:flex; align-items:center; gap:12px; padding:10px 14px; background:#f9fafb; border-radius:10px; border:1px solid #e5e7eb;">
+                    <div style="flex:1; min-width:0;">
+                        <div style="font-size:10px; font-weight:700; color:#9ca3af; text-transform:uppercase; letter-spacing:0.05em;">{{ c.competency_code }}</div>
+                        <div style="font-size:13px; font-weight:600; color:#1e1b4b; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ c.competency_name }}</div>
+                    </div>
+                    <span style="padding:4px 10px; border-radius:999px; font-size:12px; font-weight:700; background:rgba(90,31,110,0.1); color:#5A1F6E; white-space:nowrap; flex-shrink:0;">{{ c.score }}/10</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p style="font-size:13px; color:#94a3b8; text-align:center; padding:20px 0;">No competency data available.</p>
+            {% endif %}
+        </div>
+
+    </div>
+
+    {% else %}
+
+    <!-- Empty State -->
+    <div style="background:#fff; border-radius:16px; border:1px solid #ede9f4; padding:60px 20px; text-align:center;">
+        <div style="width:72px; height:72px; border-radius:50%; background:rgba(90,31,110,0.08); display:flex; align-items:center; justify-content:center; margin:0 auto 16px;">
+            <span class="material-symbols-outlined" style="font-size:32px; color:#5A1F6E;">verified</span>
+        </div>
+        <h3 style="font-size:16px; font-weight:700; color:#1e1b4b; margin:0 0 6px;">No Annual Passport Yet</h3>
+        <p style="font-size:13px; color:#94a3b8; margin:0;">Your Annual Skill Passport will appear here once your teacher has assessed your competencies across projects.</p>
+    </div>
+
+    {% endif %}
+
+</div>
+{% endblock %}

@@ -59,42 +59,38 @@
         </div>
     </div>
 
-    <!-- KPI Grid -->
+    <!-- KPI Grid (slide 47) -->
     <div class="kpi-grid">
         <div class="kpi-card">
             <div class="kpi-header">
                 <div class="kpi-icon purple">
-                    <span class="material-symbols-outlined">monitoring</span>
-                </div>
-                <span class="kpi-badge" id="kpiPerformanceBadge">+5%</span>
-            </div>
-            <div>
-                <p class="kpi-label">Overall Performance</p>
-                <p class="kpi-value" id="kpiPerformanceValue">85%</p>
-            </div>
-        </div>
-        <div class="kpi-card">
-            <div class="kpi-header">
-                <div class="kpi-icon orange">
-                    <span class="material-symbols-outlined">assignment_turned_in</span>
+                    <span class="material-symbols-outlined">event_available</span>
                 </div>
             </div>
             <div>
-                <p class="kpi-label">Assessments Done</p>
-                <p class="kpi-value" id="kpiAssessmentsValue">12</p>
+                <p class="kpi-label">Monthly Attendance</p>
+                <p class="kpi-value" id="kpiAttendanceValue">{% if children %}{{ children.0.monthly_attendance }}%{% else %}0%{% endif %}</p>
             </div>
         </div>
         <div class="kpi-card">
             <div class="kpi-header">
                 <div class="kpi-icon teal">
-                    <span class="material-symbols-outlined">book</span>
+                    <span class="material-symbols-outlined">workspace_premium</span>
                 </div>
             </div>
             <div>
-                <p class="kpi-label">Lessons Completed</p>
-                <p class="kpi-value" id="kpiLessonsValue">45</p>
+                <p class="kpi-label">Projects Completed</p>
+                <p class="kpi-value" id="kpiProjectsValue">{% if children %}{{ children.0.projects_label }}{% else %}0 of 3{% endif %}</p>
             </div>
         </div>
+    </div>
+
+    <!-- Projects this year (slide 47) -->
+    <div class="card-custom" id="projectsSection">
+        <div class="card-header-custom">
+            <h3 class="card-title-custom">Projects This Year</h3>
+        </div>
+        <div id="projectsList"></div>
     </div>
 
     <!-- Main Content Grid -->
@@ -125,17 +121,18 @@
                         </div>
                     </div>
                     <div class="learning-details">
-                        <h3 class="learning-title" id="learningModuleTitle">Current Module: Business Basics</h3>
-                        <p class="learning-description" id="learningModuleDesc">You have completed 9 out of 12 lessons. Keep up the great work!</p>
+                        <h3 class="learning-title" id="learningModuleTitle">{% if children %}Current Module : {{ children.0.current_module }}{% else %}Current Module : —{% endif %}</h3>
+                        <p class="learning-description" id="learningModuleDesc">{% if children %}You have completed {{ children.0.sessions_completed }} sessions.{% else %}You have completed 0 sessions.{% endif %}</p>
                         <div class="learning-stats">
                             <div>
-                                <span class="learning-stat-value" id="learningTotalLessons">12</span> <span class="learning-stat-label">Assigned</span>
+                                <span class="learning-stat-value" style="color: var(--primary);" id="learningSessions">{% if children %}{{ children.0.sessions_completed }}{% else %}0{% endif %}</span> <span class="learning-stat-label">Sessions</span>
                             </div>
                             <div>
-                                <span class="learning-stat-value" style="color: var(--primary);" id="learningCompletedLessons">9</span> <span class="learning-stat-label">Completed</span>
+                                <span class="learning-stat-value" id="learningProjects">{% if children %}{{ children.0.projects_label }}{% else %}0 of 3{% endif %}</span> <span class="learning-stat-label">Projects</span>
                             </div>
                         </div>
-                        <button class="btn-view-details">View Learning Details</button>
+                        <button class="btn-view-details" id="viewLearningDetailsBtn" type="button">View Learning Details</button>
+                        <p class="learning-description" id="learningModuleDetails" style="display:none;margin-top:0.75rem;">{% if children %}{{ children.0.current_module_desc|default:"No learning details available yet." }}{% endif %}</p>
                     </div>
                 </div>
             </div>
@@ -143,29 +140,79 @@
 
         <!-- Right Column (Sidebar) -->
         <div>
-            <!-- Recent Activity & Alerts -->
-            <div class="card-custom">
+            <!-- Events / Announcements (slide 48) -->
+            <div class="card-custom" id="eventsSection">
                 <div class="card-header-custom">
-                    <h3 class="card-title-custom">Recent Activity</h3>
-                    <span class="material-symbols-outlined" style="color: var(--text-muted);">notifications</span>
+                    <h3 class="card-title-custom">Events &amp; Announcements</h3>
                 </div>
-                <div class="activity-timeline" id="activityTimeline">
+                <div>
+                    {% for e in events %}
+                    <a href="{% if e.event_link %}{{ e.event_link }}{% else %}#{% endif %}"
+                       class="action-item" {% if e.event_link %}target="_blank" rel="noopener"{% endif %}
+                       style="text-decoration:none;color:inherit;align-items:flex-start;">
+                        <div class="action-item-left" style="align-items:flex-start;">
+                            <span class="material-symbols-outlined">event</span>
+                            <span class="action-item-title">
+                                <strong>{{ e.event_name|default:"Event" }}</strong>
+                                {% if e.event_date %} · {{ e.event_date|date:"d M Y" }}{% endif %}
+                                {% if e.event_description %}<br><span style="font-weight:400;color:#6b7280;">{{ e.event_description }}</span>{% endif %}
+                            </span>
+                        </div>
+                        {% if e.event_link %}
+                        <div class="action-item-right">
+                            <span class="material-symbols-outlined">chevron_right</span>
+                        </div>
+                        {% endif %}
+                    </a>
+                    {% empty %}
+                    <p style="color:#7c6882;font-size:0.875rem;">No events or announcements yet.</p>
+                    {% endfor %}
                 </div>
             </div>
 
-            <!-- Quick Actions -->
-            <div class="card-custom">
-                <h3 class="card-title-custom mb-3">Quick Actions</h3>
+            <!-- Newsletter (slide 48) -->
+            <div class="card-custom" id="newsletterSection">
+                <div class="card-header-custom">
+                    <h3 class="card-title-custom">Newsletter</h3>
+                </div>
                 <div>
-                    <a href="{% url 'parent_profile' %}" class="action-item" style="text-decoration:none;color:inherit;">
+                    {% for n in newsletters %}
+                    <a href="{% if n.newsletter_file %}{{ n.newsletter_file.url }}{% elif n.newsletter_weblink %}{{ n.newsletter_weblink }}{% else %}#{% endif %}"
+                       class="action-item" target="_blank" rel="noopener" style="text-decoration:none;color:inherit;">
                         <div class="action-item-left">
-                            <span class="material-symbols-outlined">person</span>
-                            <span class="action-item-title">My Profile</span>
+                            <span class="material-symbols-outlined">newspaper</span>
+                            <span class="action-item-title">{{ n.newsletter_month|default:n.created_at|date:"M Y" }}</span>
                         </div>
                         <div class="action-item-right">
                             <span class="material-symbols-outlined">chevron_right</span>
                         </div>
                     </a>
+                    {% empty %}
+                    <p style="color:#7c6882;font-size:0.875rem;">No newsletters yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Success Story (slide 48) -->
+            <div class="card-custom" id="successStorySection">
+                <div class="card-header-custom">
+                    <h3 class="card-title-custom">Success Story</h3>
+                </div>
+                <div>
+                    {% for s in success_stories %}
+                    <div class="action-item" style="align-items:flex-start;">
+                        <div class="action-item-left" style="align-items:flex-start;">
+                            <span class="material-symbols-outlined">emoji_events</span>
+                            <span class="action-item-title">
+                                <strong>{{ s.story_student_name|default:"Student" }}</strong>
+                                {% if s.story_grade %} · Grade {{ s.story_grade }}{% endif %}
+                                <br><span style="font-weight:400;color:#6b7280;">{{ s.story_text }}</span>
+                            </span>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p style="color:#7c6882;font-size:0.875rem;">No success stories yet.</p>
+                    {% endfor %}
                 </div>
             </div>
         </div>
@@ -189,7 +236,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         initializeChildSwitcher();
         if (currentChildId) updateDashboardData(currentChildId);
-        initializeActionButtons();
+        initializeLearningDetailsToggle();
     });
 
     // Initialize child switcher functionality
@@ -219,33 +266,65 @@
         document.getElementById('studentSchool').textContent = data.school;
         document.getElementById('studentCoach').textContent = data.coach;
 
-        // Update recent activities
-        updateActivities(data.activities || []);
+        // KPI cards (slide 47)
+        setText('kpiAttendanceValue', (data.monthly_attendance || 0) + '%');
+        setText('kpiProjectsValue', data.projects_label || '0 of 3');
+
+        // Learning module / sessions (slide 49)
+        setText('learningModuleTitle', 'Current Module : ' + (data.current_module || '—'));
+        setText('learningModuleDesc', 'You have completed ' + (data.sessions_completed || 0) + ' sessions.');
+        setText('learningSessions', data.sessions_completed || 0);
+        setText('learningProjects', data.projects_label || '0 of 3');
+        const detailsEl = document.getElementById('learningModuleDetails');
+        if (detailsEl) {
+            detailsEl.textContent = data.current_module_desc || 'No learning details available yet.';
+            detailsEl.style.display = 'none';
+        }
+
+        // Projects this year list (slide 47)
+        updateProjects(data.projects || []);
     }
 
-    // Render recent activities
-    function updateActivities(activities) {
-        const container = document.getElementById('activityTimeline');
-        if (activities.length === 0) {
-            container.innerHTML = '<div style="text-align:center;padding:2rem;color:#7c6882;"><span class="material-symbols-outlined" style="font-size:2rem;display:block;margin-bottom:0.5rem;opacity:0.4;">history</span>No recent activities</div>';
+    function setText(id, value) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+    }
+
+    // Render projects list
+    function updateProjects(projects) {
+        const container = document.getElementById('projectsList');
+        if (!container) return;
+        if (projects.length === 0) {
+            container.innerHTML = '<div style="text-align:center;padding:1.5rem;color:#7c6882;">No projects yet this year.</div>';
             return;
         }
-        container.innerHTML = activities.map(a => `
-            <div class="activity-item">
-                <div class="activity-icon ${a.color}">
-                    <span class="material-symbols-outlined">${a.icon}</span>
+        container.innerHTML = projects.map(p => `
+            <div class="action-item" style="text-decoration:none;color:inherit;">
+                <div class="action-item-left">
+                    <span class="material-symbols-outlined">${p.completed ? 'task_alt' : 'radio_button_unchecked'}</span>
+                    <span class="action-item-title">${escapeHtml(p.name)}</span>
                 </div>
-                <div class="activity-content">
-                    <p class="activity-title">${a.title}</p>
-                    <p class="activity-description">${a.description}</p>
-                    <p class="activity-description" style="font-size:0.7rem;color:#9ca3af;margin-top:2px;">${a.time}</p>
+                <div class="action-item-right">
+                    <span class="material-symbols-outlined" style="color:${p.completed ? '#10B981' : '#9ca3af'};">${p.completed ? 'check_circle' : 'pending'}</span>
                 </div>
             </div>
         `).join('');
     }
 
-    function initializeActionButtons() {
-        // Action buttons initialized — links handle navigation directly
+    function escapeHtml(s) {
+        const d = document.createElement('div');
+        d.textContent = s == null ? '' : s;
+        return d.innerHTML;
+    }
+
+    function initializeLearningDetailsToggle() {
+        const btn = document.getElementById('viewLearningDetailsBtn');
+        const details = document.getElementById('learningModuleDetails');
+        if (btn && details) {
+            btn.addEventListener('click', function() {
+                details.style.display = details.style.display === 'none' ? 'block' : 'none';
+            });
+        }
     }
 </script>
 {% endblock %}

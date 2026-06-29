@@ -284,23 +284,18 @@
                 </a>
 
 
-                <!-- LMS -->
-                <a href="#" id="nav-lms" class="student-sidebar-nav-link">
-                    <span class="material-symbols-outlined">school</span>
-                    LMS
-                </a>
-
-                <!-- Leader Board -->
-                <a href="#" id="nav-leaderboard" class="student-sidebar-nav-link">
-                    <span class="material-symbols-outlined">leaderboard</span>
-                    Leader Board
-                </a>
-
+                <!-- LMS + Leader Board removed per slide 45 -->
 
                 <!-- Reports -->
                 <a href="{% url 'student:student_reports' %}" id="nav-reports" class="student-sidebar-nav-link">
                     <span class="material-symbols-outlined">workspace_premium</span>
                     Skill Passport
+                </a>
+
+                <!-- Annual Skill Passport -->
+                <a href="{% url 'student:student_annual_passport' %}" id="nav-annual-passport" class="student-sidebar-nav-link">
+                    <span class="material-symbols-outlined">verified</span>
+                    Annual Passport
                 </a>
 
                 <!-- Badges -->

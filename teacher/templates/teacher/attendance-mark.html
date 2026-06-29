@@ -1,0 +1,426 @@
+{% extends 'teacher/base.html' %}
+{% load static %}
+
+{% block title %}Student Attendance — Thinking Coach{% endblock %}
+
+{% block extra_css %}
+<style>
+    .am * { font-family: 'Poppins', sans-serif !important; }
+    .am .material-symbols-outlined { font-family: 'Material Symbols Outlined' !important; vertical-align:middle; }
+    .am .card { background:#fff; border-radius:0.85rem; border:1px solid #ede9f4; box-shadow:0 1px 3px rgba(0,0,0,0.06); }
+    .am .lbl { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:#94a3b8; margin-bottom:8px; display:block; }
+
+    /* Classroom dropdown */
+    .am .cr-wrap { position:relative; }
+    .am .cr-toggle { width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px;
+        padding:13px 16px; border:1.5px solid #e2e8f0; border-radius:10px; background:#fff; cursor:pointer; font-size:15px; font-weight:600; color:#1e1b4b; }
+    .am .cr-toggle:hover { border-color:#cbb8d6; }
+    .am .cr-menu { position:absolute; z-index:40; top:calc(100% + 6px); left:0; right:0; background:#fff;
+        border:1px solid #e2e8f0; border-radius:12px; box-shadow:0 12px 30px rgba(0,0,0,0.12); overflow:hidden; display:none; }
+    .am .cr-menu.open { display:block; }
+    .am .cr-search { padding:12px; border-bottom:1px solid #f1f5f9; }
+    .am .cr-search input { width:100%; padding:9px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px; outline:none; }
+    .am .cr-search input:focus { border-color:#5A1F6E; }
+    .am .cr-list { max-height:280px; overflow-y:auto; }
+    .am .cr-item { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:11px 16px; cursor:pointer; font-size:14px; color:#374151; }
+    .am .cr-item:hover { background:#f8f7fc; }
+    .am .cr-item.sel { background:#f3edf8; color:#5A1F6E; font-weight:600; }
+    .am .cr-item .prog { font-weight:600; }
+    .am .cr-foot { padding:10px 16px; font-size:11px; font-weight:700; letter-spacing:0.06em; color:#94a3b8; background:#f8f7fc; border-top:1px solid #f1f5f9; }
+    .am .chip { display:inline-flex; align-items:center; gap:6px; padding:7px 14px; border-radius:999px; font-size:13px; font-weight:600; }
+    .am .chip-prog { background:#f3edf8; color:#5A1F6E; }
+    .am .chip-grade { background:#eef2ff; color:#4338ca; }
+
+    /* Sessions list */
+    .am .sess-list { max-height:560px; overflow-y:auto; padding:6px; display:flex; flex-direction:column; gap:8px; }
+    .am .sess { display:flex; align-items:center; gap:12px; padding:12px; border:1.5px solid #eef0f4; border-radius:11px; cursor:pointer; background:#fff; }
+    .am .sess:hover { border-color:#d6c6e0; }
+    .am .sess.active { border-color:#5A1F6E; background:#faf6fd; box-shadow:0 0 0 1px #5A1F6E inset; }
+    .am .daybadge { min-width:46px; height:46px; border-radius:10px; background:#f3edf8; color:#5A1F6E; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800; letter-spacing:0.04em; }
+    .am .sess.active .daybadge { background:#5A1F6E; color:#fff; }
+    .am .sess .d { font-size:14px; font-weight:600; color:#1e1b4b; }
+    .am .sess .t { font-size:12px; color:#94a3b8; display:flex; align-items:center; gap:4px; margin-top:2px; }
+
+    /* Stats */
+    .am .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+    .am .stat { border:1px solid #eef0f4; border-radius:11px; padding:14px; text-align:center; }
+    .am .stat .v { font-size:24px; font-weight:800; line-height:1; }
+    .am .stat .k { font-size:10px; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; color:#94a3b8; margin-top:6px; }
+    .am .stat.total .v { color:#1e1b4b; } .am .stat.present .v { color:#16a34a; }
+    .am .stat.absent .v { color:#dc2626; } .am .stat.pct .v { color:#2563eb; }
+
+    /* Status toggle (class held / cancelled) */
+    .am .statusbtn { padding:9px 16px; border:1.5px solid #e2e8f0; border-radius:9px; background:#fff; font-size:13px; font-weight:700; color:#64748b; cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
+    .am .statusbtn.held-on { background:#dcfce7; border-color:#86efac; color:#15803d; }
+    .am .statusbtn.cancel-on { background:#fee2e2; border-color:#fca5a5; color:#b91c1c; }
+
+    .am .bulkbtn { padding:8px 14px; border-radius:9px; font-size:12px; font-weight:700; cursor:pointer; border:1.5px solid transparent; display:inline-flex; align-items:center; gap:6px; }
+    .am .bulk-present { background:#16a34a; color:#fff; }
+    .am .bulk-absent { background:#dc2626; color:#fff; }
+    .am .bulk-cat { background:#f1f5f9; color:#64748b; border-color:#e2e8f0; }
+    .am .findstu { flex:1; min-width:160px; padding:10px 12px; border:1.5px solid #e2e8f0; border-radius:9px; font-size:14px; outline:none; }
+    .am .findstu:focus { border-color:#5A1F6E; }
+
+    /* Student rows */
+    .am .stu { display:flex; align-items:center; gap:14px; padding:13px 16px; border-bottom:1px solid #f3f4f6; }
+    .am .stu:last-child { border-bottom:none; }
+    .am .avatar { width:40px; height:40px; border-radius:50%; background:#f3edf8; color:#5A1F6E; display:inline-flex; align-items:center; justify-content:center; font-size:15px; font-weight:800; flex-shrink:0; }
+    .am .stu .nm { font-size:14px; font-weight:700; color:#1e1b4b; text-transform:uppercase; letter-spacing:0.02em; }
+    .am .stu .roll { font-size:12px; color:#94a3b8; margin-top:2px; }
+    .am .seg { display:inline-flex; border:1.5px solid #e2e8f0; border-radius:9px; overflow:hidden; flex-shrink:0; }
+    .am .seg button { border:none; background:#fff; padding:8px 18px; font-size:13px; font-weight:700; color:#94a3b8; cursor:pointer; }
+    .am .seg button + button { border-left:1px solid #e2e8f0; }
+    .am .seg button.on-present { background:#5A1F6E; color:#fff; }
+    .am .seg button.on-absent { background:#dc2626; color:#fff; }
+
+    .am .pill-marked { display:inline-flex; align-items:center; gap:6px; background:#dcfce7; color:#15803d; padding:7px 14px; border-radius:999px; font-size:12px; font-weight:700; }
+    .am .pill-unmarked { display:inline-flex; align-items:center; gap:6px; background:#f1f5f9; color:#94a3b8; padding:7px 14px; border-radius:999px; font-size:12px; font-weight:700; }
+    .am .btn-primary { background:#5A1F6E; color:#fff; border:none; border-radius:10px; padding:12px 26px; font-size:14px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:8px; }
+    .am .btn-primary:hover { opacity:0.92; }
+    .am .btn-primary:disabled { opacity:0.5; cursor:not-allowed; }
+    .am .empty { padding:48px 20px; text-align:center; color:#94a3b8; font-size:14px; }
+    .am .backbtn { font-size:13px; font-weight:600; color:#5A1F6E; text-decoration:none; display:inline-flex; align-items:center; gap:6px; border:1.5px solid #e9d9f1; border-radius:9px; padding:9px 16px; background:#fff; }
+    .am .backbtn:hover { background:#faf6fd; }
+
+    @media (max-width:900px){ .am .grid-2 { grid-template-columns:1fr !important; } .am .stats { grid-template-columns:repeat(2,1fr); } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="am" style="max-width:1180px; margin:0 auto;">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
+        <div>
+            <h1 style="font-size:24px; font-weight:800; color:#1e1b4b;">Student Attendance</h1>
+            <p style="font-size:13px; color:#94a3b8; margin-top:3px;">Mark attendance for your class sessions</p>
+        </div>
+        <a href="{% url 'teacher:attendance_list' %}" class="backbtn">
+            <span class="material-symbols-outlined" style="font-size:18px;">arrow_back</span> Back to Schedule
+        </a>
+    </div>
+
+    <!-- SECTION 1 — SELECT CLASSROOM -->
+    <div class="card" style="padding:20px; margin-bottom:20px;">
+        <label class="lbl">Select Classroom</label>
+        <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+            <div class="cr-wrap" style="flex:1; min-width:260px;">
+                <div class="cr-toggle" id="crToggle">
+                    <span id="crLabel" style="color:#94a3b8;">Choose a classroom…</span>
+                    <span class="material-symbols-outlined" style="color:#94a3b8;">expand_more</span>
+                </div>
+                <div class="cr-menu" id="crMenu">
+                    <div class="cr-search"><input type="text" id="crSearch" placeholder="Search by program, grade or section..."></div>
+                    <div class="cr-list" id="crList"></div>
+                    <div class="cr-foot" id="crFoot">0 CLASSROOMS TOTAL</div>
+                </div>
+            </div>
+            <span class="chip chip-prog" id="chipProg" style="display:none;">
+                <span class="material-symbols-outlined" style="font-size:18px;">music_note</span><span id="chipProgTxt"></span>
+            </span>
+            <span class="chip chip-grade" id="chipGrade" style="display:none;"></span>
+        </div>
+    </div>
+
+    <!-- SECTION 2 — two-column body -->
+    <div class="grid-2" style="display:grid; grid-template-columns:320px 1fr; gap:20px; align-items:start;">
+        <!-- LEFT: Class Sessions -->
+        <div class="card" style="overflow:hidden;">
+            <div style="padding:16px 18px; border-bottom:1px solid #f1f5f9; font-size:14px; font-weight:800; color:#1e1b4b;">
+                Class Sessions (<span id="sessCount">0</span>)
+            </div>
+            <div class="sess-list" id="sessList"></div>
+            <div class="empty" id="sessEmpty">Select a classroom to view sessions.</div>
+        </div>
+
+        <!-- RIGHT: marking panel -->
+        <div class="card" id="markCard" style="display:none; overflow:hidden;">
+            <!-- Header -->
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid #f1f5f9; gap:12px; flex-wrap:wrap;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <span class="daybadge" id="hdrDay">—</span>
+                    <div>
+                        <div style="font-size:15px; font-weight:700; color:#1e1b4b;" id="hdrDate">—</div>
+                        <div style="font-size:12px; color:#94a3b8; display:flex; align-items:center; gap:4px;" id="hdrTimeWrap">
+                            <span class="material-symbols-outlined" style="font-size:15px;">schedule</span><span id="hdrTime"></span>
+                        </div>
+                    </div>
+                </div>
+                <span class="pill-marked" id="markedPill" style="display:none;"><span class="material-symbols-outlined" style="font-size:16px;">check_circle</span>Already Marked</span>
+                <span class="pill-unmarked" id="unmarkedPill" style="display:none;">Not marked</span>
+            </div>
+
+            <!-- Stats -->
+            <div style="padding:18px 20px; border-bottom:1px solid #f1f5f9;">
+                <div class="stats">
+                    <div class="stat total"><div class="v" id="stTotal">0</div><div class="k">Total</div></div>
+                    <div class="stat present"><div class="v" id="stPresent">0</div><div class="k">Present</div></div>
+                    <div class="stat absent"><div class="v" id="stAbsent">0</div><div class="k">Absent</div></div>
+                    <div class="stat pct"><div class="v" id="stPct">0%</div><div class="k">Attendance</div></div>
+                </div>
+            </div>
+
+            <!-- Class status -->
+            <div style="padding:16px 20px; border-bottom:1px solid #f1f5f9;">
+                <div class="lbl">Class Status</div>
+                <div style="display:flex; gap:10px;">
+                    <button class="statusbtn held-on" id="btnHeld"><span class="material-symbols-outlined" style="font-size:18px;">check_circle</span>Class Held</button>
+                    <button class="statusbtn" id="btnCancel"><span class="material-symbols-outlined" style="font-size:18px;">block</span>Class Cancelled</button>
+                </div>
+            </div>
+
+            <!-- Search + bulk -->
+            <div style="padding:16px 20px; border-bottom:1px solid #f1f5f9;">
+                <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                    <input type="text" class="findstu" id="findStu" placeholder="Search student...">
+                    <button class="bulkbtn bulk-present" id="allPresent"><span class="material-symbols-outlined" style="font-size:16px;">done_all</span>All Present</button>
+                    <button class="bulkbtn bulk-absent" id="allAbsent"><span class="material-symbols-outlined" style="font-size:16px;">close</span>All Absent</button>
+                    <button class="bulkbtn bulk-cat" id="catBtn"><span class="material-symbols-outlined" style="font-size:16px;">visibility</span>Category</button>
+                </div>
+                <div style="font-size:11px; color:#94a3b8; margin-top:8px;">To view existing A-B-C categorisation click on the Category icon</div>
+                <div id="catNote" style="display:none; font-size:12px; color:#5A1F6E; margin-top:6px; background:#f3edf8; padding:8px 12px; border-radius:8px;">Category view (A/B/C) is not available yet for this class.</div>
+            </div>
+
+            <!-- Students -->
+            <div id="stuList"></div>
+            <div class="empty" id="stuEmpty" style="display:none;">No active students found for this class.</div>
+            <div class="empty" id="stuLoading" style="display:none;">Loading students...</div>
+
+            <!-- Save -->
+            <div style="padding:16px 20px; border-top:1px solid #f1f5f9; display:flex; justify-content:flex-end;">
+                <button class="btn-primary" id="saveBtn"><span class="material-symbols-outlined" style="font-size:18px;">save</span>Save Attendance</button>
+            </div>
+        </div>
+
+        <div class="card" id="markEmpty" style="padding:48px 20px;">
+            <div class="empty" style="padding:0;">Select a classroom and session to begin marking attendance.</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CLASSROOMS = {{ classrooms|safe }};
+const SESSIONS_URL = "{% url 'teacher:api_attendance_sessions' %}";
+const STUDENTS_URL = "{% url 'teacher:api_attendance_students' %}";
+const SAVE_URL = "{% url 'teacher:api_save_attendance' %}";
+const CSRF = "{{ csrf_token }}";
+
+let selClassroom = null;   // {id,label,program,grade,division}
+let sessions = [];
+let selSession = null;     // session dict
+let students = [];         // [{id,name,roll,initial}]
+let state = {};            // {id: 'present'|'absent'}
+let classStatus = 'held';
+
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* ---------- Classroom dropdown ---------- */
+const crToggle = document.getElementById('crToggle');
+const crMenu = document.getElementById('crMenu');
+const crSearch = document.getElementById('crSearch');
+
+function renderClassrooms(filter){
+    const f = (filter||'').toLowerCase();
+    const list = CLASSROOMS.filter(c => !f || (c.label+' '+c.program+' '+c.grade+' '+c.division).toLowerCase().includes(f));
+    const el = document.getElementById('crList');
+    if (!list.length){ el.innerHTML = '<div class="cr-item" style="color:#94a3b8; cursor:default;">No classrooms found</div>'; }
+    else {
+        el.innerHTML = list.map(c => {
+            const sel = selClassroom && selClassroom.id === c.id;
+            const check = sel ? '<span class="material-symbols-outlined" style="color:#5A1F6E;">check</span>' : '';
+            return `<div class="cr-item ${sel?'sel':''}" data-id="${c.id}">
+                <span><span class="prog">${esc(c.program||'—')}</span> &nbsp; ${esc(c.grade)}-${esc(c.division)}</span>${check}</div>`;
+        }).join('');
+        el.querySelectorAll('.cr-item[data-id]').forEach(it => it.addEventListener('click', () => {
+            const c = CLASSROOMS.find(x => String(x.id) === it.dataset.id);
+            if (c) selectClassroom(c);
+            crMenu.classList.remove('open');
+        }));
+    }
+    document.getElementById('crFoot').textContent = `${CLASSROOMS.length} CLASSROOMS TOTAL`;
+}
+
+crToggle.addEventListener('click', () => { crMenu.classList.toggle('open'); if (crMenu.classList.contains('open')) { crSearch.value=''; renderClassrooms(''); crSearch.focus(); } });
+crSearch.addEventListener('input', () => renderClassrooms(crSearch.value));
+document.addEventListener('click', e => { if (!e.target.closest('.cr-wrap')) crMenu.classList.remove('open'); });
+
+function selectClassroom(c){
+    selClassroom = c;
+    document.getElementById('crLabel').textContent = c.label;
+    document.getElementById('crLabel').style.color = '#1e1b4b';
+    const cp = document.getElementById('chipProg'); cp.style.display = c.program ? 'inline-flex' : 'none';
+    document.getElementById('chipProgTxt').textContent = c.program || '';
+    const cg = document.getElementById('chipGrade'); cg.style.display = 'inline-flex';
+    cg.textContent = `${c.grade} – ${c.division}`;
+    loadSessions(c.id);
+}
+
+/* ---------- Sessions ---------- */
+function loadSessions(classroomId){
+    sessions = []; selSession = null;
+    document.getElementById('sessList').innerHTML = '';
+    document.getElementById('sessEmpty').style.display = 'block';
+    document.getElementById('sessEmpty').textContent = 'Loading sessions...';
+    document.getElementById('markCard').style.display = 'none';
+    document.getElementById('markEmpty').style.display = 'block';
+
+    fetch(`${SESSIONS_URL}?classroom=${encodeURIComponent(classroomId)}&_=${Date.now()}`, {cache:'no-store'})
+        .then(r => r.json())
+        .then(d => {
+            sessions = d.sessions || [];
+            document.getElementById('sessCount').textContent = sessions.length;
+            renderSessions();
+            if (sessions.length){
+                // nearest-to-today (or first)
+                const today = new Date().toISOString().slice(0,10);
+                let idx = sessions.findIndex(s => s.date >= today);
+                if (idx < 0) idx = 0;
+                selectSession(idx);
+            }
+        })
+        .catch(() => { document.getElementById('sessEmpty').textContent = 'Could not load sessions.'; });
+}
+
+function renderSessions(){
+    const el = document.getElementById('sessList');
+    const empty = document.getElementById('sessEmpty');
+    if (!sessions.length){ el.innerHTML=''; empty.style.display='block'; empty.textContent='No sessions for this classroom.'; return; }
+    empty.style.display = 'none';
+    el.innerHTML = sessions.map((s,i) => `
+        <div class="sess" data-i="${i}">
+            <span class="daybadge">${esc(s.day_label)}</span>
+            <div>
+                <div class="d">${esc(s.date_label)}</div>
+                <div class="t">${s.time_label ? '<span class="material-symbols-outlined" style="font-size:14px;">schedule</span>'+esc(s.time_label) : ''}</div>
+            </div>
+        </div>`).join('');
+    el.querySelectorAll('.sess[data-i]').forEach(it => it.addEventListener('click', () => selectSession(parseInt(it.dataset.i,10))));
+}
+
+function selectSession(i){
+    selSession = sessions[i];
+    document.querySelectorAll('#sessList .sess').forEach(el => el.classList.toggle('active', parseInt(el.dataset.i,10) === i));
+    document.getElementById('markEmpty').style.display = 'none';
+    document.getElementById('markCard').style.display = 'block';
+    document.getElementById('hdrDay').textContent = selSession.day_label;
+    document.getElementById('hdrDate').textContent = selSession.date_label;
+    document.getElementById('hdrTime').textContent = selSession.time_label || '';
+    document.getElementById('hdrTimeWrap').style.display = selSession.time_label ? 'flex' : 'none';
+    loadStudents();
+}
+
+/* ---------- Students ---------- */
+function loadStudents(){
+    if (!selClassroom || !selSession) return;
+    document.getElementById('stuList').innerHTML = '';
+    document.getElementById('stuEmpty').style.display = 'none';
+    document.getElementById('stuLoading').style.display = 'block';
+    fetch(`${STUDENTS_URL}?classroom=${encodeURIComponent(selClassroom.id)}&date=${encodeURIComponent(selSession.date)}&_=${Date.now()}`, {cache:'no-store'})
+        .then(r => r.json())
+        .then(d => {
+            document.getElementById('stuLoading').style.display = 'none';
+            students = d.students || [];
+            classStatus = d.class_status || 'held';
+            setClassStatusUI(classStatus);
+            // marked pill
+            document.getElementById('markedPill').style.display = d.already_marked ? 'inline-flex' : 'none';
+            document.getElementById('unmarkedPill').style.display = d.already_marked ? 'none' : 'inline-flex';
+            // state
+            state = {};
+            const recs = d.records || {};
+            students.forEach(s => { state[s.id] = recs[String(s.id)] === 'absent' || recs[String(s.id)] === 'late' ? 'absent' : 'present'; });
+            renderStudents();
+            recomputeStats();
+        })
+        .catch(() => { document.getElementById('stuLoading').style.display='none'; document.getElementById('stuEmpty').style.display='block'; });
+}
+
+function renderStudents(){
+    const el = document.getElementById('stuList');
+    const empty = document.getElementById('stuEmpty');
+    const f = (document.getElementById('findStu').value||'').toLowerCase();
+    const list = students.filter(s => !f || (s.name+' '+s.roll).toLowerCase().includes(f));
+    if (!students.length){ el.innerHTML=''; empty.style.display='block'; return; }
+    empty.style.display = 'none';
+    el.innerHTML = list.map(s => {
+        const st = state[s.id] || 'present';
+        return `<div class="stu">
+            <span class="avatar">${esc(s.initial)}</span>
+            <div style="flex:1;">
+                <div class="nm">${esc(s.name)}</div>
+                <div class="roll">ROLL NO: ${esc(s.roll||'—')}</div>
+            </div>
+            <div class="seg" data-sid="${s.id}">
+                <button data-st="present" class="${st==='present'?'on-present':''}" onclick="setStatus(${s.id},'present')">Present</button>
+                <button data-st="absent" class="${st==='absent'?'on-absent':''}" onclick="setStatus(${s.id},'absent')">Absent</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+window.setStatus = function(sid, st){
+    state[sid] = st;
+    const seg = document.querySelector(`.seg[data-sid="${sid}"]`);
+    if (seg) seg.querySelectorAll('button').forEach(b => { b.className = b.dataset.st === st ? 'on-'+st : ''; });
+    recomputeStats();
+};
+
+document.getElementById('allPresent').addEventListener('click', () => { students.forEach(s => state[s.id]='present'); renderStudents(); recomputeStats(); });
+document.getElementById('allAbsent').addEventListener('click', () => { students.forEach(s => state[s.id]='absent'); renderStudents(); recomputeStats(); });
+document.getElementById('findStu').addEventListener('input', renderStudents);
+document.getElementById('catBtn').addEventListener('click', () => { const n=document.getElementById('catNote'); n.style.display = n.style.display==='none'?'block':'none'; });
+
+function recomputeStats(){
+    const total = students.length;
+    let present = 0; students.forEach(s => { if ((state[s.id]||'present')==='present') present++; });
+    const absent = total - present;
+    const pct = total ? Math.round(present/total*100) : 0;
+    document.getElementById('stTotal').textContent = total;
+    document.getElementById('stPresent').textContent = present;
+    document.getElementById('stAbsent').textContent = absent;
+    document.getElementById('stPct').textContent = pct + '%';
+}
+
+/* ---------- Class status ---------- */
+function setClassStatusUI(s){
+    classStatus = s;
+    document.getElementById('btnHeld').className = 'statusbtn' + (s==='held'?' held-on':'');
+    document.getElementById('btnCancel').className = 'statusbtn' + (s==='cancelled'?' cancel-on':'');
+}
+document.getElementById('btnHeld').addEventListener('click', () => setClassStatusUI('held'));
+document.getElementById('btnCancel').addEventListener('click', () => setClassStatusUI('cancelled'));
+
+/* ---------- Save ---------- */
+document.getElementById('saveBtn').addEventListener('click', () => {
+    if (!selClassroom || !selSession){ alert('Select a classroom and session first.'); return; }
+    const btn = document.getElementById('saveBtn'); btn.disabled = true;
+    const records = {}; students.forEach(s => records[s.id] = state[s.id] || 'present');
+    fetch(SAVE_URL, {
+        method:'POST',
+        headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},
+        body: JSON.stringify({
+            classroom: selClassroom.id, date: selSession.date,
+            time: selSession.start_time || '', class_status: classStatus, records
+        })
+    })
+    .then(r => r.json())
+    .then(d => {
+        btn.disabled = false;
+        if (d.ok){
+            alert(`Attendance saved for ${d.saved} student(s).`);
+            document.getElementById('markedPill').style.display='inline-flex';
+            document.getElementById('unmarkedPill').style.display='none';
+        } else { alert(d.error || 'Save failed.'); }
+    })
+    .catch(() => { btn.disabled = false; alert('Save failed.'); });
+});
+
+/* ---------- Init ---------- */
+document.addEventListener('DOMContentLoaded', function(){
+    const link = document.getElementById('nav-attendance');
+    if (link){ link.classList.add('active'); const p = link.closest('.sidebar-dropdown'); if (p) p.classList.add('active'); }
+    renderClassrooms('');
+    if (CLASSROOMS.length === 1) selectClassroom(CLASSROOMS[0]);
+});
+</script>
+{% endblock %}

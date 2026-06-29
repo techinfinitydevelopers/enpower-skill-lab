@@ -25,28 +25,28 @@
             </div>
             <div class="stud-dash-profile-details">
                 <div class="stud-dash-detail-row">
-                    <span class="stud-dash-detail-label">Registration No</span>
-                    <span class="stud-dash-detail-value blue">{{ user.student.registration_number|default:"210903" }} <span class="material-symbols-outlined stud-dash-align-middle">arrow_forward</span></span>
+                    <span class="stud-dash-detail-label">Student ID</span>
+                    <span class="stud-dash-detail-value blue">{{ student_id|default:"—" }}</span>
                 </div>
                 <div class="stud-dash-detail-row">
-                    <span class="stud-dash-detail-label">Institute</span>
-                    <span class="stud-dash-detail-value">{{ user.student.school.school_name|default:"Delhi Public School" }}</span>
+                    <span class="stud-dash-detail-label">School</span>
+                    <span class="stud-dash-detail-value">{{ school_name|default:"—" }}</span>
                 </div>
                 <div class="stud-dash-detail-row">
-                    <span class="stud-dash-detail-label">Date of Admission</span>
-                    <span class="stud-dash-detail-value">{{ user.student.admission_date|date:"d F, Y"|default:"21 November, 2025" }}</span>
+                    <span class="stud-dash-detail-label">Enrollment Date</span>
+                    <span class="stud-dash-detail-value">{{ student.enrollment_date|date:"d F, Y"|default:"—" }}</span>
+                </div>
+                <div class="stud-dash-detail-row">
+                    <span class="stud-dash-detail-label">Program</span>
+                    <span class="stud-dash-detail-value">{{ program_name|default:"—" }}</span>
+                </div>
+                <div class="stud-dash-detail-row">
+                    <span class="stud-dash-detail-label">Thinking Coach</span>
+                    <span class="stud-dash-detail-value">{{ thinking_coach|default:"—" }}</span>
                 </div>
                 <div class="stud-dash-detail-row">
                     <span class="stud-dash-detail-label">Class</span>
-                    <span class="stud-dash-detail-value blue">{{ user.student.class_name|default:"9" }} <span class="material-symbols-outlined stud-dash-align-middle">arrow_forward</span></span>
-                </div>
-                <div class="stud-dash-detail-row">
-                    <span class="stud-dash-detail-label">Family</span>
-                    <span class="stud-dash-detail-value blue"><span class="material-symbols-outlined stud-dash-align-middle">arrow_forward</span></span>
-                </div>
-                <div class="stud-dash-detail-row">
-                    <span class="stud-dash-detail-label">Discount in Fee</span>
-                    <span class="stud-dash-detail-value green">20 % <span class="material-symbols-outlined stud-dash-align-middle">arrow_forward</span></span>
+                    <span class="stud-dash-detail-value blue">{{ student.student_class|default:"—" }}{{ student.division }}</span>
                 </div>
             </div>
         </div>
@@ -61,8 +61,7 @@
                             Total Registered Students
                         </h3>
                         <div class="stud-dash-stats-count-wrapper">
-                            <p class="stud-dash-stats-count" id="studentCount">0</p>
-                            <span class="stud-dash-stats-count-plus">+</span>
+                            <p class="stud-dash-stats-count">{{ total_registered_students }}</p>
                         </div>
                         <p class="stud-dash-stats-subtitle">Active learners in the system</p>
                     </div>
@@ -74,64 +73,7 @@
             </div>
         </div>
 
-        <!-- Quiz Widget -->
-        <div class="stud-dash-card stud-dash-quiz-card">
-            <div class="stud-dash-quiz-header">
-                <div class="stud-dash-quiz-icon-wrapper">
-                    <span class="material-symbols-outlined stud-dash-quiz-icon">quiz</span>
-                </div>
-                <div class="stud-dash-quiz-info">
-                    <h4 class="stud-dash-quiz-title">Test Your Knowledge!</h4>
-                    <p class="stud-dash-quiz-subtitle">Complete today's quiz and earn XP</p>
-                </div>
-            </div>
-
-            <div class="stud-dash-quiz-stats">
-                <div class="stud-dash-quiz-stat-item">
-                    <span class="material-symbols-outlined stud-dash-quiz-stat-icon">verified</span>
-                    <div>
-                        <p class="stud-dash-quiz-stat-value">15/20</p>
-                        <p class="stud-dash-quiz-stat-label">Completed</p>
-                    </div>
-                </div>
-                <div class="stud-dash-quiz-stat-item">
-                    <span class="material-symbols-outlined stud-dash-quiz-stat-icon">stars</span>
-                    <div>
-                        <p class="stud-dash-quiz-stat-value">750 XP</p>
-                        <p class="stud-dash-quiz-stat-label">Total Earned</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="stud-dash-quiz-current">
-                <div class="stud-dash-quiz-current-header">
-                    <h5 class="stud-dash-quiz-current-title">Today's Quiz</h5>
-                    <span class="stud-dash-quiz-badge new">NEW</span>
-                </div>
-                <p class="stud-dash-quiz-current-subject">
-                    <span class="material-symbols-outlined">subject</span>
-                    Mathematics - Algebra
-                </p>
-                <div class="stud-dash-quiz-progress-wrapper">
-                    <div class="stud-dash-quiz-progress-info">
-                        <span class="stud-dash-quiz-questions-count">10 Questions</span>
-                        <span class="stud-dash-quiz-time">
-                            <span class="material-symbols-outlined">timer</span>
-                            15 min
-                        </span>
-                    </div>
-                    <div class="stud-dash-quiz-reward">
-                        <span class="material-symbols-outlined">workspace_premium</span>
-                        +50 XP
-                    </div>
-                </div>
-            </div>
-
-            <button class="stud-dash-quiz-start-btn">
-                <span class="material-symbols-outlined">play_arrow</span>
-                Start Quiz
-            </button>
-        </div>
+        <!-- Quiz Widget (Test Your Knowledge) removed per slide 46 -->
     </div>
 
     <!-- Main Column -->
@@ -140,20 +82,20 @@
         <div class="stud-dash-card stud-dash-gamification-card">
             <h3 class="stud-dash-gamification-title">Journey Progress</h3>
 
-            <!-- XP Points Section -->
+            <!-- Journey Progress (projects completed) -->
             <div class="stud-dash-xp-section">
                 <div class="stud-dash-xp-header">
-                    <span class="material-symbols-outlined stud-dash-xp-icon">stars</span>
+                    <span class="material-symbols-outlined stud-dash-xp-icon">rocket_launch</span>
                     <div>
-                        <p class="stud-dash-xp-label">Experience Points</p>
-                        <p class="stud-dash-xp-value">2,450 XP <span class="stud-dash-xp-label">level 5</span></p>
+                        <p class="stud-dash-xp-label">Projects Completed</p>
+                        <p class="stud-dash-xp-value">{{ projects_completed }} of {{ projects_total }}</p>
                     </div>
                 </div>
                 <div class="stud-dash-xp-progress">
                     <div class="stud-dash-xp-progress-bar">
-                        <div class="stud-dash-xp-progress-fill" style="width: 65%;"></div>
+                        <div class="stud-dash-xp-progress-fill" style="width: {% widthratio projects_completed projects_total 100 %}%;"></div>
                     </div>
-                    <p class="stud-dash-xp-progress-text">1,550 XP to Level 6</p>
+                    <p class="stud-dash-xp-progress-text">{% widthratio projects_completed projects_total 100 %}% of your yearly journey</p>
                 </div>
             </div>
 
@@ -162,122 +104,75 @@
                 <div class="stud-dash-streak-item">
                     <span class="material-symbols-outlined stud-dash-streak-icon fire">local_fire_department</span>
                     <div>
-                        <p class="stud-dash-streak-value">7 Days</p>
-                        <p class="stud-dash-streak-label">Current Streak</p>
+                        <p class="stud-dash-streak-value">{{ attendance.current_streak }} {% if attendance.current_streak == 1 %}Session{% else %}Sessions{% endif %}</p>
+                        <p class="stud-dash-streak-label">Attendance Streak</p>
                     </div>
                 </div>
                 <div class="stud-dash-streak-item">
-                    <span class="material-symbols-outlined stud-dash-streak-icon trophy">emoji_events</span>
+                    <span class="material-symbols-outlined stud-dash-streak-icon trophy">event_available</span>
                     <div>
-                        <p class="stud-dash-streak-value">21 Days</p>
-                        <p class="stud-dash-streak-label">Best Streak</p>
+                        <p class="stud-dash-streak-value">{{ attendance.percent }}%</p>
+                        <p class="stud-dash-streak-label">Overall Attendance</p>
                     </div>
                 </div>
             </div>
 
-            <!-- Badges Section -->
+            <!-- Attendance Badge -->
             <div class="stud-dash-badges-section">
                 <div class="stud-dash-badges-header">
-                    <h4 class="stud-dash-badges-title">Recent Badges</h4>
-                    <a href="#" class="stud-dash-badges-link">View All <span class="material-symbols-outlined stud-dash-align-middle">arrow_forward</span></a>
+                    <h4 class="stud-dash-badges-title">Attendance Badge</h4>
                 </div>
-                <div class="stud-dash-badges-grid">
-                    <div class="stud-dash-badge-item">
-                        <span class="material-symbols-outlined stud-dash-badge-icon gold">military_tech</span>
-                        <p class="stud-dash-badge-name">Top Performer</p>
-                    </div>
-                    <div class="stud-dash-badge-item">
-                        <span class="material-symbols-outlined stud-dash-badge-icon silver">school</span>
-                        <p class="stud-dash-badge-name">Quick Learner</p>
-                    </div>
-                    <div class="stud-dash-badge-item">
-                        <span class="material-symbols-outlined stud-dash-badge-icon bronze">workspace_premium</span>
-                        <p class="stud-dash-badge-name">Consistent</p>
-                    </div>
-                    <div class="stud-dash-badge-item locked">
-                        <span class="material-symbols-outlined stud-dash-badge-icon">lock</span>
-                        <p class="stud-dash-badge-name">Mystery</p>
+                {% if attendance.badge %}
+                <div class="stud-dash-streak-section">
+                    <div class="stud-dash-streak-item">
+                        <span style="font-size: 2rem; line-height: 1;">{{ attendance.badge.emoji }}</span>
+                        <div>
+                            <p class="stud-dash-streak-value">{{ attendance.badge.name }}</p>
+                            <p class="stud-dash-streak-label">{{ attendance.badge.tagline }}</p>
+                        </div>
                     </div>
                 </div>
+                {% else %}
+                <p class="stud-dash-xp-progress-text">Keep attending to earn an attendance badge (90%+).</p>
+                {% endif %}
             </div>
 
-            <!-- Leaderboard Section -->
-            <div class="stud-dash-leaderboard-section">
-                <div class="stud-dash-leaderboard-header">
-                    <h4 class="stud-dash-leaderboard-title">Leaderboard Position</h4>
-                    <span class="stud-dash-leaderboard-period">This Month</span>
-                </div>
-                <div class="stud-dash-leaderboard-rank">
-                    <div class="stud-dash-rank-badge">
-                        <span class="material-symbols-outlined stud-dash-rank-icon">leaderboard</span>
-                        <span class="stud-dash-rank-number">#12</span>
-                    </div>
-                    <div class="stud-dash-rank-info">
-                        <p class="stud-dash-rank-text">Out of 150 students</p>
-                        <p class="stud-dash-rank-change positive">
-                            <span class="material-symbols-outlined">trending_up</span>
-                            +3 from last month
-                        </p>
-                    </div>
-                </div>
-                <a href="#" class="stud-dash-leaderboard-cta">
-                    View Full Leaderboard
-                    <span class="material-symbols-outlined">arrow_forward</span>
-                </a>
-            </div>
+            <!-- Leaderboard section removed per slide 45 -->
         </div>
 
         <!-- Reports Grid -->
         <div class="stud-dash-reports-grid">
-            <!-- Attendance Report -->
+            <!-- Project Completion Report -->
             <div>
                 <a href="#" class="stud-dash-report-link">
                     <div class="stud-dash-report-header">
                         <span class="stud-dash-report-number">1</span>
-                        <h3 class="stud-dash-report-title">Attendance Report</h3>
+                        <h3 class="stud-dash-report-title">Project Completion Report</h3>
                     </div>
                 </a>
                 <div class="stud-dash-card">
-                    <div class="stud-dash-legend">
-                        <span class="stud-dash-legend-item">
-                            <span class="stud-dash-legend-dot blue"></span>P
-                        </span>
-                        <span class="stud-dash-legend-item">
-                            <span class="stud-dash-legend-dot red"></span>A
-                        </span>
-                    </div>
                     <div class="stud-dash-charts-wrapper">
                         <div class="stud-dash-chart-container">
                             <svg class="stud-dash-rotate-90" width="120" height="120">
-                                <circle cx="60" cy="60" fill="none" r="52" stroke="#fecaca" stroke-width="9"></circle>
-                                <circle cx="60" cy="60" fill="none" r="52" stroke="#ef4444" stroke-dasharray="326.7" stroke-dashoffset="326.7" stroke-width="9"></circle>
+                                <circle cx="60" cy="60" fill="none" r="52" stroke="#e9d5ff" stroke-width="9"></circle>
+                                <circle cx="60" cy="60" fill="none" r="52" stroke="#6b277e" stroke-dasharray="326.7" stroke-width="9" style="stroke-dashoffset: calc(326.7 - (326.7 * {% widthratio projects_completed projects_total 100 %} / 100));"></circle>
                             </svg>
                             <div class="stud-dash-chart-label">
-                                <span class="stud-dash-chart-percent">0%</span>
-                                <span class="stud-dash-chart-text">Overall</span>
-                            </div>
-                        </div>
-                        <div class="stud-dash-chart-container">
-                            <svg class="stud-dash-rotate-90" width="120" height="120">
-                                <circle cx="60" cy="60" fill="none" r="52" stroke="#fecaca" stroke-width="9"></circle>
-                                <circle cx="60" cy="60" fill="none" r="52" stroke="#ef4444" stroke-dasharray="326.7" stroke-dashoffset="326.7" stroke-width="9"></circle>
-                            </svg>
-                            <div class="stud-dash-chart-label">
-                                <span class="stud-dash-chart-percent">0%</span>
-                                <span class="stud-dash-chart-text">Nov 2025</span>
+                                <span class="stud-dash-chart-percent">{{ projects_completed }}/{{ projects_total }}</span>
+                                <span class="stud-dash-chart-text">Projects</span>
                             </div>
                         </div>
                     </div>
                     <div class="stud-dash-stats-grid">
                         <div class="stud-dash-stat-card blue">
-                            <p class="stud-dash-stat-label blue">PRESENTS</p>
-                            <p class="stud-dash-stat-value blue">0</p>
-                            <p class="stud-dash-stat-period blue">This Month <span class="material-symbols-outlined stud-dash-align-middle">arrow_forward</span></p>
+                            <p class="stud-dash-stat-label blue">PROJECTS COMPLETED</p>
+                            <p class="stud-dash-stat-value blue">{{ projects_completed }}</p>
+                            <p class="stud-dash-stat-period blue">of {{ projects_total }} this year</p>
                         </div>
                         <div class="stud-dash-stat-card red">
-                            <p class="stud-dash-stat-label red">ABSENTS</p>
-                            <p class="stud-dash-stat-value red">0</p>
-                            <p class="stud-dash-stat-period red">This Month <span class="material-symbols-outlined stud-dash-align-middle">arrow_forward</span></p>
+                            <p class="stud-dash-stat-label red">SESSIONS COMPLETED</p>
+                            <p class="stud-dash-stat-value red">{{ sessions_completed }}</p>
+                            <p class="stud-dash-stat-period red">Logged so far</p>
                         </div>
                     </div>
                 </div>
@@ -292,64 +187,36 @@
                     </div>
                 </a>
                 <div class="stud-dash-card stud-dash-calendar-card">
-                    <!-- Calendar Header -->
-                    <div class="stud-dash-calendar-header">
-                        <div class="stud-dash-calendar-month">
-                            <button class="stud-dash-calendar-nav-btn" id="prevMonth">
-                                <span class="material-symbols-outlined">chevron_left</span>
-                            </button>
-                            <h4 class="stud-dash-calendar-month-title">November 2025</h4>
-                            <button class="stud-dash-calendar-nav-btn" id="nextMonth">
-                                <span class="material-symbols-outlined">chevron_right</span>
-                            </button>
-                        </div>
-                        <button class="stud-dash-calendar-view-btn">
-                            <span class="material-symbols-outlined">event</span>
-                            View Full Calendar
-                        </button>
-                    </div>
-
                     <!-- Upcoming Events List -->
                     <div class="stud-dash-events-list">
                         <h5 class="stud-dash-events-title">Upcoming Events</h5>
 
+                        {% for event in events %}
                         <div class="stud-dash-event-item">
                             <div class="stud-dash-event-date">
-                                <span class="stud-dash-event-day">22</span>
-                                <span class="stud-dash-event-month">NOV</span>
+                                <span class="stud-dash-event-day">{{ event.event_date|date:"d"|default:"--" }}</span>
+                                <span class="stud-dash-event-month">{{ event.event_date|date:"M"|upper }}</span>
                             </div>
                             <div class="stud-dash-event-details">
-                                <h6 class="stud-dash-event-name">Science Fair Competition</h6>
+                                <h6 class="stud-dash-event-name">{{ event.event_name|default:"Event" }}</h6>
+                                {% if event.event_description %}
                                 <p class="stud-dash-event-time">
-                                    <span class="material-symbols-outlined">schedule</span>
-                                    10:00 AM - 2:00 PM
+                                    <span class="material-symbols-outlined">info</span>
+                                    {{ event.event_description|truncatewords:12 }}
                                 </p>
+                                {% endif %}
+                                {% if event.event_link %}
                                 <p class="stud-dash-event-location">
-                                    <span class="material-symbols-outlined">location_on</span>
-                                    School Auditorium
+                                    <span class="material-symbols-outlined">link</span>
+                                    <a href="{{ event.event_link }}" target="_blank" rel="noopener">Details</a>
                                 </p>
+                                {% endif %}
                             </div>
-                            <span class="stud-dash-event-badge academic">Academic</span>
+                            <span class="stud-dash-event-badge academic">Event</span>
                         </div>
-
-                        <div class="stud-dash-event-item">
-                            <div class="stud-dash-event-date">
-                                <span class="stud-dash-event-day">25</span>
-                                <span class="stud-dash-event-month">NOV</span>
-                            </div>
-                            <div class="stud-dash-event-details">
-                                <h6 class="stud-dash-event-name">Parent-Teacher Meeting</h6>
-                                <p class="stud-dash-event-time">
-                                    <span class="material-symbols-outlined">schedule</span>
-                                    9:00 AM - 12:00 PM
-                                </p>
-                                <p class="stud-dash-event-location">
-                                    <span class="material-symbols-outlined">location_on</span>
-                                    Class 9 Rooms
-                                </p>
-                            </div>
-                            <span class="stud-dash-event-badge meeting">Meeting</span>
-                        </div>
+                        {% empty %}
+                        <p class="stud-dash-events-title" style="font-weight:400;color:#6b7280;">No upcoming events.</p>
+                        {% endfor %}
                     </div>
                 </div>
             </div>
@@ -373,19 +240,77 @@
                             <span class="material-symbols-outlined stud-dash-newsletter-icon">mail</span>
                         </div>
                         <div class="stud-dash-newsletter-meta">
-                            <span class="stud-dash-newsletter-date">December 9, 2025</span>
-                            <span class="stud-dash-newsletter-category">Monthly Edition</span>
+                            <span class="stud-dash-newsletter-date">{{ newsletter.newsletter_date|date:"F j, Y"|default:"—" }}</span>
+                            <span class="stud-dash-newsletter-category">{{ newsletter.newsletter_month|default:"Newsletter" }}</span>
                         </div>
                     </div>
 
-                    <h4 class="stud-dash-newsletter-title">Student Success Stories</h4>
+                    <h4 class="stud-dash-newsletter-title">{% if newsletter %}{{ newsletter.newsletter_month|default:"Latest Newsletter" }}{% else %}No newsletter yet{% endif %}</h4>
 
-                    <button class="stud-dash-newsletter-read-btn">
+                    {% if newsletter.newsletter_file or newsletter.newsletter_weblink %}
+                    <a class="stud-dash-newsletter-read-btn" href="{% if newsletter.newsletter_weblink %}{{ newsletter.newsletter_weblink }}{% else %}{{ newsletter.newsletter_file.url }}{% endif %}" target="_blank" rel="noopener">
                         Read Newsletter
                         <span class="material-symbols-outlined">arrow_forward</span>
-                    </button>
+                    </a>
+                    {% endif %}
                 </div>
             </div>
+
+            <!-- Success Story -->
+            <div>
+                <a href="#" class="stud-dash-report-link">
+                    <div class="stud-dash-report-header">
+                        <span class="stud-dash-report-number">4</span>
+                        <h3 class="stud-dash-report-title">Success Story</h3>
+                    </div>
+                </a>
+                <div class="stud-dash-card">
+                    {% if success_story %}
+                    {% if success_story.story_photo_1 %}
+                    <img src="{{ success_story.story_photo_1.url }}" alt="{{ success_story.story_student_name }}" style="width:100%;max-height:160px;object-fit:cover;border-radius:0.5rem;margin-bottom:0.75rem;" />
+                    {% endif %}
+                    <h4 class="stud-dash-newsletter-title">{{ success_story.story_student_name|default:"Student" }}{% if success_story.story_grade %} — Grade {{ success_story.story_grade }}{% endif %}</h4>
+                    {% if success_story.story_text %}
+                    <p style="color:#4b5563;font-size:0.9rem;margin-top:0.5rem;">{{ success_story.story_text }}</p>
+                    {% endif %}
+                    {% if success_story.story_youtube_link %}
+                    <a class="stud-dash-newsletter-read-btn" href="{{ success_story.story_youtube_link }}" target="_blank" rel="noopener">
+                        Watch Story
+                        <span class="material-symbols-outlined">play_circle</span>
+                    </a>
+                    {% endif %}
+                    {% else %}
+                    <p style="color:#6b7280;">No success story available yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- View Projects -->
+        <div class="stud-dash-card" style="margin-top:1.5rem;">
+            <h3 class="stud-dash-gamification-title">View Projects</h3>
+            {% for upload in project_uploads %}
+            <div style="border:1px solid #e5e7eb;border-radius:0.5rem;padding:1rem;margin-top:0.75rem;">
+                <h4 style="font-size:1rem;font-weight:600;color:#1f2937;margin-bottom:0.25rem;">{{ upload.title }}</h4>
+                {% if upload.description %}
+                <p style="color:#4b5563;font-size:0.875rem;margin-bottom:0.5rem;">{{ upload.description }}</p>
+                {% endif %}
+                <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+                    {% if upload.file %}
+                    <a href="{{ upload.file.url }}" target="_blank" rel="noopener" style="color:#6b277e;font-size:0.875rem;display:inline-flex;align-items:center;gap:4px;">
+                        <span class="material-symbols-outlined">attach_file</span>View File
+                    </a>
+                    {% endif %}
+                    {% if upload.video_link %}
+                    <a href="{{ upload.video_link }}" target="_blank" rel="noopener" style="color:#6b277e;font-size:0.875rem;display:inline-flex;align-items:center;gap:4px;">
+                        <span class="material-symbols-outlined">play_circle</span>Watch Video
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <p style="color:#6b7280;margin-top:0.75rem;">No projects uploaded yet.</p>
+            {% endfor %}
         </div>
     </div>
 </div>

@@ -8,8 +8,45 @@ from django.utils.timesince import timesince
 from .models import Parent
 from schools.models import Class
 from teacher.models import Teacher
-from competencies.models import ScoreEntry, StudentAssessmentFeedback, StudentProjectFeedback
+from competencies.models import ScoreEntry, StudentAssessmentFeedback, StudentProjectFeedback, Announcement
+from attendance.services import (
+    student_attendance_stats,
+    projects_completed,
+    sessions_completed,
+    student_project_uploads,
+)
 import json
+
+
+def _child_projects(child):
+    """List of projects for the child's class in the current academic year.
+
+    Source of truth is DailySessionFeedback (links a Project to a specific
+    class). Returns latest-first list of dicts: name, description, completed.
+    Safe defaults (empty list) when no data.
+    """
+    projects = []
+    try:
+        from attendance.models import DailySessionFeedback
+        rows = (DailySessionFeedback.objects
+                .filter(school=child.school,
+                        grade=str(child.student_class),
+                        division=child.division)
+                .select_related('project')
+                .order_by('-date'))
+        seen = set()
+        for r in rows:
+            if not r.project or r.project_id in seen:
+                continue
+            seen.add(r.project_id)
+            projects.append({
+                'name': r.project.title,
+                'description': (r.session_description or '').strip(),
+                'completed': bool(r.is_project_completed),
+            })
+    except Exception:
+        projects = []
+    return projects
 
 
 def is_parent(user):
@@ -103,6 +140,16 @@ def parent_dashboard(request):
             activities.sort(key=lambda x: x['timestamp'], reverse=True)
             activities = activities[:5]
 
+            # --- Real KPI / module data (PPT slides 47, 49) ---
+            attendance = student_attendance_stats(child)          # safe defaults built-in
+            completed_projects, total_projects = projects_completed(child)
+            sessions_done = sessions_completed(child)
+            projects_list = _child_projects(child)
+
+            # Current module = latest active project name for the child's class.
+            current_module = projects_list[0]['name'] if projects_list else '—'
+            current_module_desc = projects_list[0]['description'] if projects_list else ''
+
             children_data.append({
                 'id': child.id,
                 'name': child.full_name,
@@ -114,14 +161,93 @@ def parent_dashboard(request):
                 'initials': initials,
                 'gender': getattr(child, 'gender', 'male'),
                 'activities': activities,
+                # KPIs (slide 47)
+                'monthly_attendance': attendance.get('monthly_percent', 0),
+                'attendance_percent': attendance.get('percent', 0),
+                'projects_completed': completed_projects,
+                'projects_total': total_projects,
+                'projects_label': f'{completed_projects} of {total_projects}',
+                'projects': projects_list,
+                # Module / sessions (slide 49)
+                'current_module': current_module,
+                'current_module_desc': current_module_desc,
+                'sessions_completed': sessions_done,
             })
     except Parent.DoesNotExist:
+        pass
+
+    # Collect the schools of this parent's children for announcement scoping.
+    child_school_ids = set()
+    try:
+        for child in children:
+            if child.school_id:
+                child_school_ids.add(child.school_id)
+    except Exception:
+        child_school_ids = set()
+
+    def _scope_announcement(ann):
+        """An announcement is relevant if:
+        - applicable_schools is empty (global) OR includes one of the children's schools, AND
+        - publish_to is empty OR contains 'parent'.
+        Defensive: never raise.
+        """
+        try:
+            pub = ann.publish_to or []
+            if pub and 'parent' not in pub:
+                return False
+            sids = [s.id for s in ann.applicable_schools.all()]
+            if sids and not (child_school_ids & set(sids)):
+                return False
+            return True
+        except Exception:
+            return False
+
+    # Events, Newsletters & success stories (slide 48), scoped to children's schools.
+    events, newsletters, success_stories = [], [], []
+    try:
+        seen_event_ids = set()
+        event_qs = (Announcement.objects
+                    .filter(announcement_type='event', is_published=True)
+                    .prefetch_related('applicable_schools')
+                    .order_by('-event_date', '-created_at'))
+        for a in event_qs:
+            if a.id in seen_event_ids:
+                continue
+            if _scope_announcement(a):
+                seen_event_ids.add(a.id)
+                events.append(a)
+            if len(events) >= 20:
+                break
+
+        news_qs = (Announcement.objects
+                   .filter(announcement_type='newsletter', is_published=True)
+                   .prefetch_related('applicable_schools')
+                   .order_by('-created_at'))
+        for a in news_qs:
+            if _scope_announcement(a):
+                newsletters.append(a)
+            if len(newsletters) >= 10:
+                break
+
+        story_qs = (Announcement.objects
+                    .filter(announcement_type='success_story', is_published=True)
+                    .prefetch_related('applicable_schools')
+                    .order_by('-created_at'))
+        for a in story_qs:
+            if _scope_announcement(a):
+                success_stories.append(a)
+            if len(success_stories) >= 10:
+                break
+    except Exception:
         pass
 
     context = {
         'children': children_data,
         'children_json': json.dumps(children_data),
         'has_children': len(children_data) > 0,
+        'events': events,
+        'newsletters': newsletters,
+        'success_stories': success_stories,
     }
     return render(request, 'parent/dashboard.html', context)
 

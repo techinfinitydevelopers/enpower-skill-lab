@@ -27,4 +27,15 @@ urlpatterns = [
     path('api/save-feedback/', views.api_save_feedback, name='api_save_feedback'),
     path('api/generate-report/', views.api_generate_report, name='api_generate_report'),
     path('api/save-project-feedback/', views.api_save_project_feedback, name='api_save_project_feedback'),
+
+    # ESL Dashboard — Thinking Coach features (slides 14-17)
+    path('attendance/', views.attendance_mark, name='attendance_mark'),
+    path('attendance/list/', views.attendance_list, name='attendance_list'),
+    path('api/attendance-sessions/', views.api_attendance_sessions, name='api_attendance_sessions'),
+    path('api/attendance-students/', views.api_attendance_students, name='api_attendance_students'),
+    path('api/save-attendance/', views.api_save_attendance, name='api_save_attendance'),
+    path('daily-feedback/', views.daily_feedback, name='daily_feedback'),
+    path('weekly-feedback/', views.weekly_feedback, name='weekly_feedback'),
+    path('student-project-upload/', views.student_project_upload, name='student_project_upload'),
+    path('api/class-students/', views.api_class_students, name='api_class_students'),
 ]

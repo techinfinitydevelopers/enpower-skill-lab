@@ -1,0 +1,100 @@
+{% extends 'teacher/base.html' %}
+{% load static %}
+
+{% block title %}Weekly Session Feedback — Thinking Coach{% endblock %}
+
+{% block extra_css %}
+<style>
+    .wf * { font-family: 'Poppins', sans-serif !important; }
+    .wf .material-symbols-outlined { font-family: 'Material Symbols Outlined' !important; }
+    .wf .card { background:#fff; border-radius:0.75rem; border:1px solid #ede9f4; box-shadow:0 1px 3px rgba(0,0,0,0.06); }
+    .wf .lbl { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:#94a3b8; margin-bottom:6px; display:block; }
+    .wf .ctrl { width:100%; padding:10px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px; color:#374151; outline:none; background:#fff; }
+    .wf .ctrl:focus { border-color:#5A1F6E; }
+    .wf textarea.ctrl { min-height:80px; resize:vertical; }
+    .wf .btn-primary { background:#5A1F6E; color:#fff; border:none; border-radius:9px; padding:12px 28px; font-size:14px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:8px; }
+    .wf .btn-primary:hover { opacity:0.9; }
+    .wf .hint { font-size:11px; color:#cbd5e1; float:right; }
+    .wf .recent-item { padding:14px 16px; border:1px solid #f1f5f9; border-radius:10px; margin-bottom:10px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="wf" style="max-width:820px; margin:0 auto;">
+    <div style="margin-bottom:20px;">
+        <h1 style="font-size:22px; font-weight:700; color:#1e1b4b;">Weekly Session Feedback</h1>
+        <p style="font-size:13px; color:#94a3b8; margin-top:2px;">Reflect on the week's sessions.</p>
+    </div>
+
+    <form method="post" class="card" style="padding:24px; margin-bottom:28px;">
+        {% csrf_token %}
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:18px;">
+            <div>
+                <label class="lbl">Week From *</label>
+                <input name="date_from" type="date" class="ctrl" required>
+            </div>
+            <div>
+                <label class="lbl">Week To *</label>
+                <input name="date_to" type="date" class="ctrl" required>
+            </div>
+        </div>
+
+        <div style="margin-bottom:16px;">
+            <label class="lbl">What went wrong? <span class="hint">max 200</span></label>
+            <textarea name="went_wrong" class="ctrl" maxlength="200"></textarea>
+        </div>
+        <div style="margin-bottom:16px;">
+            <label class="lbl">What went well? <span class="hint">max 200</span></label>
+            <textarea name="went_well" class="ctrl" maxlength="200"></textarea>
+        </div>
+        <div style="margin-bottom:18px;">
+            <label class="lbl">Anything new you tried? <span class="hint">max 200</span></label>
+            <textarea name="new_tried" class="ctrl" maxlength="200"></textarea>
+        </div>
+
+        <div style="margin-bottom:14px;">
+            <label class="lbl">Any lab issue?</label>
+            <div style="display:flex; gap:18px;">
+                <label style="display:flex; align-items:center; gap:6px; font-size:14px; color:#1e1b4b; cursor:pointer;"><input type="radio" name="lab_issue" value="yes" onchange="toggleDetail(true)"> Yes</label>
+                <label style="display:flex; align-items:center; gap:6px; font-size:14px; color:#1e1b4b; cursor:pointer;"><input type="radio" name="lab_issue" value="no" checked onchange="toggleDetail(false)"> No</label>
+            </div>
+        </div>
+        <div id="labDetailWrap" style="display:none; margin-bottom:20px;">
+            <label class="lbl">Lab Issue Details</label>
+            <textarea name="lab_issue_detail" class="ctrl" placeholder="Describe the lab issue"></textarea>
+        </div>
+
+        <button type="submit" class="btn-primary"><span class="material-symbols-outlined" style="font-size:18px;">save</span>Save Weekly Feedback</button>
+    </form>
+
+    <div style="margin-bottom:14px;">
+        <h2 style="font-size:16px; font-weight:700; color:#1e1b4b;">Recent Weekly Feedback</h2>
+    </div>
+    <div class="card" style="padding:18px;">
+        {% for f in recent %}
+        <div class="recent-item">
+            <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+                <div style="font-size:14px; font-weight:700; color:#1e1b4b;">{{ f.date_from }} → {{ f.date_to }}</div>
+                {% if f.lab_issue %}<span style="font-size:12px; color:#dc2626; font-weight:700;">⚠ Lab Issue</span>{% endif %}
+            </div>
+            {% if f.went_well %}<div style="font-size:13px; color:#16a34a; margin-top:6px;"><strong>Went well:</strong> {{ f.went_well }}</div>{% endif %}
+            {% if f.went_wrong %}<div style="font-size:13px; color:#dc2626; margin-top:4px;"><strong>Went wrong:</strong> {{ f.went_wrong }}</div>{% endif %}
+            {% if f.new_tried %}<div style="font-size:13px; color:#7c3aed; margin-top:4px;"><strong>New tried:</strong> {{ f.new_tried }}</div>{% endif %}
+            {% if f.lab_issue and f.lab_issue_detail %}<div style="font-size:12px; color:#6b7280; margin-top:6px;">{{ f.lab_issue_detail }}</div>{% endif %}
+        </div>
+        {% empty %}
+        <p style="text-align:center; padding:24px; color:#94a3b8; font-size:14px;">No weekly feedback recorded yet.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleDetail(show){ document.getElementById('labDetailWrap').style.display = show ? 'block' : 'none'; }
+document.addEventListener('DOMContentLoaded', function(){
+    const link = document.getElementById('nav-weekly-feedback');
+    if (link) { link.classList.add('active'); link.closest('.sidebar-dropdown').classList.add('active'); }
+});
+</script>
+{% endblock %}
