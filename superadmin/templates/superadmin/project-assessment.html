@@ -406,6 +406,12 @@
                                     No file uploaded
                                 {% endif %}
                             </span>
+                            <button type="button"
+                                    onclick="openRubricGrid({{ a.id }})"
+                                    style="display:inline-flex;align-items:center;gap:6px;background:#5A1F6E;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:.75rem;font-weight:600;cursor:pointer;">
+                                <span class="material-symbols-outlined" style="font-size:16px;">edit_note</span>
+                                Edit Rubric Grid
+                            </button>
                         </div>
                     </div>
 
@@ -571,6 +577,49 @@
         </form>
     </div>
 </div>
+
+<!-- ── Shared Editable Rubric Grid Modal ── -->
+<div id="rubricGridOverlay" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.55);z-index:9999;align-items:center;justify-content:center;padding:20px;">
+    <div style="background:#fff;border-radius:16px;width:100%;max-width:1100px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 25px 60px rgba(0,0,0,0.3);">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 24px;background:#5A1F6E;color:#fff;">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <span class="material-symbols-outlined">grid_on</span>
+                <div>
+                    <div style="font-size:1rem;font-weight:700;">Edit Rubric Grid</div>
+                    <div id="rubricGridSubtitle" style="font-size:.75rem;opacity:.85;"></div>
+                </div>
+            </div>
+            <button type="button" onclick="closeRubricGrid()" style="background:transparent;border:none;color:#fff;cursor:pointer;display:flex;">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div style="padding:18px 24px;overflow:auto;flex:1;">
+            <div id="rubricGridLoading" style="text-align:center;color:#64748b;font-size:.85rem;padding:30px;">Loading…</div>
+            <div id="rubricGridTableWrap" style="display:none;overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;font-size:.8rem;min-width:900px;">
+                    <thead>
+                        <tr>
+                            <th style="text-align:left;padding:10px;background:#f8f7fc;border:1px solid #ece9f2;color:#5A1F6E;font-weight:700;position:sticky;left:0;min-width:180px;">Competency</th>
+                            <th style="text-align:left;padding:10px;background:#fef2f2;border:1px solid #ece9f2;color:#b91c1c;font-weight:700;">1-4 Not meeting expectations</th>
+                            <th style="text-align:left;padding:10px;background:#fff7ed;border:1px solid #ece9f2;color:#c2410c;font-weight:700;">4-7 Approaching expectation</th>
+                            <th style="text-align:left;padding:10px;background:#f0fdf4;border:1px solid #ece9f2;color:#15803d;font-weight:700;">7-9 Fully meeting expectation</th>
+                            <th style="text-align:left;padding:10px;background:#eff6ff;border:1px solid #ece9f2;color:#1d4ed8;font-weight:700;">9-10 Exceeding expectation</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rubricGridBody"></tbody>
+                </table>
+            </div>
+            <div id="rubricGridEmpty" style="display:none;text-align:center;color:#94a3b8;font-size:.85rem;padding:30px;">No competencies mapped to this assessment yet.</div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 24px;border-top:1px solid #f1f5f9;">
+            <span id="rubricGridMsg" style="font-size:.8rem;font-weight:600;"></span>
+            <div style="display:flex;gap:10px;">
+                <button type="button" onclick="closeRubricGrid()" style="background:#f1f5f9;color:#475569;border:none;border-radius:8px;padding:9px 18px;font-size:.8rem;font-weight:600;cursor:pointer;">Cancel</button>
+                <button type="button" id="rubricGridSaveBtn" onclick="saveRubricGrid()" style="background:#5A1F6E;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:.8rem;font-weight:600;cursor:pointer;">Save Rubric</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -703,6 +752,99 @@ function toggleEditPluginFields() {
     const isPlugin = type === 'Plug In';
     document.getElementById('editLinkedField').style.display = isPlugin ? '' : 'none';
     document.getElementById('editSeqField').style.display    = isPlugin ? 'none' : '';
+}
+
+/* ── Editable Rubric Grid Modal ── */
+let rubricGridAssessmentId = null;
+
+function getCsrfToken() {
+    const el = document.querySelector('input[name=csrfmiddlewaretoken]');
+    if (el) return el.value;
+    const m = document.cookie.match(/csrftoken=([^;]+)/);
+    return m ? m[1] : '';
+}
+
+function openRubricGrid(assessmentId) {
+    rubricGridAssessmentId = assessmentId;
+    const overlay = document.getElementById('rubricGridOverlay');
+    overlay.style.display = 'flex';
+    document.getElementById('rubricGridLoading').style.display = 'block';
+    document.getElementById('rubricGridTableWrap').style.display = 'none';
+    document.getElementById('rubricGridEmpty').style.display = 'none';
+    document.getElementById('rubricGridMsg').textContent = '';
+    document.getElementById('rubricGridBody').innerHTML = '';
+
+    fetch(`/super-admin/api/rubric-grid/${assessmentId}/`, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('rubricGridLoading').style.display = 'none';
+            document.getElementById('rubricGridSubtitle').textContent = data.assessment_name || '';
+            if (!data.competencies || data.competencies.length === 0) {
+                document.getElementById('rubricGridEmpty').style.display = 'block';
+                return;
+            }
+            const body = document.getElementById('rubricGridBody');
+            data.competencies.forEach(c => {
+                const r = (data.rubric && data.rubric[c.competency_id]) || {};
+                const esc = s => (s || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                const ta = (band, val) => `<td style="border:1px solid #ece9f2;padding:6px;vertical-align:top;"><textarea data-band="${band}" rows="3" style="width:100%;border:1px solid #e2e8f0;border-radius:6px;padding:7px;font-size:.78rem;resize:vertical;font-family:inherit;">${esc(val)}</textarea></td>`;
+                const tr = document.createElement('tr');
+                tr.setAttribute('data-comp-id', c.competency_id);
+                tr.innerHTML =
+                    `<td style="border:1px solid #ece9f2;padding:10px;vertical-align:top;background:#faf9fc;position:sticky;left:0;">
+                        <div style="font-size:.68rem;font-weight:700;color:#5A1F6E;text-transform:uppercase;">${esc(c.code)}</div>
+                        <div style="font-size:.8rem;font-weight:600;color:#1e1b4b;">${esc(c.name)}</div>
+                    </td>` +
+                    ta('band1', r.band1) + ta('band2', r.band2) + ta('band3', r.band3) + ta('band4', r.band4);
+                body.appendChild(tr);
+            });
+            document.getElementById('rubricGridTableWrap').style.display = 'block';
+        })
+        .catch(() => {
+            document.getElementById('rubricGridLoading').style.display = 'none';
+            document.getElementById('rubricGridMsg').style.color = '#b91c1c';
+            document.getElementById('rubricGridMsg').textContent = 'Failed to load rubric.';
+        });
+}
+
+function closeRubricGrid() {
+    document.getElementById('rubricGridOverlay').style.display = 'none';
+    rubricGridAssessmentId = null;
+}
+
+function saveRubricGrid() {
+    if (!rubricGridAssessmentId) return;
+    const rows = [];
+    document.querySelectorAll('#rubricGridBody tr').forEach(tr => {
+        const row = {competency_id: parseInt(tr.getAttribute('data-comp-id'), 10)};
+        tr.querySelectorAll('textarea').forEach(t => { row[t.getAttribute('data-band')] = t.value; });
+        rows.push(row);
+    });
+    const btn = document.getElementById('rubricGridSaveBtn');
+    btn.disabled = true; btn.textContent = 'Saving…';
+    const msg = document.getElementById('rubricGridMsg');
+    fetch('/super-admin/api/save-rubric-grid/', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
+        body: JSON.stringify({assessment_id: rubricGridAssessmentId, rows: rows}),
+    })
+        .then(r => r.json())
+        .then(data => {
+            btn.disabled = false; btn.textContent = 'Save Rubric';
+            if (data.ok) {
+                msg.style.color = '#15803d';
+                msg.textContent = `Saved ${data.saved} row(s).`;
+                setTimeout(closeRubricGrid, 900);
+            } else {
+                msg.style.color = '#b91c1c';
+                msg.textContent = data.error || 'Save failed.';
+            }
+        })
+        .catch(() => {
+            btn.disabled = false; btn.textContent = 'Save Rubric';
+            msg.style.color = '#b91c1c';
+            msg.textContent = 'Save failed.';
+        });
 }
 </script>
 {% endblock %}

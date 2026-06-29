@@ -184,6 +184,46 @@
         {% endif %}
     </div>
 
+    <!-- ── Scoring Rubric Grid (read-only) ── -->
+    {% if rubric_rows %}
+    <div class="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+        <div class="flex items-center justify-between px-6 py-5 border-b border-slate-100">
+            <h3 class="flex items-center gap-2" style="font-size:15px; font-weight:700; color:#1e1b4b;">
+                <span class="material-symbols-outlined" style="font-size:20px; color:#5A1F6E;">grid_on</span>
+                Scoring Rubric
+            </h3>
+            <span style="font-size:12px; font-weight:600; background:rgba(90,31,110,0.08); color:#5A1F6E; padding:4px 12px; border-radius:999px;">{{ rubric_rows|length }} criteria</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left" style="min-width:880px; border-collapse:collapse;">
+                <thead>
+                    <tr style="background:#f8f7fc; border-bottom:1px solid #f1f5f9;">
+                        <th class="px-4 py-3" style="font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.07em; white-space:nowrap;">Competency</th>
+                        <th class="px-4 py-3" style="font-size:11px; font-weight:700; color:#b91c1c; text-transform:uppercase; letter-spacing:0.05em;">1-4 Not meeting expectations</th>
+                        <th class="px-4 py-3" style="font-size:11px; font-weight:700; color:#c2410c; text-transform:uppercase; letter-spacing:0.05em;">4-7 Approaching expectation</th>
+                        <th class="px-4 py-3" style="font-size:11px; font-weight:700; color:#15803d; text-transform:uppercase; letter-spacing:0.05em;">7-9 Fully meeting expectation</th>
+                        <th class="px-4 py-3" style="font-size:11px; font-weight:700; color:#1d4ed8; text-transform:uppercase; letter-spacing:0.05em;">9-10 Exceeding expectation</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in rubric_rows %}
+                    <tr style="border-bottom:1px solid #f8f7fc;">
+                        <td class="px-4 py-4" style="vertical-align:top; background:#faf9fc;">
+                            <div style="font-size:10px; font-weight:700; color:#5A1F6E; opacity:0.7; text-transform:uppercase; letter-spacing:0.06em;">{{ r.code }}</div>
+                            <div style="font-size:13px; font-weight:600; color:#1e1b4b;">{{ r.name }}</div>
+                        </td>
+                        <td class="px-4 py-4" style="font-size:12px; color:#64748b; line-height:1.55; vertical-align:top;">{% if r.band1 %}{{ r.band1|linebreaksbr }}{% else %}<span style="color:#cbd5e1;">—</span>{% endif %}</td>
+                        <td class="px-4 py-4" style="font-size:12px; color:#64748b; line-height:1.55; vertical-align:top;">{% if r.band2 %}{{ r.band2|linebreaksbr }}{% else %}<span style="color:#cbd5e1;">—</span>{% endif %}</td>
+                        <td class="px-4 py-4" style="font-size:12px; color:#64748b; line-height:1.55; vertical-align:top;">{% if r.band3 %}{{ r.band3|linebreaksbr }}{% else %}<span style="color:#cbd5e1;">—</span>{% endif %}</td>
+                        <td class="px-4 py-4" style="font-size:12px; color:#64748b; line-height:1.55; vertical-align:top;">{% if r.band4 %}{{ r.band4|linebreaksbr }}{% else %}<span style="color:#cbd5e1;">—</span>{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- ── Additional Instructions + Checklist ── -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
 

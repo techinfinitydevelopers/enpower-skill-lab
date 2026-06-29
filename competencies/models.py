@@ -358,3 +358,23 @@ class Announcement(models.Model):
 
     def __str__(self):
         return f"{self.get_announcement_type_display()} — {self.event_name or self.story_student_name or 'Newsletter'}"
+
+
+class RubricCriterion(models.Model):
+    """Editable rubric grid (PPT slide 28). One row per competency of an assessment,
+    with descriptor text for each of the 4 score bands. Complements (does not replace)
+    Assessment.rubric_file."""
+    assessment = models.ForeignKey(Assessment, on_delete=models.CASCADE, related_name='rubric_criteria')
+    competency = models.ForeignKey(Competency, on_delete=models.CASCADE, related_name='rubric_criteria')
+    band1_text = models.TextField(blank=True, help_text='1-4 Not meeting expectations')
+    band2_text = models.TextField(blank=True, help_text='4-7 Approaching expectation')
+    band3_text = models.TextField(blank=True, help_text='7-9 Fully meeting expectation')
+    band4_text = models.TextField(blank=True, help_text='9-10 Exceeding expectation')
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [('assessment', 'competency')]
+        ordering = ['id']
+
+    def __str__(self):
+        return f"Rubric {self.assessment_id} / {self.competency.code}"

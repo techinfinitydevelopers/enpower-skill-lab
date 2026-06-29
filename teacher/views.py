@@ -134,7 +134,11 @@ def assessment_detail(request, assessment_id):
     else:
         work_form = '—'
 
+    # Read-only rubric grid (PPT slide 28) — descriptor text per band per competency
+    rubric_map = {rc.competency_id: rc for rc in assessment.rubric_criteria.all()}
+
     enriched = []
+    rubric_rows = []
     for cm in competency_mappings:
         enriched.append({
             'code': cm.competency.code,
@@ -143,12 +147,23 @@ def assessment_detail(request, assessment_id):
             'comp_type': cm.get_comp_type_display(),
             'weight': 'Primary' if cm.competency_id in primary_comp_ids else 'Secondary',
         })
+        rc = rubric_map.get(cm.competency_id)
+        if rc:
+            rubric_rows.append({
+                'code': cm.competency.code,
+                'name': cm.competency.name,
+                'band1': rc.band1_text,
+                'band2': rc.band2_text,
+                'band3': rc.band3_text,
+                'band4': rc.band4_text,
+            })
 
     context = {
         'assessment': assessment,
         'project': assessment.project,
         'competencies': enriched,
         'work_form': work_form,
+        'rubric_rows': rubric_rows,
     }
     return render(request, 'teacher/assessment-detail.html', context)
 

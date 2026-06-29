@@ -12,7 +12,7 @@ from django.utils import timezone
 from schools.models import School
 from school_admin.models import SchoolAdmin
 from .models import SuperAdmin
-from competencies.models import Pillar, SubPillar, Competency, Profile, Project, Assessment, AssessmentCompetency, ESLProduct, Announcement
+from competencies.models import Pillar, SubPillar, Competency, Profile, Project, Assessment, AssessmentCompetency, ESLProduct, Announcement, RubricCriterion
 import json
 import secrets
 import string
@@ -3797,3 +3797,86 @@ def api_schools_by_product(request):
         schools = School.objects.none()
 
     return JsonResponse({'schools': list(schools)})
+
+
+# ─────────────────────────────────────────────────────────────
+# Editable Rubric Grid (PPT slide 28)
+# ─────────────────────────────────────────────────────────────
+
+@login_required
+@user_passes_test(is_superadmin)
+def api_rubric_grid(request, assessment_id):
+    """Return the editable rubric grid data for an assessment.
+    Competencies come from the assessment's competency_mappings (ordered);
+    existing RubricCriterion rows prefill the band descriptors."""
+    assessment = get_object_or_404(Assessment, id=assessment_id)
+
+    mappings = assessment.competency_mappings.select_related('competency').order_by('order', 'id')
+    competencies = [
+        {
+            'competency_id': cm.competency_id,
+            'code': cm.competency.code,
+            'name': cm.competency.name,
+        }
+        for cm in mappings
+    ]
+
+    rubric = {}
+    for rc in assessment.rubric_criteria.all():
+        rubric[str(rc.competency_id)] = {
+            'band1': rc.band1_text,
+            'band2': rc.band2_text,
+            'band3': rc.band3_text,
+            'band4': rc.band4_text,
+        }
+
+    return JsonResponse({
+        'assessment_name': assessment.name,
+        'competencies': competencies,
+        'rubric': rubric,
+    })
+
+
+@login_required
+@user_passes_test(is_superadmin)
+def api_save_rubric_grid(request):
+    """Save the editable rubric grid. POST JSON:
+    {assessment_id, rows:[{competency_id, band1, band2, band3, band4}]}."""
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'POST required'}, status=405)
+
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except (ValueError, UnicodeDecodeError):
+        return JsonResponse({'ok': False, 'error': 'Invalid JSON'}, status=400)
+
+    assessment_id = data.get('assessment_id')
+    rows = data.get('rows', [])
+    assessment = get_object_or_404(Assessment, id=assessment_id)
+
+    valid_comp_ids = set(
+        assessment.competency_mappings.values_list('competency_id', flat=True)
+    )
+
+    saved = 0
+    for row in rows:
+        comp_id = row.get('competency_id')
+        try:
+            comp_id = int(comp_id)
+        except (TypeError, ValueError):
+            continue
+        if comp_id not in valid_comp_ids:
+            continue
+        RubricCriterion.objects.update_or_create(
+            assessment=assessment,
+            competency_id=comp_id,
+            defaults={
+                'band1_text': (row.get('band1') or '').strip(),
+                'band2_text': (row.get('band2') or '').strip(),
+                'band3_text': (row.get('band3') or '').strip(),
+                'band4_text': (row.get('band4') or '').strip(),
+            },
+        )
+        saved += 1
+
+    return JsonResponse({'ok': True, 'saved': saved})

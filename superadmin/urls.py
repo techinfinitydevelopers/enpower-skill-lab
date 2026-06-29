@@ -75,4 +75,7 @@ urlpatterns = [
     path('announcements/<int:ann_id>/edit/', views.announcement_edit, name='announcement_edit'),
     path('announcements/<int:ann_id>/delete/', views.announcement_delete, name='announcement_delete'),
     path('api/schools-by-product/', views.api_schools_by_product, name='api_schools_by_product'),
+    # Editable Rubric Grid
+    path('api/rubric-grid/<int:assessment_id>/', views.api_rubric_grid, name='api_rubric_grid'),
+    path('api/save-rubric-grid/', views.api_save_rubric_grid, name='api_save_rubric_grid'),
 ]
