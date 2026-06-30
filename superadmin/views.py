@@ -2221,7 +2221,7 @@ def class_list(request):
     
     # Get coaches (teachers)
     User = get_user_model()
-    coaches = User.objects.filter(role='TEACHER', is_active=True)
+    coaches = User.objects.filter(role='THINKING_COACH', is_active=True)
     
     # Grade choices for the edit drawer
     grade_choices = Class.GRADE_CHOICES
@@ -2342,7 +2342,7 @@ def edit_class(request, class_id):
             thinking_coach_id = request.POST.get('thinking_coach')
             if thinking_coach_id:
                 User = get_user_model()
-                class_obj.thinking_coach = User.objects.filter(id=thinking_coach_id, role='TEACHER').first()
+                class_obj.thinking_coach = User.objects.filter(id=thinking_coach_id, role='THINKING_COACH').first()
             else:
                 class_obj.thinking_coach = None
             

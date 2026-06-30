@@ -342,6 +342,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // Live-mirror Step 1 school email into the Step 6 (read-only) field
+    const step1Email = document.getElementById('schoolEmail');
+    const step6Email = document.getElementById('schoolEmailSec6');
+    if (step1Email && step6Email) {
+        const mirror = () => { step6Email.value = step1Email.value; };
+        step1Email.addEventListener('input', mirror);
+        step1Email.addEventListener('change', mirror);
+        mirror();
+    }
+
     // Initialize
     updateStepDisplay();
 

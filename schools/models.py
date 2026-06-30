@@ -836,7 +836,7 @@ class Class(models.Model):
         null=True,
         blank=True,
         related_name='assigned_classes',
-        limit_choices_to={'role': 'TEACHER'},
+        limit_choices_to={'role': 'THINKING_COACH'},
         verbose_name="Thinking Coach",
         help_text="Assigned thinking coach for this class"
     )
