@@ -680,11 +680,40 @@ async function bulkGenerateReports() {
 }
 
 // Sidebar active
+// Auto-preselect grade -> project -> assessment when opened from "Start Scoring"
+// (e.g. /teacher/academics/score-entry/?grade=Middle&project=2&assessment=3)
+function _waitFor(cond, cb, tries) {
+    if (cond()) { cb(); return; }
+    if (tries <= 0) return;
+    setTimeout(function(){ _waitFor(cond, cb, tries - 1); }, 100);
+}
+function presetFromURL() {
+    const p = new URLSearchParams(window.location.search);
+    const g = p.get('grade'), pid = p.get('project'), aid = p.get('assessment');
+    if (!g) return;
+    gradeSelect.value = g;
+    gradeSelect.dispatchEvent(new Event('change'));
+    if (!pid) return;
+    _waitFor(function(){ return projectSelect.querySelector('option[value="' + pid + '"]'); }, function(){
+        projectSelect.value = pid;
+        projectSelect.dispatchEvent(new Event('change'));
+        if (!aid) return;
+        _waitFor(function(){ return allAssessments && allAssessments.length > 0; }, function(){
+            const idx = allAssessments.findIndex(function(a){ return String(a.id) === String(aid); });
+            if (idx >= 0) {
+                assessmentNumSelect.value = idx;
+                assessmentNumSelect.dispatchEvent(new Event('change'));
+            }
+        }, 40);
+    }, 40);
+}
+
 document.addEventListener('DOMContentLoaded', function () {
     const link = document.getElementById('nav-score-entry');
     if (link) link.classList.add('active');
     const parent = link ? link.closest('.sidebar-dropdown') : null;
     if (parent) parent.classList.add('active');
+    presetFromURL();
 });
 </script>
 <style>

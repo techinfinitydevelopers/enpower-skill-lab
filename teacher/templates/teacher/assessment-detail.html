@@ -58,12 +58,13 @@
                         <span class="material-symbols-outlined" style="font-size:17px;">arrow_back</span>
                         Back
                     </a>
-                    <button style="display:flex; align-items:center; gap:6px; padding:10px 20px; border-radius:8px; background:#fff; color:#5A1F6E; font-size:13px; font-weight:700; border:none; cursor:pointer; transition:opacity 0.2s;"
-                            onmouseenter="this.style.opacity='0.9'"
-                            onmouseleave="this.style.opacity='1'">
+                    <a href="{% url 'teacher:score_entry' %}?grade={{ assessment.project.grade|urlencode }}&project={{ assessment.project_id }}&assessment={{ assessment.id }}"
+                       style="text-decoration:none; display:flex; align-items:center; gap:6px; padding:10px 20px; border-radius:8px; background:#fff; color:#5A1F6E; font-size:13px; font-weight:700; border:none; cursor:pointer; transition:opacity 0.2s;"
+                       onmouseenter="this.style.opacity='0.9'"
+                       onmouseleave="this.style.opacity='1'">
                         <span class="material-symbols-outlined" style="font-size:17px;">edit_square</span>
                         Start Scoring
-                    </button>
+                    </a>
                 </div>
             </div>
         </div>

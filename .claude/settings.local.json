@@ -13,7 +13,13 @@
       "Bash(done)",
       "Bash(for f:*)",
       "Bash(python manage.py shell -c \":*)",
-      "Bash(curl -s http://127.0.0.1:8000/super-admin/dashboard/)"
+      "Bash(curl -s http://127.0.0.1:8000/super-admin/dashboard/)",
+      "Bash(venv/Scripts/python.exe \"C:/Users/prasa/AppData/Local/Temp/claude/C--Terraform-enpower-skill-lab/0d47273d-10d0-4e50-bab4-1ae69b744742/scratchpad/verify_tt.py\")",
+      "Bash(./venv/Scripts/python.exe manage.py check)",
+      "Bash(./venv/Scripts/python.exe manage.py makemigrations --check --dry-run)",
+      "Bash(PYTHONIOENCODING=utf-8 ./venv/Scripts/python.exe ck.py)",
+      "Bash(venv/Scripts/python.exe *3)",
+      "Bash(venv/Scripts/python.exe manage.py shell)"
     ]
   }
 }

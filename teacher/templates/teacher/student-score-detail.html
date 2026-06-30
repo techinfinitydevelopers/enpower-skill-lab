@@ -139,14 +139,28 @@
                 <div style="font-size:11px; color:#94a3b8; margin-top:3px; line-height:1.5;">{{ row.cm.competency.description|truncatechars:100 }}</div>
                 {% endif %}
             </div>
-            <!-- See Rubric -->
-            <div style="padding:16px 20px; text-align:center;">
+            <!-- Rubric: View (popup) + Download -->
+            <div style="padding:16px 20px; text-align:center; white-space:nowrap;">
+                {% if row.rubric %}
+                <button type="button" class="rubric-btn"
+                        data-code="{{ row.cm.competency.code }}"
+                        data-name="{{ row.cm.competency.name }}"
+                        data-band1="{{ row.rubric.band1_text|default:''|escapejs }}"
+                        data-band2="{{ row.rubric.band2_text|default:''|escapejs }}"
+                        data-band3="{{ row.rubric.band3_text|default:''|escapejs }}"
+                        data-band4="{{ row.rubric.band4_text|default:''|escapejs }}"
+                        onclick="openRubricView(this)">
+                    <span class="material-symbols-outlined" style="font-size:14px;">visibility</span>
+                    View
+                </button>
+                {% endif %}
                 {% if assessment.rubric_file %}
                 <a href="{{ assessment.rubric_file.url }}" target="_blank" class="rubric-btn">
-                    <span class="material-symbols-outlined" style="font-size:14px;">description</span>
-                    See Rubric
+                    <span class="material-symbols-outlined" style="font-size:14px;">download</span>
+                    Download
                 </a>
-                {% else %}
+                {% endif %}
+                {% if not row.rubric and not assessment.rubric_file %}
                 <span style="font-size:11px; color:#cbd5e1; font-style:italic;">No rubric</span>
                 {% endif %}
             </div>
@@ -195,6 +209,41 @@
 
 
 </div>
+
+<!-- Rubric View Modal (popup) -->
+<div id="rubricModal" style="display:none; position:fixed; inset:0; z-index:1000; background:rgba(15,23,42,0.5); align-items:center; justify-content:center; padding:20px;">
+  <div style="background:#fff; border-radius:14px; max-width:760px; width:100%; max-height:85vh; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 20px 50px rgba(0,0,0,0.25);">
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:18px 22px; border-bottom:1px solid #ede9f4;">
+      <div>
+        <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#94a3b8;">Scoring Rubric</div>
+        <div id="rubricModalTitle" style="font-size:16px; font-weight:700; color:#1e1b4b; margin-top:2px;"></div>
+      </div>
+      <button onclick="closeRubricView()" style="background:none; border:none; cursor:pointer; color:#94a3b8;">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <div style="padding:20px 22px; overflow-y:auto;">
+      <table style="width:100%; border-collapse:collapse; font-size:13px;">
+        <thead>
+          <tr>
+            <th style="text-align:left; padding:10px 12px; background:#fef2f2; color:#b91c1c; border:1px solid #f1f5f9; font-size:11px; font-weight:700;">1-4 Not meeting</th>
+            <th style="text-align:left; padding:10px 12px; background:#fff7ed; color:#c2410c; border:1px solid #f1f5f9; font-size:11px; font-weight:700;">4-7 Approaching</th>
+            <th style="text-align:left; padding:10px 12px; background:#f0fdf4; color:#15803d; border:1px solid #f1f5f9; font-size:11px; font-weight:700;">7-9 Fully meeting</th>
+            <th style="text-align:left; padding:10px 12px; background:#eff6ff; color:#1d4ed8; border:1px solid #f1f5f9; font-size:11px; font-weight:700;">9-10 Exceeding</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td id="rb1" style="padding:12px; border:1px solid #f1f5f9; vertical-align:top; color:#374151; line-height:1.5;"></td>
+            <td id="rb2" style="padding:12px; border:1px solid #f1f5f9; vertical-align:top; color:#374151; line-height:1.5;"></td>
+            <td id="rb3" style="padding:12px; border:1px solid #f1f5f9; vertical-align:top; color:#374151; line-height:1.5;"></td>
+            <td id="rb4" style="padding:12px; border:1px solid #f1f5f9; vertical-align:top; color:#374151; line-height:1.5;"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -203,6 +252,21 @@ const SAVE_SCORE_URL    = "{% url 'teacher:api_save_score' %}";
 const SAVE_FEEDBACK_URL = "{% url 'teacher:api_save_feedback' %}";
 const CSRF_TOKEN          = "{{ csrf_token }}";
 const STUDENT_ID          = {{ student.id }};
+
+// Rubric View popup
+function openRubricView(btn) {
+    const d = btn.dataset;
+    document.getElementById('rubricModalTitle').textContent = (d.code || '') + ' — ' + (d.name || '');
+    const set = function(id, val){ document.getElementById(id).textContent = val && val.trim() ? val : '—'; };
+    set('rb1', d.band1); set('rb2', d.band2); set('rb3', d.band3); set('rb4', d.band4);
+    document.getElementById('rubricModal').style.display = 'flex';
+}
+function closeRubricView() {
+    document.getElementById('rubricModal').style.display = 'none';
+}
+document.addEventListener('click', function(e){
+    if (e.target && e.target.id === 'rubricModal') closeRubricView();
+});
 const ASSESSMENT_ID       = {{ assessment.id }};
 const PROJECT_ID          = {{ project.id }};
 

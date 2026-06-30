@@ -344,9 +344,16 @@ def student_score_detail(request, assessment_id, student_id):
     except StudentProjectFeedback.DoesNotExist:
         project_feedback_text = ''
 
+    # Editable rubric grid (slide 28) — band descriptors per competency for "View" popup
+    from competencies.models import RubricCriterion
+    rubric_by_comp = {
+        rc.competency_id: rc
+        for rc in RubricCriterion.objects.filter(assessment=assessment)
+    }
+
     # Pre-pair each competency mapping with its score so template needs no custom filter
     comp_rows = [
-        {'cm': cm, 'score': scores.get(cm.id)}
+        {'cm': cm, 'score': scores.get(cm.id), 'rubric': rubric_by_comp.get(cm.competency_id)}
         for cm in comp_mappings
     ]
 
