@@ -120,24 +120,6 @@ def student_profile(request):
 def student_reports(request):
     """Student skill passport reports page"""
     from competencies.models import ProjectReport
-
-    student = None
-    if hasattr(request.user, 'student_profile'):
-        student = request.user.student_profile
-    elif hasattr(request.user, 'student'):
-        student = request.user.student
-
-    reports = []
-    if student:
-        reports = ProjectReport.objects.filter(student=student).select_related('project').order_by('-project__sequence_number', '-generated_at')
-
-    return render(request, 'student/reports.html', {'reports': reports})
-
-
-@login_required
-@user_passes_test(is_student)
-def student_reports(request):
-    from competencies.models import ProjectReport
     student = getattr(request.user, 'student_profile', None) or getattr(request.user, 'student', None)
     reports = []
     if student:

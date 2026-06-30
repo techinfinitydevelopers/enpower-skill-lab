@@ -216,8 +216,8 @@ def coordinator_logout(request):
 @user_passes_test(is_coordinator)
 def school_list(request):
     """School list view"""
-    # Fetch all schools from the database
-    schools = School.objects.all().order_by('-created_at')
+    # Fetch only schools assigned to the requesting coordinator
+    schools = _coordinator_schools(request).order_by('-created_at')
 
     context = {
         'schools': schools,

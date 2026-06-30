@@ -3202,6 +3202,7 @@ def project_assessment(request):
 @user_passes_test(is_superadmin)
 def custom_framework(request):
     """Fully editable Learning Pillars page for CSL+ framework."""
+    from competencies.models import Framework
 
     # Active sub-pillar
     active_sp_id = request.GET.get('sp')  # Using ID since CSL+ sp_numbers may overlap later
@@ -3236,11 +3237,12 @@ def custom_framework(request):
             if not name:
                 messages.error(request, 'Pillar name is required.')
             else:
+                active_fw_obj = Framework.objects.filter(is_fixed=False).first()
                 max_order = Pillar.objects.filter(framework_ref__is_fixed=False).aggregate(models.Max('order'))['order__max'] or 0
                 count = Pillar.objects.filter(framework_ref__is_fixed=False, is_kb=False).count()
                 Pillar.objects.create(
                     name=name, number=f"{count + 1:02d}", color=color,
-                    order=max_order + 1, framework_ref__is_fixed=False, is_kb=False,
+                    order=max_order + 1, framework_ref=active_fw_obj, is_kb=False,
                 )
                 messages.success(request, f'Pillar "{name}" added!')
 

@@ -221,7 +221,7 @@ def api_score_entry_data(request):
     teacher_obj = getattr(request.user, 'teacher_profile', None)
     students_qs = Student.objects.filter(
         student_class__in=class_range,
-        attendance_status='active'
+        is_active=True
     )
     if teacher_obj and teacher_obj.school:
         students_qs = students_qs.filter(school=teacher_obj.school)
@@ -292,6 +292,11 @@ def api_save_score(request):
             score_val = None
     except (KeyError, ValueError, TypeError):
         return JsonResponse({'error': 'Invalid data'}, status=400)
+
+    student = get_object_or_404(Student, id=student_id)
+    teacher_profile = getattr(request.user, 'teacher_profile', None)
+    if teacher_profile and student.school != teacher_profile.school:
+        return JsonResponse({'error': 'Student not in your school'}, status=403)
 
     entry, _ = ScoreEntry.objects.update_or_create(
         student_id=student_id,
@@ -390,6 +395,10 @@ def api_save_feedback(request):
     student    = get_object_or_404(Student, id=student_id)
     assessment = get_object_or_404(Assessment, id=assessment_id)
 
+    teacher_profile = getattr(request.user, 'teacher_profile', None)
+    if teacher_profile and student.school != teacher_profile.school:
+        return JsonResponse({'error': 'Student not in your school'}, status=403)
+
     StudentAssessmentFeedback.objects.update_or_create(
         student=student,
         assessment=assessment,
@@ -418,6 +427,10 @@ def api_save_project_feedback(request):
 
     student = get_object_or_404(Student, id=student_id)
     project = get_object_or_404(Project, id=project_id)
+
+    teacher_profile = getattr(request.user, 'teacher_profile', None)
+    if teacher_profile and student.school != teacher_profile.school:
+        return JsonResponse({'error': 'Student not in your school'}, status=403)
 
     StudentProjectFeedback.objects.update_or_create(
         student=student,

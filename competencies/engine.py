@@ -172,14 +172,20 @@ def _calculate_profile_score(profile, competency_scores):
         return None
 
     # Step 2: Weightage
-    secondary_total = len(secondary_comps) * SECONDARY_COMPETENCY_WEIGHT
-    remaining       = 1.0 - secondary_total
+    # Only competencies that were actually assessed get a weight, so the
+    # applied weights always sum to 1.0. An unassessed secondary must not
+    # steal 10% from the primary pool (it would deflate the profile score).
+    assessed_secondaries = [c for c in secondary_comps if c.id in competency_scores]
+    secondary_total = len(assessed_secondaries) * SECONDARY_COMPETENCY_WEIGHT
+    # Clamp so a misconfigured profile with too many secondaries can't
+    # produce negative primary weights.
+    remaining       = max(0.0, 1.0 - secondary_total)
     primary_weight  = remaining / len(assessed_primaries) if assessed_primaries else 0
 
     weightage = {}
     for c in assessed_primaries:
         weightage[c.id] = primary_weight
-    for c in secondary_comps:
+    for c in assessed_secondaries:
         weightage[c.id] = SECONDARY_COMPETENCY_WEIGHT
 
     # Step 3: Profile score

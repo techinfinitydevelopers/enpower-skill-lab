@@ -236,7 +236,16 @@ def school_admin_onboard_student(request):
             student.middle_name = request.POST.get('middle_name', '')
             student.last_name = request.POST.get('last_name', '')
             student.gender = request.POST.get('gender', '')
-            student.date_of_birth = request.POST.get('date_of_birth', '')
+            date_of_birth = request.POST.get('date_of_birth', '')
+            enrollment_date = request.POST.get('enrollment_date', '')
+            gr_number = request.POST.get('gr_number', '')
+            if not date_of_birth or not enrollment_date:
+                messages.error(request, 'Date of birth and enrollment date are required')
+                return redirect('school_admin_onboard_student')
+            if not gr_number:
+                messages.error(request, 'GR number is required')
+                return redirect('school_admin_onboard_student')
+            student.date_of_birth = date_of_birth
             student.nationality = request.POST.get('nationality', 'Indian')
             student.mother_tongue = request.POST.get('mother_tongue', '')
             student.blood_group = request.POST.get('blood_group', '')
@@ -249,7 +258,7 @@ def school_admin_onboard_student(request):
             student.division = request.POST.get('division', '')
             student.roll_number = request.POST.get('roll_number', '')
             student.academic_year = request.POST.get('academic_year', '')
-            student.gr_number = request.POST.get('gr_number', '')
+            student.gr_number = gr_number
             student.previous_school = request.POST.get('previous_school', '')
             student.stream = request.POST.get('stream', '')
             student.school_board = request.POST.get('school_board', '')
@@ -262,7 +271,7 @@ def school_admin_onboard_student(request):
 
             # D. Skill Lab Specific Details
             student.skill_lab_reg_id = skill_lab_reg_id
-            student.enrollment_date = request.POST.get('enrollment_date', '')
+            student.enrollment_date = enrollment_date
             student.skills_enrolled = request.POST.get('skills_enrolled', '')
             student.current_skill_level = request.POST.get('current_skill_level', '')
             student.assigned_trainer = request.POST.get('assigned_trainer', '')
@@ -420,6 +429,7 @@ def school_admin_student_list(request):
 
 
 @login_required
+@user_passes_test(is_school_admin)
 def school_admin_onboard_parent(request):
     """View for school admin to onboard new parents to their school"""
     from schools.models import School
@@ -608,6 +618,7 @@ ENpower Skill Lab Team
 
 
 @login_required
+@user_passes_test(is_school_admin)
 def school_admin_parent_list(request):
     """View to display list of all parents for this school"""
     from schools.models import School
