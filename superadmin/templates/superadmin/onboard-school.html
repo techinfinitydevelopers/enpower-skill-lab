@@ -35,7 +35,7 @@
             <div class="step"><div class="step-icon">9</div><div class="step-label">Additional</div></div>
         </div>
 
-        <form id="schoolForm" method="POST" action="{% url 'onboard_school' %}" enctype="multipart/form-data">
+        <form id="schoolForm" method="POST" action="{% url 'onboard_school' %}" enctype="multipart/form-data" novalidate>
             {% csrf_token %}
 
             <div class="form-section" id="step1">

@@ -355,6 +355,22 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize
     updateStepDisplay();
 
+    // Make stepper circles clickable to jump between steps
+    document.querySelectorAll('.stepper .step').forEach((step, index) => {
+        step.style.cursor = 'pointer';
+        step.addEventListener('click', function () {
+            const target = index + 1;
+            if (target === currentStep) return;
+            // Moving forward: validate the current step first
+            if (target > currentStep) {
+                if (!validateCurrentStep()) return;
+                saveCurrentStepData();
+            }
+            currentStep = target;
+            updateStepDisplay();
+        });
+    });
+
     // Auto-Fill button handler
     const autoFillBtn = document.getElementById('autoFillBtn');
     if (autoFillBtn) {
@@ -392,10 +408,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const schoolForm = document.getElementById('schoolForm');
     if (schoolForm) {
         schoolForm.addEventListener('submit', function (e) {
-            // Only validate, don't prevent default submission
-            if (!validateCurrentStep()) {
-                e.preventDefault();
-                return false;
+            // Validate every step; jump to the first invalid one so the user
+            // can see and fix the error (hidden steps can't be focused natively).
+            for (let s = 1; s <= totalSteps; s++) {
+                if (!validateStep(s)) {
+                    e.preventDefault();
+                    currentStep = s;
+                    updateStepDisplay();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    return false;
+                }
             }
             // If validation passes, allow normal form submission to Django
             saveCurrentStepData();
@@ -522,14 +544,18 @@ function updateStepDisplay() {
 }
 
 function validateCurrentStep() {
+    return validateStep(currentStep);
+}
+
+function validateStep(stepNum) {
     let isValid = true;
-    const currentStepElement = document.getElementById(`step${currentStep}`);
-    
+    const currentStepElement = document.getElementById(`step${stepNum}`);
+
     if (!currentStepElement) {
         return true; // If step doesn't exist, consider it valid
     }
 
-    // Get all fields with validators in the current step
+    // Get all fields with validators in this step
     const fieldsToValidate = currentStepElement.querySelectorAll('input[id], select[id]');
 
     fieldsToValidate.forEach(field => {
