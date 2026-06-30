@@ -1,0 +1,998 @@
+
+======================================================================
+SLIDE 1
+ESL Dashboard 
+Logic and flow 
+
+======================================================================
+SLIDE 2
+ESL timelines
+19th Nov- Finalised the UI template based on Scope of work
+27th Dec- First level of discussion on elements and features on each of the roles
+Jan-Feb-March - Knowledge team started work on the skill passport logic with Kunal
+April - First school onboarded (shiv vani)
+May- Insights into processes and implementation flow
+June - Workflow and logic with new scope of work requests pertaining to actual implementation 
+
+======================================================================
+SLIDE 3
+School onboarding flow - authorisation only with Super admin
+Neocreate project manager signs in as Super Admin
+Fills up details of schools
+School info
+Program info
+Fee and payment info
+Special remarks for school
+Assigns SRM (sushrut, vasudha or sai) - here sushrut sai and vasudha should be already signed up as a program coordinator role on the system
+School ID is created
+SRM is assigned
+SRM (project coordinator) now sees the school assigned on their dashboard/account
+
+======================================================================
+SLIDE 4
+Changes in the school onboarding flow on Super Admin -Section 5
+[IMAGE]
+Skill program (ESL product) (dropdown)
+Future Skills Lab 
+CSL plus with PC
+CSL plus with TC
+CSL foundation with PC
+CSl foundation 
+Assign academic year to program selected 
+E.g. Future skill lab Academic year 26-27
+Assigning School relationship manager (dropdown) - data comes from program coordinator ID - Vasudha, sushrut and Sai
+Trainer assigned (data comes from dropdown of all onboarded thinking coach)
+Number of students grade-wise
+Replace the existing fields with above 5 fields in this section
+
+======================================================================
+SLIDE 5
+Changes in the school onboarding flow on Super Admin- Sec 6 
+Lab fees with gst
+Program fees with gst
+Payment terms quarterly, half yearly or annual)
+TCE sales SPoC name
+TCE sales spoc contact details
+Upload signed TCE school agreement
+Upload go-live certificate
+Keep school email id instead of billing email
+Replace the existing fields with above 8 fields 
+[IMAGE]
+
+======================================================================
+SLIDE 6
+Changes in the school onboarding flow on Super Admin-Sec 9 
+Exceptions for this school
+Add Events and workshop calendar 
+Notable alumni
+Replace the existing fields with above  fields 
+[IMAGE]
+
+======================================================================
+SLIDE 7
+*New feature on Super admin :  “Add ESL product”
+“Lesson title” change to “program title” (FSL/ CSL plus etc)
+Short description -keep as it is (here we add competencies applicable at program level)
+Add applicable grades - 1 to 12 (checkbox)
+Upload program SKU pdf or doc
+Add project name : 
+Flow : select grade (dropdown) —> Add project name (There will be multiple projects o give that functionality.)
+Add sessions under each project 
+Session no.—> Session title—-> Brief session descriptor 
+Refer to google form : https://forms.gle/MsqH1AmkNVEU1BmH6
+
+======================================================================
+SLIDE 8
+New feature on Super admin : Add Announcement 
+Add announcement
+Select ESL product (dropdown : FSL/ CSL plus etc)
+Select applicable schools under the product 
+Select applicable grades under the school
+Add event name
+Add newsletter
+Add student success story
+Add event date
+Add event description
+Add event link 
+Publish event (school/student/parent 
+Add date and month
+Upload (weblink/pdf)
+Publish Newsletter
+Add student name, grade, school
+Add success story (max 500 characters)
+Upload photos (max 2 photos) or upload youtube video link
+Publish story
+
+======================================================================
+SLIDE 9
+2. Student & parent onboarding flow- authorisation with Super admin
+SRM collects from school following data (offline)
+Student name 
+Grade
+Division
+Roll no
+Student Birthdate
+Parent name
+Parent email id (optional)
+Parent phone no (optional)
+Timetable gradewise
+System creates unique ID for all students (check if this can be auto generated )
+Eg. for Shiv Vani Student riddhima guruji; grade 6A; birth date 22 feb; academic year 2026
+Student Id :
+SV-RG-6A-222-26-stu
+Parent ID
+SV-RG-6A-222-26-par
+Password can be same as id and can be changed after first login by parent/student
+SRM submits the sheet to Neocreate program manager (super admin) 
+Super admin will  upload the student and parent data for each onboarded school in csv
+Once ids are created program manager will give the data to SRM to be given to parents and students (school will give it or TC will give once he joins)
+
+======================================================================
+SLIDE 10
+Changes : Student & parent Bulk upload format 
+[IMAGE]
+[IMAGE]
+Q.1 What can be done to generate student and parent ids like these
+Student Id :
+SV-RG-6A-222-26-stu
+Parent ID
+SV-RG-6A-222-26-par
+Q.2 Student and parent Bulk upload authorisation can be also given to program coordinator (SRM) once the school is assigned to them on the dashboard
+
+======================================================================
+SLIDE 11
+In the system : At this point of time following is linked
+Onboarded School ID is linked to
+School Relationship Manager
+2. Program such as FSL/CSL plus
+3. Grade-wise student ID data
+4. Grade-wise Parent id data
+
+======================================================================
+SLIDE 12
+3. Schedule management (new dev/ feature to be added on program coordinator and super admin role)
+Authorisation to be given to SRM (program coordinator role)
+Flow of timetable upload
+SRM (PC) will select school (dropdown) —--> Assign Thinking coach—---> Assign Grade and division and then upload the schedule .
+Flow reference video : https://drive.google.com/file/d/1vnxTE7CP2RZbburGAmJkKwa8uS66M31k/view?usp=drive_link 
+[IMAGE]
+Replace “instrument”with program name (FSL/CSL plus/ CSL foundation)
+Rest of the fields remain same
+
+======================================================================
+SLIDE 13
+At this point of time following is linked
+Onboarded School ID is linked to
+School Relationship Manager
+2. Thinking coach
+3. Grade-wise student ID data
+4. Grade-wise Timetable 
+
+======================================================================
+SLIDE 14
+4. Attendance (new dev feature on Thinking coach dashboard)
+Input function on Thinking coach
+Daily session data comes via timetable configured by SRM or central team
+This data will be used in multiple output (dashboard for student/parent/school etc)
+Reference for attendance : https://drive.google.com/file/d/1RGwTHGmCRqMXLl2LbUfmtRL0BamScUsL/view?usp=sharing
+[IMAGE]
+
+======================================================================
+SLIDE 15
+5. Daily Session feedback - (new dev feature on Thinking coach dashboard)
+Select date
+Select Grade
+Select division
+Select project mapped under FSL etc(data already associated with School)
+Add session detailsInclude session no, session title, and session description
+Add class activity or project photosMaximum 3 per session; add descriptions for each
+Give ratings on a scale of 5(1=Poor, 2=Average, 3=Good, 4=Very Good, 5=Excellent) on 4 criteria:
+Student engagement
+Ease of curriculum delivery
+Lesson resources
+Time management of the lesson plan
+Final Step: TC marks the project as “Completed” once all sessions under the project are done
+
+======================================================================
+SLIDE 16
+6. Weekly Session feedback - qualitative
+(new dev feature on Thinking coach dashboard)
+Select date range 
+Give qualitative feedback on your overall sessions in this week (max 200 characters each answer)
+What went wrong this week? ______________
+What went well this week? ______________
+Details of anything new that you tried this week _____________________
+Lab issues if any - yes or no
+If yes; give details ___________
+
+======================================================================
+SLIDE 17
+7. Student project input - 3 per grade per year(Thinking coach dashboard)
+Select Grade
+Select division
+Upload project file (images/ppt/pdf/doc/video link)
+Select group of students (add students to the group from the dropdown classlist)
+Confirm the project input
+Final step :submit
+
+======================================================================
+SLIDE 18
+Assessment Reporting : 
+FSL/ CSL+/ CSL Foundation
+Reporting Logic, Dashboard and UI
+
+======================================================================
+SLIDE 19
+Major Dashboards For Assessment
+Super Admin & Admin Dashboard
+Teacher Dashboard
+Student Dashboard
+3.Profiling Engine : Profile - Student Score Calculator 
+1.Project Details
+2.Assessment wise grade input per student
+View Scores/Report
+2.Project - Assessment - Competency Setting
+3.Score Viewing
+
+======================================================================
+SLIDE 20
+Input : 
+SP7.C7
+Super Admin & Admin Dashboard
+1. Profile-Competency Setting Dashboard
+There are 15 profiles. Each profile in mapped to a max of 2-3 primary competency and 2 secondary competency. The Super Admin Dashboard should allow for setting of these for each profile. And this should be editable as well. 
+1.Financial Steward
+2.Well-Being Navigator
+...15.Well-Being Navigator
+Input: SP1.C1
+Input : SP2.C3 
+Input : SP6.C4 
+Input : SP3.C3
+Input : SP5.C6
+Input : SP13.C3 
+Input : SP9.C1
+Input : SP5.C7
+Input : SP10.C3
+Input : SP4.C5
+Input : S9.C3
+Input : SP13.C11
+Input : SP13.C3
+Primary Competencies
+Secondary 
+Profiles
+Input : 
+-
+Input : 
+-
+Input : SP5.C7
+Input : SP10.C7
+Profile mapping disabled in CSL+/ other projects
+
+======================================================================
+SLIDE 21
+Super Admin & Admin Dashboard
+Logo
+Menu Bar
+Academics 
+Learning Pillars
+FSL+
+[IMAGE]
+[IMAGE]
+[IMAGE]
+[IMAGE]
+[IMAGE]
+[IMAGE]
+[IMAGE]
+[IMAGE]
+[IMAGE]
+[IMAGE]
+[IMAGE]
+[IMAGE]
+[IMAGE]
+Option to add Pillars
+Option to add Sub-Pillars
+
+======================================================================
+SLIDE 22
+Logo
+Menu Bar
+Academics 
+Learning Pillars
+KaushalBodh
+Future Competencies
+[IMAGE]
+[IMAGE]
+CSL+
+Tech of Future
+[IMAGE]
+KB1 Practical Skills
+[IMAGE]
+KB2 Workplace Awareness
+[IMAGE]
+KB3 Essential Values
+[IMAGE]
+Option to add Pillars
+Option to add Sub-Pillars
+KB1 Practical Skills
+CSL+ Framework 
+3 pillars 13 sub pillars
+
+======================================================================
+SLIDE 23
+Logo
+Menu Bar
+Academics 
+Learning Pillars
+KaushalBodh
+[IMAGE]
+KB1 Practical Skills
+[IMAGE]
+KB2 Workplace Awareness
+[IMAGE]
+KB3 Essential Values
+[IMAGE]
+Option to add Pillars
+Option to add Sub-Pillars
+KB1 Practical Skills
+CSL Foundation
+
+======================================================================
+SLIDE 24
+Super Admin & Admin Dashboard
+Flow down of the Numbering 3-6 comps under each sub-pillar)
+SP1 : Knowing Self
+SP2 : Building Self
+SP3 : Connect with the World
+….SP17: Emerging Tech
+Sub Pillars
+Competencies (for each subpillar)
+Foundational Stage- G1,2,3,4,5
+Middle Stage - G6,7,8
+High Secondary- G9,10
+SP1.C1
+SP1.C2
+SP1.C3
+SP1.C4
+SP1.C5
+SP1.C6
+SP1.C7
+SP1.C10
+SP1.C11
+SP1.C9
+SP2.C1
+SP2.C2
+SP2.C3
+SP2.C4
+SP2.C5
+SP2.C6
+SP2.C7
+SP2.C10
+SP2.C11
+SP2.C9
+SP1.C6 :
+SP1.Building Self
+C6 : Reflects on thoughts, emotions, and behaviour to deepen self-understanding and evaluates how identity interacts with social and academic contexts
+
+======================================================================
+SLIDE 25
+Super Admin & Admin Dashboard
+2.Project - Ass- Competency Setting
+Grade
+Dropdown [6,7,8,9,10]
+Project Title 
+Input : [Text]
+Student Output
+Drop down [Ass 1-6]
+Set Competency
+Competency 1
+Competency 2
+Competency 3
+…..Competency 8
+Input : Code [SP1.C1,SP1.C2….SP17.C7
+Show : [Text] Corresponding Competency
+Input : Code [SP1.C1,SP1.C2….SP17.C7
+Show : [Text] Corresponding Competency
+Input : Code [SP1.C1,SP1.C2….SP17.C7
+Show : [Text] Corresponding Competency
+Project Form
+Dropdown:  [Life form/ Machines & Materials/ Humans Services/ Plug In/Final Project]
+Input : Code [SP1.C1,SP1.C2….SP17.C7
+Show : [Text] Corresponding Competency
+Admin has to be able to set the different projects available for different grades and map the competencies scored in each assess. Each grade will have 3 project + plug-ins
+Dropdown : [Presentation, Written, Oral/Portfolio] 
+Type
+Upload Rubric
+Output Descriptor
+Input : [Text]
+After chlleneg#
+Placement
+Additional  Instructions for Teacher
+Group
+Indi
+Group
+Checklist for student output
+
+======================================================================
+SLIDE 26
+Teacher Dashboard
+1.Project Details [View]
+Grade
+Dropdown [6,7,8,9,10]
+Project Title 
+Dropdown: [Text]
+Student Output
+Ass 1
+Project Form
+Dropdown:  [Life form/ Machines & Materials/ Humans Services/ Plug In]
+Show: [Presentation, Written, Oral/Portfolio] 
+Type
+View Details
+Student Output
+Ass 2
+Show: [Presentation, Written, Oral/Portfolio] 
+Type
+View Details
+Student Output
+Ass 3
+Show: [Presentation, Written, Oral/Portfolio] 
+Type
+View Details
+Student Output
+Ass 4
+Show: [Presentation, Written, Oral/Portfolio] 
+Type
+View Details
+Profiles 
+Active
+View Profile Map with competencies
+Engine
+After Challenge
+#
+After Challenge
+#
+After Challenge
+#
+After Challenge
+#
+
+======================================================================
+SLIDE 27
+Teacher Dashboard
+1.Project Details [View]
+Grade
+Show  : [6,7,8,9,10]
+Project Title 
+Show : [Text]
+After Challenge No.
+Show‘Assess No.
+Competency 1
+Competency 2
+Competency 3
+…..Competency 8
+Show : Code [SP1.C1,SP1.C2….SP17.C7
+Show : [Text] Corresponding Competency
+Show : Code [SP1.C1,SP1.C2….SP17.C7
+Show : [Text] Corresponding Competency
+Show: Code [SP1.C1,SP1.C2….SP17.C7
+Show : [Text] Corresponding Competency
+Project Form
+Show : Work Form
+Show : Code [SP1.C1,SP1.C2….SP17.C7
+Show : [Text] Corresponding Competency
+Show: [Presentation, Written, Oral/Portfolio] 
+See Rubric
+Output Descriptor
+Show: [Text]
+Additional  Instructions for Teacher
+Group
+Indivi
+Indi
+Group
+Checklist for student output
+Show Challe #
+
+======================================================================
+SLIDE 28
+Sample Rubric [Editable] 
+: Presentation on Env. Conservation ideas
+Rubric Criteria | 1-4.Not meeting expectations | 4-7.Approaching expectation | 7-9.Fully meeting expectation | 9-10 Exceeding Expectation
+Competency 1 [LO] | [...text] |  |  | 
+Competency 2 [LO] |  |  |  | 
+Competency 3 [LO] |  |  |  | 
+Competency 4 [LO] |  |  |  | 
+Competency 5 [LO] |  |  |  | 
+
+======================================================================
+SLIDE 29
+Teacher Dashboard
+Dropdown [6,7,8,9,10]
+Dropdown: [Text]
+2.Asses wise score input per student
+Select Grade
+Select ongoing Project
+Show : Student Name 1
+C1 
+View Score
+Student Output
+Drop down [Ass 1-6]
+Show: [Presentation, Written, Oral/Portfolio] 
+Type
+Show : Student Name 2
+View Score
+..Show : Student Name 40
+View Score
+Add/edit Score
+C2 
+C3
+C4
+C5
+C5 
+Add/edit Score
+Add/edit Score
+Add/edit Score
+Add/edit Score
+Add/edit Score
+Add/edit Score
+Add/edit Score
+Add/edit Score
+Add/edit Score
+Add/edit Score
+Add/edit Score
+Add/edit Score
+Add/edit Score
+Add/edit Score
+Add/edit Score
+Add/edit Score
+Add/edit Score
+
+======================================================================
+SLIDE 30
+Teacher Dashboard
+Show [6,7,8,9,10]
+Show: [Text]
+2.Challenge wise score input per student
+Grade
+Project
+Show : Student Name 1
+Student Output
+Show [Challenge 1-12]
+Show: [Presentation, Written, Oral/Portfolio] 
+Type
+Show : Code [SP1.C1,SP1.C2….SP17.C7
+Show : [Text] Corresponding Competency
+Show : Code [SP1.C1,SP1.C2….SP17.C7
+Show : [Text] Corresponding Competency
+Show: Code [SP1.C1,SP1.C2….SP17.C7
+Show : [Text] Corresponding Competency
+See Rubric
+See
+Rubric
+See
+Rubric
+Input : Enter Grade
+Input : Enter Grade
+Input : Enter Grade
+Enter Feedback : [Text]
+Submit
+Final Grade
+
+======================================================================
+SLIDE 31
+Teacher Dashboard
+3.Score Viewing
+Student Level 
+Class Level
+Project Wise
+Agg Competency Wise
+Percentile Competency
+Project Level Aggregate Comparative
+Student Profile
+All competency report
+Show Project : 
+Show Grade : 
+Competency 1 
+Show score
+Competency 4 
+Show score
+Competency 7 
+Generate Profile Report
+Repeated competencies  to be aggregated
+Show score
+Show score
+Show score
+Pending [Add score] 
+
+======================================================================
+SLIDE 32
+Student Dashboard
+1.Skill Passport Viewing
+Profile
+View Scores
+Competency Wise across Projects/grades
+Latest Score
+Project <> Challenge Wise
+View Profile Report
+Student Profile
+All competency report
+Show Project : 
+Show Grade : 
+Competency 1 
+Show score
+Competency 4 
+Show score
+Competency 7 
+Show Profile
+3 times a year (after ever project)
+Show score
+Show score
+Show score
+Pending 
+Pending 
+Students view results in competency level only not student profiles 
+Sub-pillar wise
+Customised report (KB)
+
+======================================================================
+SLIDE 33
+Profiling Engine
+3.Profiling Engine : Profile - Student Score Calculator 
+Step 1: 
+Map all the competencies taught for a project to profiles and determine the profiles that gets unlocked for that project- at least 2 primary competencies to be listed to unlock a profile
+Step 3: 
+Do student level scouting to identify each students top 5-6 competencies from project and convert to scale to calculate.
+Step 4: 
+Based on primary competencies shortlist the top 5 possible profiles.(all primary competency wrt to project need to be present to shortlist)
+Step 5: 
+Do total score calculation including primary and secondary competencies. Identify the top 3 profiles and the common strengths
+Profile Detail for Student calculated and reported at project level. Reset after every project 
+Step 2: Distribute 100% weightage across the competencies present. All secondary competencies weighted at 10%. The pending distributed across primary.
+Stage 3- Skill passport stage disabled in CSL+
+
+======================================================================
+SLIDE 34
+Engine Example
+Project : Bio Conservation (Output for Competency Marking)
+SP1.C3
+SP1.C2
+SP9.C3
+SP12.C3
+SP7.C3
+SP8.C2
+SP11.C2
+SP3.C2
+Ass 1 Output
+Ass 2 Output
+Ass 3 Output
+SP11.C2
+SP3.C2
+SP11.C2
+SP3.C2
+SP3.C2
+SP1.C3
+SP9.C3
+STEP 1: Project - Competency Mapping Listed by Super Admin/Admin
+
+======================================================================
+SLIDE 35
+[IMAGE]
+SP1.C3
+SP1.C2
+SP6.C3
+SP5.C3
+SP12.C3
+SP5.C3
+SP6.C2
+S6.C3
+SP9.C3
+SP2.C3
+SP11.C2
+SP5.C2
+SP6.C3
+SP9.C3
+SP12.C3
+SP1.C3
+SP11.C2
+SP6.C3
+SP9.C3
+SP1.C2
+[IMAGE]
+[IMAGE]
+[IMAGE]
+[IMAGE]
+[IMAGE]
+[IMAGE]
+[IMAGE]
+STEP 1 : Project - Profile Unlocking
+
+======================================================================
+SLIDE 36
+[IMAGE]
+SP1.C3
+SP1.C2
+SP6.C3
+SP5.C3
+SP12.C3
+[IMAGE]
+SP1.C3
+SP11.C2
+SP6.C3
+SP9.C3
+SP1.C2
+[IMAGE]
+[IMAGE]
+50%
+50%
+0
+0
+0
+40%
+40%
+0
+10%
+10%
+STEP 2 : Profile - Competency Weightage Distribution
+
+======================================================================
+SLIDE 37
+SP1.C3
+SP1.C2
+SP1.C3
+SP11.C2
+SP9.C3
+SP1.C2
+STEP 3 : Student - Competency Identification and Mapping
+Student 1
+Top Competencies
+(10) 
+SP9.C3
+SP8.C2
+SP7.C3
+SP12.C3
+
+======================================================================
+SLIDE 38
+STEP 4 : Profile Shortlisting and final scoring
+[IMAGE]
+[IMAGE]
+Calculate total scores for the profile based on weightage and both secondary and primary. 
+Repeating competencies to be avg for a project
+[IMAGE]
+[IMAGE]
+[IMAGE]
+SP1.C3
+SP1.C2
+50%
+50%
+SP1.C3
+SP11.C2
+SP9.C3
+SP1.C2
+40%
+40%
+10%
+10%
+Student 1 Scores across profiles using both primary and secondary scores 
+A(50%) + A+(50%)
+A(40%) + B(40%)+C(10%)+D(10%)
+45+47.5=85
+36+32+7.5+6=81.5
+Identify the strongest 3 profile
+72
+80
+62
+
+======================================================================
+SLIDE 39
+SP1.C3
+SP1.C2
+SP1.C3
+SP11.C2
+SP9.C3
+Top 5 competencies
+Written Feedback
+STEP 5 : Report competencies project
+[IMAGE]
+[IMAGE]
+[IMAGE]
+ Very Strong
+Strong
+Emerging
+Skill to work on
+SP9.C3
+SP1.C2
+Skill to work on
+SP9.C3
+SP1.C2
+
+======================================================================
+SLIDE 40
+[IMAGE]
+[IMAGE]
+[IMAGE]
+ Very Strong
+Strong
+Emerging
+SP1.C3
+SP1.C2
+SP1.C3
+SP11.C2
+SP9.C3
+Top 5 competencies
+Cumulative Scores
+Skill to work on
+SP9.C3
+SP1.C2
+Skill to work on
+SP9.C3
+SP1.C2
+Written Feedback
+STEP 5 : Report final 3 profile and top competencies (based on latest entered scores whichever project)
+
+======================================================================
+SLIDE 41
+Program Structure
+Plug-In 1
+Project 1
+Plug-In 2
+Project 2
+Plug-In 3
+Project 3
+Plug-In 4
+Final Project
+Comp 2
+Comp 3
+Comp 1
+Comp 2
+Comp 3
+..Comp 8
+Report 1 Profile : Based on Plug-In 1+
+Project1 (avg score)
+Comp 7
+Comp 8
+Comp 3
+Comp 8
+Comp 7
+..Comp .11
+Report 2 Profile : Based on Plug-In 2 + Project 2 (avg score)
+Comp 4
+Comp 5
+Comp 6
+Comp 4
+Comp 5
+..Comp 10
+Report 3 Profile : based on Plug-in3 + Project 3 (avg score)
+Comp 5
+Comp 6
+Comp 8
+Comp 6
+Comp 9
+..Comp 5
+Annual Report of Profile: Based on Latest Competencies Score
+Plug-In 1
+Project 1
+Eg:
+Project 2
+Project 3
+Plug-In 4
+Final Project
+*plug-ins may or maynot be there. If there, calculate score with the next project.
+
+======================================================================
+SLIDE 42
+Skill report changes (communicated)
+https://docs.google.com/document/d/1FCoX2t_QRAq2StlX6o-uregCYIVVXtHR4XlPAhL-4Yw/edit?tab=t.0
+
+======================================================================
+SLIDE 43
+Logic for Student and Parent dashboard elements
+
+======================================================================
+SLIDE 44
+Student Dashboard
+[IMAGE]
+Student ID
+School Name
+Date of enrollment in Program
+Program name : FSL/ CSL plus 
+Thinking coach name : 
+
+======================================================================
+SLIDE 45
+Student Dashboard
+[IMAGE]
+Journey progress: Project Completion - Level 1 (Student completes 3 of 12 projects/levels annually, Grades 6-9).
+Attendance Logic: data input mentioned slide
+Weekly perfect attendance = Current streak.
+Monthly days attended = Monthly streak.
+Badges based on monthly attendance:
+🥉 Star: 90–94% attendance. Tagline: "Showing up and staying committed."
+🥈 Champion: 95–98% attendance. Tagline: "Consistency is the key to success."
+🥇 Legend: 99–100% attendance. Tagline: "A model of dedication and reliability."
+Remove "leaderboard position tab" and "view full leaderboard" buttons and LMS from sidebar and main dashboard
+
+======================================================================
+SLIDE 46
+[IMAGE]
+Student Dashboard
+Attendance report will be replaced by “Project completion report” = data from sessions marked completed by TC for each project
+Event calendar = data from SA dashboard mentioned in slide 7
+Newsletter and student success story from slide 7 data
+Remove the tab “Test your knowledge”
+Total registered students data = input from all onboarded students in all programs across.
+ADD : View projects (input from slideSlide 17: 7. Student project input - 3 per grade per year(Thinking coach dashboard)
+
+======================================================================
+SLIDE 47
+Parent dashboard
+[IMAGE]
+Keep as it is - 
+Add “program” : FSl/ CSL plus etc
+data comes from student and school data onboarded (Ref : slide)
+Overall performance = change to Monthly attendance (data input as mentioned in slide13
+Assessments done = remove
+Lessons completed = change to Project completed (1 out of 3- data input from slide 14
+Academic performance = change to list of Projects in current year = data from slide 6
+
+======================================================================
+SLIDE 48
+Parent dashboard
+[IMAGE]
+Dashboard- Keep
+Child profiles - change the name to “student profiles”
+Assessments - Remove
+LMS - Remove
+Reports- change it to Portfolio
+Under portfolio add annual skill report
+Events - keep
+Notices- remove
+Announcements- keep
+Add : newsletter ( input logic slide 7)
+Add student success story ( input logic slide 7)
+ADD : View projects (input from slideSlide 17: 7. Student project input - 3 per grade per year(Thinking coach dashboard)
+
+======================================================================
+SLIDE 49
+Parent dashboard
+[IMAGE]
+Current Module : Project 1 (name - data from logic on slide 6
+You have completed ___ sessions (add number of sessions completed- data from logic on slide 14
+View learning details - project description data from slide 6
+Remove “Recent activity” and quick actions”
+
+======================================================================
+SLIDE 50
+Logic for School admin dashboard
+Grade-wise student distribution - static - school onboarding data- slide 9
+Monthly gradewise student attendance - changes monthly - student attendance data- slide 13
+Project completion - gradewise - changes periodic - slide 14
+Top 3 skill profiles- gradewise - skill passport data
+
+======================================================================
+SLIDE 51
+[IMAGE]
+[IMAGE]
+Remove user onboarding feature from school admin (this id is given to principals. Only view access. No inputs
+
+======================================================================
+SLIDE 52
+[IMAGE]
+
+======================================================================
+SLIDE 53
+Elements | Super admin | Program coordinator / SRM | TC / PC | School Admin / Principal | Student | Parent
+School data | Input- all schools
+View- all schools | View- only schools mapped | View selective data on individual school mapped | View selective data on individual school mapped | View selective data on individual school mapped | View selective data on individual school mapped
+Student data | Input and Output | View-only for schools mapped | Output-all student data only for one school | Output-all student data only for one school | View-Only personal(per student) | View- Only personal(per student)
+Timetable | Input and Output-secondary | Input and output -Primary | Output | Output | Output | Output
+Attendance | Input-all schools | Input-all mapped schools | Input-one school-Primary | Output | Output | output
+Curriculum (prog details, projects,assessments parameters) | Input | output | output | output | output | output
+Daily Session feedback | Input- schoolwise-secondary | n/a | Input- primary | output | output | output
+Skill passport | Input-schoolwise -secondary | n/a | input-primary | output | output | output
+
+======================================================================
+SLIDE 54
+Compilation of changes role-wise
+https://docs.google.com/document/d/1Xni5gKBgD9nAbWS_72AYbls45VRMsfLr5Hi2hfvzo2w/edit?usp=sharing
+
+======================================================================
+SLIDE 55
