@@ -1,0 +1,163 @@
+/* =====================================================================
+   Enpower Skill Lab — Unified Toast Notification System
+   Brand: purple #6c32a8 / yellow #f4b400 · green-tick success
+   Position: top-right slide-in · auto-dismiss 3s
+   Used by every role base.html + all AJAX calls (window.showToast).
+   ===================================================================== */
+
+:root {
+    --esl-toast-purple: #6c32a8;
+    --esl-toast-yellow: #f4b400;
+    --esl-toast-success: #16a34a;
+    --esl-toast-error: #dc2626;
+    --esl-toast-info: #6c32a8;
+}
+
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 380px;
+    width: calc(100% - 40px);
+    pointer-events: none;
+}
+
+.toast {
+    pointer-events: auto;
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    background: #ffffff;
+    border-radius: 12px;
+    border-left: 4px solid var(--esl-toast-purple);
+    box-shadow: 0 10px 30px rgba(108, 50, 168, 0.18), 0 2px 8px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    transform: translateX(120%);
+    opacity: 0;
+    animation: esl-toast-in 0.35s cubic-bezier(0.21, 1.02, 0.73, 1) forwards;
+}
+
+.toast.closing {
+    animation: esl-toast-out 0.3s ease forwards;
+}
+
+@keyframes esl-toast-in {
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes esl-toast-out {
+    to { transform: translateX(120%); opacity: 0; }
+}
+
+/* ---- Icon ---- */
+.toast-icon {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    color: #ffffff;
+    background: var(--esl-toast-purple);
+}
+
+.toast-icon .material-symbols-outlined,
+.toast-icon .material-icons {
+    font-size: 20px;
+    font-variation-settings: 'FILL' 1;
+}
+
+/* ---- Content ---- */
+.toast-content {
+    flex: 1;
+    min-width: 0;
+    padding-top: 1px;
+}
+
+.toast-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #1f2937;
+    line-height: 1.2;
+    margin-bottom: 2px;
+}
+
+.toast-message {
+    font-size: 0.85rem;
+    color: #4b5563;
+    line-height: 1.35;
+    word-wrap: break-word;
+}
+
+/* ---- Close button ---- */
+.toast-close {
+    flex-shrink: 0;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #9ca3af;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s ease;
+}
+
+.toast-close:hover { color: #4b5563; }
+.toast-close .material-symbols-outlined,
+.toast-close .material-icons { font-size: 18px; }
+
+/* ---- Progress bar (brand-tinted, counts down 3s) ---- */
+.toast-progress {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 3px;
+    background: rgba(0, 0, 0, 0.06);
+}
+
+.toast-progress-bar {
+    height: 100%;
+    width: 100%;
+    background: var(--esl-toast-purple);
+    transform-origin: left;
+    animation: esl-toast-progress 3s linear forwards;
+}
+
+@keyframes esl-toast-progress {
+    from { transform: scaleX(1); }
+    to { transform: scaleX(0); }
+}
+
+/* ---- Type variants ---- */
+.toast-success { border-left-color: var(--esl-toast-success); }
+.toast-success .toast-icon { background: var(--esl-toast-success); }
+.toast-success .toast-progress-bar { background: var(--esl-toast-success); }
+
+.toast-error { border-left-color: var(--esl-toast-error); }
+.toast-error .toast-icon { background: var(--esl-toast-error); }
+.toast-error .toast-progress-bar { background: var(--esl-toast-error); }
+
+.toast-warning { border-left-color: var(--esl-toast-yellow); }
+.toast-warning .toast-icon { background: var(--esl-toast-yellow); }
+.toast-warning .toast-progress-bar { background: var(--esl-toast-yellow); }
+
+/* info + default keep brand purple (set above) */
+
+@media (max-width: 480px) {
+    .toast-container {
+        top: 12px;
+        right: 12px;
+        left: 12px;
+        width: auto;
+        max-width: none;
+    }
+}

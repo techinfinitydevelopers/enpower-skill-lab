@@ -12,6 +12,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
 
+    <!-- Toast Notifications -->
+    <link rel="stylesheet" href="{% static 'css/common/toast.css' %}">
+
     <!-- Base Layout Styles -->
     <style>
         :root {
@@ -1250,6 +1253,19 @@
                 </div>
             </header>
 
+            {% if messages %}
+            <div class="toast-container">
+              {% for message in messages %}
+              <div class="toast toast-{{ message.tags }}" data-toast>
+                <div class="toast-icon"><span class="material-symbols-outlined">{% if message.tags == 'success' %}check_circle{% elif message.tags == 'error' %}cancel{% elif message.tags == 'warning' %}warning{% else %}info{% endif %}</span></div>
+                <div class="toast-content"><div class="toast-title">{% if message.tags == 'success' %}Success{% elif message.tags == 'error' %}Error{% elif message.tags == 'warning' %}Warning{% else %}Info{% endif %}</div><div class="toast-message">{{ message }}</div></div>
+                <button class="toast-close" onclick="closeToast(this)"><span class="material-symbols-outlined">close</span></button>
+                <div class="toast-progress"><div class="toast-progress-bar"></div></div>
+              </div>
+              {% endfor %}
+            </div>
+            {% endif %}
+
             <!-- Main Content Area -->
             {% block content %}
             {% endblock %}
@@ -1499,6 +1515,9 @@
             });
         }
     </script>
+
+    <!-- Toast Notifications -->
+    <script src="{% static 'js/common/toast.js' %}"></script>
 
     {% block extra_js %}{% endblock %}
 </body>

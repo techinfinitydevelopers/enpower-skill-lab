@@ -378,6 +378,10 @@ async function uploadAvatar(file) {
 // ============================================
 
 function showToast(message, type = 'info') {
+    // Delegate to global toast API if available
+    if (window.showToast) { return window.showToast(message, type); }
+
+    // Fallback (older local implementation)
     // Remove existing toast
     const existingToast = document.querySelector('.stud-prof-toast');
     if (existingToast) {

@@ -106,7 +106,11 @@ function resetData() {
     return loadData();
 }
 
-function showToast(message) {
+function showToast(message, type) {
+    // Delegate to global toast API if available
+    if (window.showToast) { return window.showToast(message, type); }
+
+    // Fallback (standalone mockup implementation)
     let toast = document.getElementById('app-toast');
     if (!toast) {
         toast = document.createElement('div');

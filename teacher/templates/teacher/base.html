@@ -208,35 +208,6 @@
         .dropdown-item.logout-item .material-symbols-outlined { color: var(--red-600); }
         .dropdown-item.logout-item:hover { background-color: rgba(239, 68, 68, 0.1); }
 
-        /* Toast Messages */
-        .toast-container { position: fixed; top: 90px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 12px; max-width: 420px; width: 100%; }
-        .toast { display: flex; align-items: flex-start; gap: 14px; padding: 16px 18px; background: #ffffff; border-radius: 12px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12); position: relative; overflow: hidden; animation: toastSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); border-left: 4px solid; }
-        .toast-success { border-left-color: #10b981; }
-        .toast-error { border-left-color: #ef4444; }
-        .toast-warning { border-left-color: #f59e0b; }
-        .toast-info { border-left-color: #3b82f6; }
-        .toast-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .toast-success .toast-icon { background: rgba(16, 185, 129, 0.12); color: #10b981; }
-        .toast-error .toast-icon { background: rgba(239, 68, 68, 0.12); color: #ef4444; }
-        .toast-warning .toast-icon { background: rgba(245, 158, 11, 0.12); color: #f59e0b; }
-        .toast-info .toast-icon { background: rgba(59, 130, 246, 0.12); color: #3b82f6; }
-        .toast-icon .material-symbols-outlined { font-size: 22px; font-variation-settings: 'FILL' 1; }
-        .toast-content { flex: 1; min-width: 0; }
-        .toast-title { font-weight: 600; font-size: 15px; color: #1f2937; margin-bottom: 4px; }
-        .toast-message { font-size: 14px; color: #6b7280; line-height: 1.5; }
-        .toast-close { background: none; border: none; padding: 4px; cursor: pointer; color: #9ca3af; border-radius: 6px; transition: all 0.2s ease; }
-        .toast-close:hover { background: #f3f4f6; color: #4b5563; }
-        .toast-progress { position: absolute; bottom: 0; left: 0; right: 0; height: 4px; background: rgba(0, 0, 0, 0.06); }
-        .toast-progress-bar { height: 100%; width: 100%; animation: progressShrink 5s linear forwards; }
-        .toast-success .toast-progress-bar { background: linear-gradient(90deg, #10b981, #34d399); }
-        .toast-error .toast-progress-bar { background: linear-gradient(90deg, #ef4444, #f87171); }
-        .toast-warning .toast-progress-bar { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
-        .toast-info .toast-progress-bar { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
-        @keyframes toastSlideIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        @keyframes toastSlideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(120%); opacity: 0; } }
-        @keyframes progressShrink { from { width: 100%; } to { width: 0%; } }
-        .toast.closing { animation: toastSlideOut 0.3s ease-out forwards; }
-
         /* Responsive */
         @media (max-width: 1023px) {
             .sidebar { position: fixed; left: -100%; top: 0; height: 100vh; z-index: 50; transition: left 0.3s ease-in-out; width: 280px; }
@@ -260,6 +231,7 @@
 
     <!-- Dashboard Page Styles -->
     <link rel="stylesheet" href="{% static 'css/teacher/teacher-dashboard.css' %}">
+    <link rel="stylesheet" href="{% static 'css/common/toast.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -462,21 +434,6 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        function closeToast(button) {
-            const toast = button.closest('.toast');
-            toast.classList.add('closing');
-            setTimeout(() => toast.remove(), 300);
-        }
-        document.querySelectorAll('[data-toast]').forEach(function(toast, index) {
-            setTimeout(function() {
-                if (toast.parentElement) {
-                    toast.classList.add('closing');
-                    setTimeout(() => toast.remove(), 300);
-                }
-            }, 5000 + (index * 200));
-        });
-    </script>
-    <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Sidebar functionality
             const sidebar = document.getElementById('sidebar');
@@ -613,5 +570,6 @@
         });
     </script>
     {% block extra_js %}{% endblock %}
+    <script src="{% static 'js/common/toast.js' %}"></script>
 </body>
 </html>
