@@ -1285,7 +1285,7 @@
     }
 
     .stud-dash-reports-grid > div:nth-child(3) {
-        margin-top: -60px;
+        margin-top: 0;
     }
 }
 
@@ -1305,7 +1305,7 @@
     }
 
     .stud-dash-reports-grid > div:nth-child(3) {
-        margin-top: -285px;
+        margin-top: 0;
     }
 }
 
@@ -1807,12 +1807,12 @@
 
 @media (min-width: 1550px) {
     .stud-dash-reports-grid > div:nth-child(3) {
-        margin-top: -340px;
+        margin-top: 0;
     }
 }
 
 @media (min-width: 1844px) {
     .stud-dash-reports-grid > div:nth-child(3) {
-        margin-top: -290px;
+        margin-top: 0;
     }
 }
