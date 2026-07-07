@@ -330,8 +330,12 @@ function saveScore(input, acId) {
             renderCell(wrapper, acId, data.score);
             showSaved();
             updateSummary();
+            if (window.showToast) showToast(scoreVal === null ? 'Score cleared' : 'Score saved', 'success');
+        } else if (window.showToast) {
+            showToast(data.error || 'Could not save score', 'error');
         }
-    });
+    })
+    .catch(() => { if (window.showToast) showToast('Could not save score', 'error'); });
 }
 
 function renderCell(wrapper, acId, score) {
@@ -350,7 +354,15 @@ function saveFeedback() {
         body: JSON.stringify({ student_id: STUDENT_ID, assessment_id: ASSESSMENT_ID, feedback })
     })
     .then(r => r.json())
-    .then(data => { if (data.ok) showSaved(); });
+    .then(data => {
+        if (data.ok) {
+            showSaved();
+            if (window.showToast) showToast('Feedback saved', 'success');
+        } else if (window.showToast) {
+            showToast(data.error || 'Could not save feedback', 'error');
+        }
+    })
+    .catch(() => { if (window.showToast) showToast('Could not save feedback', 'error'); });
 }
 
 

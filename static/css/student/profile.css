@@ -195,6 +195,9 @@
     font-weight: 500;
     color: var(--stud-prof-text);
     margin: 0;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    min-width: 0;
 }
 
 .stud-prof-basic-value.highlight {
@@ -360,6 +363,9 @@
     font-weight: 500;
     color: var(--stud-prof-text);
     margin: 0;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    min-width: 0;
 }
 
 .stud-prof-info-value.highlight {

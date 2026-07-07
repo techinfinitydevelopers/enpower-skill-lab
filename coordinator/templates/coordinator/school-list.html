@@ -77,9 +77,9 @@
                                 </td>
                                 <td>
                                     <div class="d-flex align-items-center justify-content-center gap-3 text-muted">
-                                        <button class="btn btn-link p-0 text-decoration-none text-muted hover-primary" data-school-id="{{ school.id }}">
+                                        <a href="{% url 'coordinator:school_detail' school.id %}" class="btn btn-link p-0 text-decoration-none text-muted hover-primary" data-school-id="{{ school.id }}">
                                             <span class="material-symbols-outlined">visibility</span>
-                                        </button>
+                                        </a>
                                     </div>
                                 </td>
                             </tr>

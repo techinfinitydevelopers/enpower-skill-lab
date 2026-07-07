@@ -50,7 +50,7 @@ def student_dashboard(request):
     if student:
         # Header info (slide 44)
         try:
-            context['student_id'] = student.skill_lab_reg_id or student.gr_number
+            context['student_id'] = student.gr_number
         except Exception:
             context['student_id'] = None
         try:

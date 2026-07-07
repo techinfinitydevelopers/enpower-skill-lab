@@ -130,7 +130,7 @@
             </div>
             {% if ann.announcement_type == 'event' %}
                 <div class="ann-card-meta">Date: {{ ann.event_date|default:"N/A" }}</div>
-                {% if ann.esl_product %}<div class="ann-card-meta">Product: {{ ann.esl_product.name }}</div>{% endif %}
+                {% if ann.program %}<div class="ann-card-meta">Program: {{ ann.get_program_display }}</div>{% elif ann.esl_product %}<div class="ann-card-meta">Product: {{ ann.esl_product.name }}</div>{% endif %}
             {% elif ann.announcement_type == 'success_story' %}
                 <div class="ann-card-meta">Grade {{ ann.story_grade|default:"N/A" }}{% if ann.story_school %} — {{ ann.story_school.school_name }}{% endif %}</div>
             {% endif %}
@@ -180,11 +180,11 @@
                     </h5>
 
                     <div class="mb-4">
-                        <label class="al-form-label">Select ESL Product</label>
-                        <select class="al-form-select" name="esl_product" id="eslProductSelect">
-                            <option value="">— Select ESL Product (FSL / CSL Plus etc) —</option>
-                            {% for p in esl_products %}
-                            <option value="{{ p.id }}" {% if ann and ann.esl_product_id == p.id %}selected{% endif %}>{{ p.name }}</option>
+                        <label class="al-form-label">Select Program</label>
+                        <select class="al-form-select" name="program" id="eslProductSelect">
+                            <option value="">— Select Program (FSL / CSL Plus etc) —</option>
+                            {% for val, label in program_choices %}
+                            <option value="{{ val }}" {% if ann and ann.program == val %}selected{% endif %}>{{ label }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -284,18 +284,9 @@
                             <span class="material-symbols-outlined" style="color:#3b82f6;">newspaper</span> Newsletter Details
                         </h5>
                         <div class="row g-3 mb-3">
-                            <div class="col-md-6">
+                            <div class="col-md-12">
                                 <label class="al-form-label">Date</label>
                                 <input type="date" class="al-form-control" name="newsletter_date" value="{% if ann and ann.newsletter_date %}{{ ann.newsletter_date|date:'Y-m-d' }}{% endif %}">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="al-form-label">Month</label>
-                                <select class="al-form-select" name="newsletter_month">
-                                    <option value="">— Select Month —</option>
-                                    {% for m in month_list %}
-                                    <option value="{{ m }}" {% if ann and ann.newsletter_month == m %}selected{% endif %}>{{ m }}</option>
-                                    {% endfor %}
-                                </select>
                             </div>
                         </div>
                         <div class="row g-3 mb-0">
@@ -442,8 +433,8 @@
     var eslSelect = document.getElementById('eslProductSelect');
     if (eslSelect) {
         eslSelect.addEventListener('change', function() {
-            var productId = this.value;
-            fetch('{% url "api_schools_by_product" %}?product_id=' + productId)
+            var program = this.value;
+            fetch('{% url "api_schools_by_product" %}?program=' + encodeURIComponent(program))
                 .then(r => r.json())
                 .then(function(data) {
                     var dropdown = document.getElementById('schoolDropdown');

@@ -1,0 +1,329 @@
+{% load static %}
+<!-- Coordinator Bulk Import Modal — one instance per role (student/parent) -->
+<!-- Usage: include with role='student' role_label='Student' -->
+<style>
+  #cbuModal-{{ role }} .material-symbols-outlined {
+    width: auto !important; height: auto !important; overflow: visible !important;
+  }
+</style>
+
+<div class="modal fade" id="cbuModal-{{ role }}" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content" style="border-radius: 16px; border: none;">
+
+      <div class="modal-header border-0 pb-0" style="padding: 1.5rem 1.5rem 0;">
+        <div>
+          <h5 class="modal-title fw-bold" style="font-size: 1.25rem;">
+            <span class="material-symbols-outlined align-middle me-2" style="font-size: 1.3rem;">upload_file</span>
+            Bulk Import {{ role_label }}s
+          </h5>
+          <p class="text-muted mb-0" style="font-size: 0.85rem;">Upload a CSV or Excel file to import multiple {{ role_label|lower }}s at once.</p>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body" style="padding: 1.5rem;">
+
+        <!-- Step 1: Upload -->
+        <div id="biUpload-{{ role }}">
+          <div class="d-flex align-items-center justify-content-between p-3 mb-3" style="background: #F0F7FF; border-radius: 10px;">
+            <div>
+              <p class="fw-medium mb-0" style="font-size: 0.9rem;">Download sample Excel template</p>
+              <p class="text-muted mb-0" style="font-size: 0.8rem;">Use this template to fill in your data correctly.</p>
+            </div>
+            <a href="{% url 'coordinator:download_sample' role=role %}" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1" style="border-radius: 8px;">
+              <span class="material-symbols-outlined" style="font-size: 1rem;">download</span>Sample Excel
+            </a>
+          </div>
+
+          <div id="biDrop-{{ role }}" class="text-center p-4 mb-3" style="border: 2px dashed #D1D5DB; border-radius: 12px; cursor: pointer; transition: all 0.2s;">
+            <span class="material-symbols-outlined mb-2" style="font-size: 2.5rem; color: #9CA3AF;">cloud_upload</span>
+            <p class="fw-medium mb-1">Click to upload or drag &amp; drop</p>
+            <p class="text-muted mb-0" style="font-size: 0.8rem;">CSV or Excel (.xlsx) files</p>
+            <input type="file" id="biFile-{{ role }}" accept=".csv,.xlsx" style="display: none;">
+          </div>
+
+          <div id="biFileInfo-{{ role }}" class="d-none align-items-center justify-content-between p-3 mb-3" style="background: #F9FAFB; border-radius: 10px;">
+            <div class="d-flex align-items-center gap-2">
+              <span class="material-symbols-outlined" style="color: #10B981;">description</span>
+              <span id="biFileName-{{ role }}" class="fw-medium" style="font-size: 0.9rem;"></span>
+              <span id="biFileSize-{{ role }}" class="text-muted" style="font-size: 0.8rem;"></span>
+            </div>
+            <button type="button" class="btn btn-sm btn-link text-danger p-0" id="biRemove-{{ role }}">
+              <span class="material-symbols-outlined" style="font-size: 1.2rem;">close</span>
+            </button>
+          </div>
+
+          <button type="button" class="btn w-100 fw-medium d-flex align-items-center justify-content-center gap-2" id="biUploadBtn-{{ role }}" disabled
+                  style="background: #5A1F6E; color: white; border-radius: 10px; padding: 0.7rem;">
+            <span class="material-symbols-outlined" style="font-size: 1.1rem;">upload</span>Start Import
+          </button>
+        </div>
+
+        <!-- Step 2: Progress -->
+        <div id="biProgress-{{ role }}" class="d-none">
+          <div class="text-center mb-3">
+            <div class="spinner-border text-primary mb-2" role="status" id="biSpinner-{{ role }}"></div>
+            <p class="fw-medium mb-1" id="biProgressText-{{ role }}">Processing...</p>
+            <p class="text-muted mb-0" style="font-size: 0.85rem;" id="biProgressSub-{{ role }}">Please wait while we import your data.</p>
+          </div>
+          <div class="mb-3" style="background: #F3F4F6; border-radius: 8px; height: 12px; overflow: hidden;">
+            <div id="biBar-{{ role }}" style="width: 0%; height: 100%; background: linear-gradient(90deg, #5A1F6E, #A67DB1); border-radius: 8px; transition: width 0.3s;"></div>
+          </div>
+          <div class="d-flex justify-content-between" style="font-size: 0.85rem;">
+            <span id="biProcessed-{{ role }}">0 / 0 processed</span>
+            <span id="biPercent-{{ role }}">0%</span>
+          </div>
+        </div>
+
+        <!-- Step 3: Results -->
+        <div id="biResults-{{ role }}" class="d-none">
+          <div class="row g-3 mb-3">
+            <div class="col-4">
+              <div class="text-center p-3" style="background: #F0FDF4; border-radius: 10px;">
+                <p class="fw-bold mb-0" style="font-size: 1.5rem; color: #16A34A;" id="biSuccess-{{ role }}">0</p>
+                <p class="text-muted mb-0" style="font-size: 0.8rem;">Imported</p>
+              </div>
+            </div>
+            <div class="col-4">
+              <div class="text-center p-3" style="background: #FEF2F2; border-radius: 10px;">
+                <p class="fw-bold mb-0" style="font-size: 1.5rem; color: #DC2626;" id="biFail-{{ role }}">0</p>
+                <p class="text-muted mb-0" style="font-size: 0.8rem;">Failed</p>
+              </div>
+            </div>
+            <div class="col-4">
+              <div class="text-center p-3" style="background: #F0F7FF; border-radius: 10px;">
+                <p class="fw-bold mb-0" style="font-size: 1.5rem; color: #5A1F6E;" id="biTotal-{{ role }}">0</p>
+                <p class="text-muted mb-0" style="font-size: 0.8rem;">Total</p>
+              </div>
+            </div>
+          </div>
+
+          <div id="biFailedSection-{{ role }}" class="d-none">
+            <h6 class="fw-bold mb-2 d-flex align-items-center gap-1" style="color: #DC2626;">
+              <span class="material-symbols-outlined" style="font-size: 1.1rem;">error</span>Failed Entries
+            </h6>
+            <div style="max-height: 250px; overflow-y: auto; border-radius: 10px; border: 1px solid #E5E7EB;">
+              <table class="table table-sm mb-0" style="font-size: 0.85rem;">
+                <thead style="background: #FEF2F2; position: sticky; top: 0;">
+                  <tr>
+                    <th style="padding: 0.6rem; border: none;">Row</th>
+                    <th style="padding: 0.6rem; border: none;">Name</th>
+                    <th style="padding: 0.6rem; border: none;">Reason</th>
+                  </tr>
+                </thead>
+                <tbody id="biFailedBody-{{ role }}"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div id="biAllSuccess-{{ role }}" class="d-none text-center py-3">
+            <span class="material-symbols-outlined mb-2" style="font-size: 3rem; color: #16A34A;">check_circle</span>
+            <p class="fw-medium mb-0" style="color: #16A34A;">All entries imported successfully!</p>
+          </div>
+
+          <div class="d-flex gap-2 mt-3">
+            <button type="button" class="btn btn-outline-secondary flex-fill" data-bs-dismiss="modal" style="border-radius: 10px;" onclick="location.reload();">Close &amp; Refresh</button>
+            <button type="button" class="btn flex-fill fw-medium" id="biMore-{{ role }}" style="background: #5A1F6E; color: white; border-radius: 10px;">Import More</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+    const role = '{{ role }}';
+    const uploadUrl = "{% url 'coordinator:bulk_import' role=role %}";
+    const csrfToken = '{{ csrf_token }}';
+
+    const dropZone = document.getElementById('biDrop-' + role);
+    const fileInput = document.getElementById('biFile-' + role);
+    const fileInfo = document.getElementById('biFileInfo-' + role);
+    const fileName = document.getElementById('biFileName-' + role);
+    const fileSize = document.getElementById('biFileSize-' + role);
+    const removeFileBtn = document.getElementById('biRemove-' + role);
+    const uploadBtn = document.getElementById('biUploadBtn-' + role);
+
+    const uploadSection = document.getElementById('biUpload-' + role);
+    const progressSection = document.getElementById('biProgress-' + role);
+    const resultsSection = document.getElementById('biResults-' + role);
+
+    const progressBar = document.getElementById('biBar-' + role);
+    const progressText = document.getElementById('biProgressText-' + role);
+    const progressSub = document.getElementById('biProgressSub-' + role);
+    const processedCount = document.getElementById('biProcessed-' + role);
+    const progressPercent = document.getElementById('biPercent-' + role);
+    const spinner = document.getElementById('biSpinner-' + role);
+
+    const successCountEl = document.getElementById('biSuccess-' + role);
+    const failCountEl = document.getElementById('biFail-' + role);
+    const totalCountEl = document.getElementById('biTotal-' + role);
+    const failedSection = document.getElementById('biFailedSection-' + role);
+    const failedBody = document.getElementById('biFailedBody-' + role);
+    const allSuccessMsg = document.getElementById('biAllSuccess-' + role);
+    const importMoreBtn = document.getElementById('biMore-' + role);
+
+    let selectedFile = null;
+
+    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = '#5A1F6E';
+        dropZone.style.background = '#F5F3FF';
+    });
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.style.borderColor = '#D1D5DB';
+        dropZone.style.background = '';
+    });
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = '#D1D5DB';
+        dropZone.style.background = '';
+        if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+    });
+
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files.length) handleFile(fileInput.files[0]);
+    });
+
+    function handleFile(file) {
+        if (!file.name.endsWith('.csv') && !file.name.endsWith('.xlsx')) {
+            alert('Please select a CSV or Excel (.xlsx) file.');
+            return;
+        }
+        selectedFile = file;
+        fileName.textContent = file.name;
+        fileSize.textContent = `(${(file.size / 1024).toFixed(1)} KB)`;
+        fileInfo.classList.remove('d-none');
+        fileInfo.classList.add('d-flex');
+        dropZone.style.display = 'none';
+        uploadBtn.disabled = false;
+    }
+
+    removeFileBtn.addEventListener('click', () => {
+        selectedFile = null;
+        fileInput.value = '';
+        fileInfo.classList.add('d-none');
+        fileInfo.classList.remove('d-flex');
+        dropZone.style.display = '';
+        uploadBtn.disabled = true;
+    });
+
+    uploadBtn.addEventListener('click', () => {
+        if (!selectedFile) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const lines = e.target.result.split('\n').filter(l => l.trim());
+            const totalRows = Math.max(lines.length - 1, 0);
+
+            uploadSection.classList.add('d-none');
+            progressSection.classList.remove('d-none');
+            processedCount.textContent = `0 / ${totalRows} processed`;
+
+            let fakeProgress = 0;
+            const interval = setInterval(() => {
+                if (fakeProgress < 85) {
+                    fakeProgress += Math.random() * 8;
+                    fakeProgress = Math.min(fakeProgress, 85);
+                    progressBar.style.width = fakeProgress + '%';
+                    progressPercent.textContent = Math.round(fakeProgress) + '%';
+                    const processed = Math.round((fakeProgress / 100) * totalRows);
+                    processedCount.textContent = `${processed} / ${totalRows} processed`;
+                    progressText.textContent = `Processing row ${processed} of ${totalRows}...`;
+                }
+            }, 300);
+
+            const formData = new FormData();
+            formData.append('csv_file', selectedFile);
+
+            fetch(uploadUrl, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrfToken },
+                body: formData,
+            })
+            .then(res => res.json())
+            .then(data => {
+                clearInterval(interval);
+                if (data.error) {
+                    spinner.classList.add('d-none');
+                    progressText.textContent = 'Import Failed';
+                    progressText.style.color = '#DC2626';
+                    progressSub.textContent = data.error;
+                    progressBar.style.width = '100%';
+                    progressBar.style.background = '#DC2626';
+                    return;
+                }
+                progressBar.style.width = '100%';
+                progressPercent.textContent = '100%';
+                processedCount.textContent = `${data.total} / ${data.total} processed`;
+                progressText.textContent = 'Import complete!';
+                setTimeout(() => showResults(data), 500);
+            })
+            .catch(() => {
+                clearInterval(interval);
+                spinner.classList.add('d-none');
+                progressText.textContent = 'Error';
+                progressText.style.color = '#DC2626';
+                progressSub.textContent = 'Network error. Please try again.';
+            });
+        };
+        reader.readAsText(selectedFile);
+    });
+
+    function showResults(data) {
+        progressSection.classList.add('d-none');
+        resultsSection.classList.remove('d-none');
+        successCountEl.textContent = data.success;
+        failCountEl.textContent = data.failed;
+        totalCountEl.textContent = data.total;
+
+        const failed = data.results.filter(r => r.status === 'failed');
+        if (failed.length > 0) {
+            failedSection.classList.remove('d-none');
+            allSuccessMsg.classList.add('d-none');
+            failedBody.innerHTML = '';
+            failed.forEach(f => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="padding: 0.5rem; border-color: #F3F4F6;">${f.row}</td>
+                    <td style="padding: 0.5rem; border-color: #F3F4F6; font-weight: 500;">${f.name}</td>
+                    <td style="padding: 0.5rem; border-color: #F3F4F6; color: #DC2626;">${f.reason}</td>
+                `;
+                failedBody.appendChild(tr);
+            });
+        } else {
+            failedSection.classList.add('d-none');
+            allSuccessMsg.classList.remove('d-none');
+        }
+    }
+
+    importMoreBtn.addEventListener('click', () => {
+        selectedFile = null;
+        fileInput.value = '';
+        fileInfo.classList.add('d-none');
+        fileInfo.classList.remove('d-flex');
+        dropZone.style.display = '';
+        uploadBtn.disabled = true;
+        progressBar.style.width = '0%';
+        progressBar.style.background = 'linear-gradient(90deg, #5A1F6E, #A67DB1)';
+        progressPercent.textContent = '0%';
+        progressText.textContent = 'Processing...';
+        progressText.style.color = '';
+        progressSub.textContent = 'Please wait while we import your data.';
+        spinner.classList.remove('d-none');
+        failedBody.innerHTML = '';
+        resultsSection.classList.add('d-none');
+        progressSection.classList.add('d-none');
+        uploadSection.classList.remove('d-none');
+    });
+
+    document.getElementById('cbuModal-' + role).addEventListener('hidden.bs.modal', () => {
+        importMoreBtn.click();
+    });
+
+    document.body.appendChild(document.getElementById('cbuModal-' + role));
+})();
+</script>

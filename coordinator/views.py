@@ -4,9 +4,11 @@ from django.contrib import messages
 from django.contrib.auth import logout, update_session_auth_hash
 from django.contrib.auth.forms import PasswordChangeForm
 from django.db.models import Count
+from django.shortcuts import get_object_or_404
 from schools.models import School, Class
 from teacher.models import Teacher
 from student.models import Student
+from parent.models import Parent
 from accounts.models import User
 from attendance.models import Timetable, TimetableSlot, GRADE_CHOICES, ACADEMIC_YEAR_CHOICES, DAY_CHOICES
 from django.utils import timezone
@@ -558,3 +560,212 @@ def timetable_upload(request):
         'program_choices': program_choices,
     }
     return render(request, 'coordinator/timetable-upload.html', context)
+
+
+# ============================================================
+# ASSIGN THINKING COACHES (#12)
+# ============================================================
+@login_required
+@user_passes_test(is_coordinator)
+def assign_coaches(request):
+    """List classes of the coordinator's assigned schools and assign a Thinking Coach to each.
+    All operations are scoped to the coordinator's assigned schools for security."""
+    assigned_schools = _coordinator_schools(request)
+    school_ids = list(assigned_schools.values_list('id', flat=True))
+    thinking_coaches = User.objects.filter(role='THINKING_COACH').order_by('first_name', 'username')
+
+    if request.method == 'POST':
+        class_id = request.POST.get('class_id', '').strip()
+        coach_id = request.POST.get('thinking_coach', '').strip()
+
+        # Only allow classes within the coordinator's assigned schools
+        klass = Class.objects.filter(id=class_id, school_id__in=school_ids).first()
+        if not klass:
+            messages.error(request, 'Class not found or not in your assigned schools.')
+            return redirect('coordinator:assign_coaches')
+
+        coach = None
+        if coach_id:
+            coach = thinking_coaches.filter(id=coach_id).first()
+            if not coach:
+                messages.error(request, 'Invalid coach selection.')
+                return redirect('coordinator:assign_coaches')
+
+        klass.thinking_coach = coach
+        klass.save()
+        messages.success(request, 'Coach assigned successfully!')
+        return redirect('coordinator:assign_coaches')
+
+    classes = (
+        Class.objects
+        .filter(school_id__in=school_ids)
+        .select_related('school', 'thinking_coach')
+        .order_by('school__school_name', 'grade', 'division')
+    )
+
+    context = {
+        'classes': classes,
+        'thinking_coaches': thinking_coaches,
+        'total_schools': assigned_schools.count(),
+    }
+    return render(request, 'coordinator/assign-coaches.html', context)
+
+
+# ============================================================
+# SCHOOL DETAILS (#11)
+# ============================================================
+@login_required
+@user_passes_test(is_coordinator)
+def school_detail(request, school_id):
+    """Read-only detail page for a single school. Restricted to the coordinator's assigned schools."""
+    assigned_schools = _coordinator_schools(request)
+    school = assigned_schools.filter(id=school_id).first()
+    if not school:
+        messages.error(request, 'School not found or not in your assigned schools.')
+        return redirect('coordinator:school_list')
+
+    class_count = Class.objects.filter(school=school).count()
+    student_count = Student.objects.filter(school=school).count()
+    parent_count = Parent.objects.filter(students__school=school).distinct().count()
+
+    context = {
+        'school': school,
+        'class_count': class_count,
+        'student_count': student_count,
+        'parent_count': parent_count,
+    }
+    return render(request, 'coordinator/school-details.html', context)
+
+
+# ============================================================
+# BULK UPLOAD — Students & Parents (client issue #10)
+# ============================================================
+# Reuses the superadmin bulk-import machinery WITHOUT modifying it.
+# We import the parsing config + per-role processors from
+# superadmin.bulk_import and run the same thin parse+process loop the
+# (superadmin-decorated) bulk_import view runs, so behavior stays identical.
+
+# Roles the coordinator is allowed to bulk-upload.
+COORDINATOR_BULK_ROLES = ('student', 'parent')
+
+
+@login_required
+@user_passes_test(is_coordinator)
+def bulk_upload_page(request):
+    """Coordinator bulk-upload landing page — Student & Parent cards only."""
+    return render(request, 'coordinator/bulk-upload.html')
+
+
+@login_required
+@user_passes_test(is_coordinator)
+def download_sample_view(request, role):
+    """Serve the same Excel sample template superadmin serves, scoped to
+    the roles a coordinator may import (student/parent)."""
+    from django.http import JsonResponse
+    from superadmin.bulk_import import _generate_excel
+    from django.http import HttpResponse
+
+    if role not in COORDINATOR_BULK_ROLES:
+        return JsonResponse({'error': 'Invalid role'}, status=400)
+
+    wb = _generate_excel(role)
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="sample_{role}_import.xlsx"'
+    wb.save(response)
+    return response
+
+
+@login_required
+@user_passes_test(is_coordinator)
+def bulk_import_view(request, role):
+    """Bulk-import students/parents. Mirrors superadmin.bulk_import.bulk_import
+    exactly (same parse + process loop + JsonResponse shape) but is gated to
+    coordinators and only student/parent roles."""
+    import csv
+    import io
+    from django.http import JsonResponse
+    from superadmin.bulk_import import EXCEL_CONFIG, ROLE_PROCESSORS, _get_display_name
+
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    if role not in COORDINATOR_BULK_ROLES:
+        return JsonResponse({'error': 'Invalid role'}, status=400)
+
+    csv_file = request.FILES.get('csv_file')
+    if not csv_file:
+        return JsonResponse({'error': 'No file uploaded'}, status=400)
+
+    file_name = csv_file.name.lower()
+    is_excel = file_name.endswith('.xlsx')
+    is_csv = file_name.endswith('.csv')
+
+    if not is_excel and not is_csv:
+        return JsonResponse({'error': 'Please upload a CSV or Excel (.xlsx) file'}, status=400)
+
+    try:
+        if is_excel:
+            from openpyxl import load_workbook
+            wb = load_workbook(csv_file, data_only=True)
+            ws = wb.active
+            # Row 2 has field names, data starts from row 3
+            field_row = [str(cell.value or '').strip() for cell in ws[2]]
+            rows = []
+            for row in ws.iter_rows(min_row=3, values_only=True):
+                if all(v is None or str(v).strip() == '' for v in row):
+                    continue
+                row_dict = {}
+                for idx, field in enumerate(field_row):
+                    if field:
+                        row_dict[field] = str(row[idx]).strip() if idx < len(row) and row[idx] is not None else ''
+                rows.append(row_dict)
+        else:
+            decoded = csv_file.read().decode('utf-8-sig')
+            reader = csv.DictReader(io.StringIO(decoded))
+            rows = list(reader)
+    except Exception as e:
+        return JsonResponse({'error': f'Error reading file: {str(e)}'}, status=400)
+
+    if not rows:
+        return JsonResponse({'error': 'File is empty or has no data rows'}, status=400)
+
+    # Validate headers — only REQUIRED columns must be present.
+    expected = set(EXCEL_CONFIG[role]['required_fields'])
+    actual = set(rows[0].keys())
+    missing = expected - actual
+    if missing:
+        return JsonResponse({'error': f'Missing required columns: {", ".join(sorted(missing))}'}, status=400)
+
+    results = []
+    success_count = 0
+    fail_count = 0
+    processor = ROLE_PROCESSORS[role]
+
+    for i, row in enumerate(rows):
+        row = {k: (v.strip() if v else '') for k, v in row.items()}
+        try:
+            processor(row, request.user)
+            success_count += 1
+            results.append({'row': i + 1, 'name': _get_display_name(row, role), 'status': 'success'})
+        except Exception as e:
+            fail_count += 1
+            results.append({'row': i + 1, 'name': _get_display_name(row, role), 'status': 'failed', 'reason': str(e)})
+
+    return JsonResponse({
+        'total': len(rows),
+        'success': success_count,
+        'failed': fail_count,
+        'results': results,
+    })
+
+
+# ============================================================
+# COMING SOON PLACEHOLDER (#17)
+# ============================================================
+@login_required
+@user_passes_test(is_coordinator)
+def coming_soon(request):
+    """Simple placeholder page for features not yet built."""
+    return render(request, 'coordinator/coming-soon.html')

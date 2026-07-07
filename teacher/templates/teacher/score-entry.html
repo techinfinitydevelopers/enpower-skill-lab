@@ -671,11 +671,13 @@ async function bulkGenerateReports() {
         result.style.border     = '1px solid #bbf7d0';
         result.style.color      = '#15803d';
         result.innerHTML = `<span class="material-symbols-outlined" style="font-size:16px; vertical-align:middle; margin-right:6px;">check_circle</span>Reports generated for all ${success} students successfully.`;
+        if (window.showToast) showToast(`Reports generated for all ${success} students`, 'success');
     } else {
         result.style.background = '#fffbeb';
         result.style.border     = '1px solid #fde68a';
         result.style.color      = '#92400e';
         result.innerHTML = `<span class="material-symbols-outlined" style="font-size:16px; vertical-align:middle; margin-right:6px;">warning</span>${success} succeeded, ${failed} failed. Failed students may not have any scores yet.`;
+        if (window.showToast) showToast(`${success} report(s) generated, ${failed} failed`, 'warning');
     }
 }
 

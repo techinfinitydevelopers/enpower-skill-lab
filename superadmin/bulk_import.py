@@ -813,12 +813,13 @@ def bulk_import(request, role):
     if not rows:
         return JsonResponse({'error': 'File is empty or has no data rows'}, status=400)
 
-    # Validate headers
-    expected = set(SAMPLE_DATA[role]['headers'])
+    # Validate headers — only REQUIRED columns must be present (optional
+    # columns can be omitted from the uploaded file).
+    expected = set(EXCEL_CONFIG[role]['required_fields'])
     actual = set(rows[0].keys())
     missing = expected - actual
     if missing:
-        return JsonResponse({'error': f'Missing columns: {", ".join(sorted(missing))}'}, status=400)
+        return JsonResponse({'error': f'Missing required columns: {", ".join(sorted(missing))}'}, status=400)
 
     # Process each row
     results = []

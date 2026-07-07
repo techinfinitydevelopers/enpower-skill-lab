@@ -2860,10 +2860,10 @@ def learning_pillars(request):
             p_id = request.POST.get('pillar_id')
             sp_name = request.POST.get('sp_name', '').strip()
             pillar_obj = get_object_or_404(Pillar, id=p_id)
-            # Only allow for KB pillar (FSL) or any CSL+ pillar
-            if not pillar_obj.is_kb and pillar_obj.framework_ref and pillar_obj.framework_ref.is_fixed:
-                messages.error(request, 'Cannot add sub-pillars to this pillar.')
-            elif not sp_name:
+            # Adding a sub-pillar is non-destructive (new sp_number = max+1), so
+            # it's allowed for any pillar/framework. Existing standard sub-pillars
+            # stay protected from edit/delete below.
+            if not sp_name:
                 messages.error(request, 'Sub-pillar name is required.')
             else:
                 max_sp = SubPillar.objects.aggregate(models.Max('sp_number'))['sp_number__max'] or 17
@@ -3632,9 +3632,7 @@ def announcement_add(request):
             ann = Announcement(announcement_type=ann_type)
 
             # Common fields for all types
-            esl_id = request.POST.get('esl_product')
-            if esl_id:
-                ann.esl_product = ESLProduct.objects.filter(id=esl_id).first()
+            ann.program = request.POST.get('program') or None
             ann.applicable_grades = [int(g) for g in request.POST.getlist('applicable_grades')]
             ann.is_published = request.POST.get('action') == 'publish'
 
@@ -3678,11 +3676,10 @@ def announcement_add(request):
             messages.error(request, f'Error creating announcement: {str(e)}')
 
     schools = School.objects.filter(is_active=True)
-    esl_products = ESLProduct.objects.all()
     return render(request, 'superadmin/announcements.html', {
         'form_mode': 'add',
         'schools': schools,
-        'esl_products': esl_products,
+        'program_choices': Announcement.PROGRAM_CHOICES,
         'grade_list': list(range(1, 13)),
         'month_list': ['January','February','March','April','May','June','July','August','September','October','November','December'],
     })
@@ -3697,17 +3694,16 @@ def announcement_edit(request, ann_id):
     if request.method == 'POST':
         try:
             ann_type = ann.announcement_type
+            ann.program = request.POST.get('program') or None
 
             if ann_type == 'event':
-                esl_id = request.POST.get('esl_product')
-                ann.esl_product = ESLProduct.objects.filter(id=esl_id).first() if esl_id else None
                 ann.applicable_grades = [int(g) for g in request.POST.getlist('applicable_grades')]
                 ann.event_name = request.POST.get('event_name', '')
                 ann.event_date = request.POST.get('event_date') or None
                 ann.event_description = request.POST.get('event_description', '')
                 ann.event_link = request.POST.get('event_link', '')
                 ann.publish_to = request.POST.getlist('publish_to')
-                ann.is_published = request.POST.get('is_published') == 'on'
+                ann.is_published = request.POST.get('action') == 'publish'
                 ann.save()
                 school_ids = request.POST.getlist('applicable_schools')
                 ann.applicable_schools.set(School.objects.filter(id__in=school_ids))
@@ -3716,7 +3712,7 @@ def announcement_edit(request, ann_id):
                 ann.newsletter_date = request.POST.get('newsletter_date') or None
                 ann.newsletter_month = request.POST.get('newsletter_month', '')
                 ann.newsletter_weblink = request.POST.get('newsletter_weblink', '')
-                ann.is_published = request.POST.get('is_published') == 'on'
+                ann.is_published = request.POST.get('action') == 'publish'
                 if 'newsletter_file' in request.FILES:
                     ann.newsletter_file = request.FILES['newsletter_file']
                 ann.save()
@@ -3728,7 +3724,7 @@ def announcement_edit(request, ann_id):
                 ann.story_school = School.objects.filter(id=story_school_id).first() if story_school_id else None
                 ann.story_text = request.POST.get('story_text', '')[:500]
                 ann.story_youtube_link = request.POST.get('story_youtube_link', '')
-                ann.is_published = request.POST.get('is_published') == 'on'
+                ann.is_published = request.POST.get('action') == 'publish'
                 if 'story_photo_1' in request.FILES:
                     ann.story_photo_1 = request.FILES['story_photo_1']
                 if 'story_photo_2' in request.FILES:
@@ -3741,12 +3737,11 @@ def announcement_edit(request, ann_id):
             messages.error(request, f'Error updating announcement: {str(e)}')
 
     schools = School.objects.filter(is_active=True)
-    esl_products = ESLProduct.objects.all()
     return render(request, 'superadmin/announcements.html', {
         'form_mode': 'edit',
         'ann': ann,
         'schools': schools,
-        'esl_products': esl_products,
+        'program_choices': Announcement.PROGRAM_CHOICES,
         'grade_list': list(range(1, 13)),
         'selected_schools': list(ann.applicable_schools.values_list('id', flat=True)) if ann.announcement_type == 'event' else [],
         'selected_grades': ann.applicable_grades or [],
@@ -3768,36 +3763,16 @@ def announcement_delete(request, ann_id):
 @login_required
 @user_passes_test(is_superadmin)
 def api_schools_by_product(request):
-    """AJAX: return schools that have a skill_program matching the given ESL product."""
-    product_id = request.GET.get('product_id', '')
-    if not product_id:
-        # No product selected — return all active schools
+    """AJAX: return schools whose onboarded skill_program matches the given
+    program code (fsl / csl_plus_pc / ...). Program now comes straight from the
+    same choices schools fill during onboarding, so it's an exact match."""
+    program = request.GET.get('program', '') or request.GET.get('product_id', '')
+    if not program:
+        # No program selected — return all active schools
         schools = School.objects.filter(is_active=True).values('id', 'school_name')
         return JsonResponse({'schools': list(schools)})
 
-    try:
-        product = ESLProduct.objects.get(id=product_id)
-    except ESLProduct.DoesNotExist:
-        return JsonResponse({'schools': []})
-
-    # Map product name to skill_program codes
-    name_lower = product.name.lower()
-    if 'future' in name_lower or 'fsl' in name_lower:
-        codes = ['fsl']
-    elif 'csl' in name_lower and 'plus' in name_lower:
-        codes = ['csl_plus_pc', 'csl_plus_tc']
-    elif 'csl' in name_lower and 'foundation' in name_lower:
-        codes = ['csl_foundation_pc', 'csl_foundation']
-    else:
-        # Fallback — try exact match or return all
-        codes = []
-
-    if codes:
-        schools = School.objects.filter(is_active=True, skill_program__in=codes).values('id', 'school_name')
-    else:
-        # No matching codes — no schools for this product
-        schools = School.objects.none()
-
+    schools = School.objects.filter(is_active=True, skill_program=program).values('id', 'school_name')
     return JsonResponse({'schools': list(schools)})
 
 

@@ -1,0 +1,129 @@
+{% extends 'coordinator/base.html' %}
+{% load static %}
+
+{% block title %}Bulk Upload - Program Coordinator{% endblock %}
+
+{% block extra_css %}
+<style>
+    .cbu-page { padding: 0.5rem 0; }
+    .cbu-header { margin-bottom: 1.75rem; }
+    .cbu-header h1 { font-size: 1.5rem; font-weight: 700; color: var(--text-dark); margin: 0; }
+    .cbu-header p { font-size: 0.9rem; color: var(--text-muted); margin: 0.25rem 0 0 0; }
+
+    .cbu-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .cbu-card {
+        background: var(--white);
+        border: 1px solid var(--border-light);
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-sm);
+        overflow: hidden;
+        transition: box-shadow 0.2s;
+    }
+    .cbu-card:hover { box-shadow: 0 4px 14px rgba(0,0,0,0.10); }
+
+    .cbu-card-header {
+        display: flex; align-items: center; gap: 1rem;
+        padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-light);
+    }
+    .cbu-icon {
+        width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .cbu-icon .material-symbols-outlined { font-size: 24px; color: #fff; }
+    .cbu-icon.student { background: linear-gradient(135deg, #0EA5E9, #0284C7); }
+    .cbu-icon.parent  { background: linear-gradient(135deg, #10B981, #059669); }
+
+    .cbu-card-header h3 { font-size: 1.125rem; font-weight: 600; color: var(--text-dark); margin: 0; }
+    .cbu-card-header p  { font-size: 0.85rem; color: var(--text-muted); margin: 0.125rem 0 0 0; }
+
+    .cbu-card-body { padding: 1.25rem 1.5rem; }
+    .cbu-actions { display: flex; gap: 0.75rem; }
+    .cbu-btn {
+        flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.4rem;
+        font-size: 0.875rem; font-weight: 500; padding: 0.625rem 1rem;
+        border-radius: 8px; border: none; cursor: pointer; text-decoration: none;
+    }
+    .cbu-btn .material-symbols-outlined { font-size: 1.1rem; }
+    .cbu-btn-download { background: var(--gray-100); color: var(--text-dark); border: 1px solid var(--border-light); }
+    .cbu-btn-download:hover { background: var(--gray-200); }
+    .cbu-btn-upload { background: var(--primary); color: #fff; }
+    .cbu-btn-upload:hover { opacity: 0.92; }
+
+    @media (max-width: 480px) {
+        .cbu-grid { grid-template-columns: 1fr; }
+        .cbu-actions { flex-direction: column; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cbu-page">
+    <div class="cbu-header">
+        <h1>Bulk Upload</h1>
+        <p>Download a sample template and bulk import students and parents. Records are linked to schools via the <strong>School Name</strong> column in the file.</p>
+    </div>
+
+    <div class="cbu-grid">
+        <!-- Student -->
+        <div class="cbu-card">
+            <div class="cbu-card-header">
+                <div class="cbu-icon student"><span class="material-symbols-outlined">person</span></div>
+                <div>
+                    <h3>Students</h3>
+                    <p>Import multiple students at once</p>
+                </div>
+            </div>
+            <div class="cbu-card-body">
+                <div class="cbu-actions">
+                    <a href="{% url 'coordinator:download_sample' role='student' %}" class="cbu-btn cbu-btn-download">
+                        <span class="material-symbols-outlined">download</span>Sample Excel
+                    </a>
+                    <button type="button" class="cbu-btn cbu-btn-upload" onclick="openCbuModal('student')">
+                        <span class="material-symbols-outlined">upload_file</span>Bulk Import
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Parent -->
+        <div class="cbu-card">
+            <div class="cbu-card-header">
+                <div class="cbu-icon parent"><span class="material-symbols-outlined">family_restroom</span></div>
+                <div>
+                    <h3>Parents</h3>
+                    <p>Import multiple parents at once</p>
+                </div>
+            </div>
+            <div class="cbu-card-body">
+                <div class="cbu-actions">
+                    <a href="{% url 'coordinator:download_sample' role='parent' %}" class="cbu-btn cbu-btn-download">
+                        <span class="material-symbols-outlined">download</span>Sample Excel
+                    </a>
+                    <button type="button" class="cbu-btn cbu-btn-upload" onclick="openCbuModal('parent')">
+                        <span class="material-symbols-outlined">upload_file</span>Bulk Import
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'coordinator/includes/bulk_import_modal.html' with role='student' role_label='Student' %}
+{% include 'coordinator/includes/bulk_import_modal.html' with role='parent' role_label='Parent' %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function openCbuModal(role) {
+    const modalEl = document.getElementById('cbuModal-' + role);
+    if (!modalEl) return;
+    const bsModal = new bootstrap.Modal(modalEl);
+    bsModal.show();
+}
+</script>
+{% endblock %}

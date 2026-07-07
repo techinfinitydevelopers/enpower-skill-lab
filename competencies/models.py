@@ -328,7 +328,19 @@ class Announcement(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # Program the announcement targets — sourced from the onboarding
+    # program schools fill (School.skill_program), not the ESLProduct catalog.
+    PROGRAM_CHOICES = [
+        ('fsl', 'Future Skills Lab'),
+        ('csl_plus_pc', 'CSL Plus with PC'),
+        ('csl_plus_tc', 'CSL Plus with TC'),
+        ('csl_foundation_pc', 'CSL Foundation with PC'),
+        ('csl_foundation', 'CSL Foundation'),
+    ]
+    program = models.CharField(max_length=20, choices=PROGRAM_CHOICES, null=True, blank=True)
+
     # Event fields
+    # (Deprecated: kept for backward-compat; new announcements use `program`.)
     esl_product = models.ForeignKey('ESLProduct', on_delete=models.SET_NULL, null=True, blank=True, related_name='announcements')
     applicable_schools = models.ManyToManyField('schools.School', blank=True, related_name='announcements')
     applicable_grades = models.JSONField(default=list, blank=True)

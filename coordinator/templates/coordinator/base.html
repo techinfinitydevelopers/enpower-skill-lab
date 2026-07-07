@@ -267,10 +267,16 @@
                     </a>
                     <div class="coord-sidebar-dropdown-menu">
                         <a href="{% url 'coordinator:school_list' %}" id="nav-school-list"><span class="material-symbols-outlined">list</span>School List</a>
-                        <a href="#" id="nav-school-details"><span class="material-symbols-outlined">info</span>School Details</a>
-                        <a href="#" id="nav-assign-coaches"><span class="material-symbols-outlined">assignment_ind</span>Assign Thinking Coaches</a>
+                        <a href="{% url 'coordinator:school_list' %}" id="nav-school-details"><span class="material-symbols-outlined">info</span>School Details</a>
+                        <a href="{% url 'coordinator:assign_coaches' %}" id="nav-assign-coaches"><span class="material-symbols-outlined">assignment_ind</span>Assign Thinking Coaches</a>
                     </div>
                 </div>
+
+                <!-- Bulk Upload -->
+                <a href="{% url 'coordinator:bulk_upload' %}" class="coord-sidebar-nav-link" id="nav-bulk-upload">
+                    <span class="material-symbols-outlined">upload_file</span>
+                    Bulk Upload
+                </a>
 
                 <!-- Timetable -->
                 <a href="{% url 'coordinator:timetable_list' %}" class="coord-sidebar-nav-link" id="nav-timetable">
@@ -279,7 +285,7 @@
                 </a>
 
                 <!-- Teacher Performance -->
-                <a href="#" class="coord-sidebar-nav-link" id="nav-teacher-performance">
+                <a href="{% url 'coordinator:coming_soon' %}" class="coord-sidebar-nav-link" id="nav-teacher-performance">
                     <span class="material-symbols-outlined">person_search</span>
                     Teacher Performance
                 </a>
@@ -292,9 +298,9 @@
                         <span class="material-symbols-outlined coord-dropdown-icon">expand_more</span>
                     </a>
                     <div class="coord-sidebar-dropdown-menu">
-                        <a href="#" id="nav-assignment-reports"><span class="material-symbols-outlined">assignment</span>Assignment Reports</a>
-                        <a href="#" id="nav-studentwise-reports"><span class="material-symbols-outlined">person</span>Studentwise Reports</a>
-                        <a href="#" id="nav-gradewise-reports"><span class="material-symbols-outlined">groups</span>Gradewise Reports</a>
+                        <a href="{% url 'coordinator:coming_soon' %}" id="nav-assignment-reports"><span class="material-symbols-outlined">assignment</span>Assignment Reports</a>
+                        <a href="{% url 'coordinator:coming_soon' %}" id="nav-studentwise-reports"><span class="material-symbols-outlined">person</span>Studentwise Reports</a>
+                        <a href="{% url 'coordinator:coming_soon' %}" id="nav-gradewise-reports"><span class="material-symbols-outlined">groups</span>Gradewise Reports</a>
                     </div>
                 </div>
 
@@ -306,8 +312,8 @@
                         <span class="material-symbols-outlined coord-dropdown-icon">expand_more</span>
                     </a>
                     <div class="coord-sidebar-dropdown-menu">
-                        <a href="#" id="nav-lesson-progress"><span class="material-symbols-outlined">task_alt</span>Lesson Progress</a>
-                        <a href="#" id="nav-learning-path"><span class="material-symbols-outlined">route</span>Learning Path Compliance</a>
+                        <a href="{% url 'coordinator:coming_soon' %}" id="nav-lesson-progress"><span class="material-symbols-outlined">task_alt</span>Lesson Progress</a>
+                        <a href="{% url 'coordinator:coming_soon' %}" id="nav-learning-path"><span class="material-symbols-outlined">route</span>Learning Path Compliance</a>
                     </div>
                 </div>
 
@@ -320,9 +326,9 @@
                         <span class="material-symbols-outlined coord-dropdown-icon">expand_more</span>
                     </a>
                     <div class="coord-sidebar-dropdown-menu">
-                        <a href="#" id="nav-consolidated-reports"><span class="material-symbols-outlined">summarize</span>Consolidated Reports</a>
-                        <a href="#" id="nav-multi-school-comparison"><span class="material-symbols-outlined">compare_arrows</span>Multi-School Comparison</a>
-                        <a href="#" id="nav-download-reports"><span class="material-symbols-outlined">download</span>Download Reports</a>
+                        <a href="{% url 'coordinator:coming_soon' %}" id="nav-consolidated-reports"><span class="material-symbols-outlined">summarize</span>Consolidated Reports</a>
+                        <a href="{% url 'coordinator:coming_soon' %}" id="nav-multi-school-comparison"><span class="material-symbols-outlined">compare_arrows</span>Multi-School Comparison</a>
+                        <a href="{% url 'coordinator:coming_soon' %}" id="nav-download-reports"><span class="material-symbols-outlined">download</span>Download Reports</a>
                     </div>
                 </div>
 

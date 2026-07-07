@@ -391,8 +391,9 @@ document.getElementById('btnHeld').addEventListener('click', () => setClassStatu
 document.getElementById('btnCancel').addEventListener('click', () => setClassStatusUI('cancelled'));
 
 /* ---------- Save ---------- */
+function notify(msg, type){ if (window.showToast) { showToast(msg, type); } else { alert(msg); } }
 document.getElementById('saveBtn').addEventListener('click', () => {
-    if (!selClassroom || !selSession){ alert('Select a classroom and session first.'); return; }
+    if (!selClassroom || !selSession){ notify('Select a classroom and session first.', 'warning'); return; }
     const btn = document.getElementById('saveBtn'); btn.disabled = true;
     const records = {}; students.forEach(s => records[s.id] = state[s.id] || 'present');
     fetch(SAVE_URL, {
@@ -407,12 +408,12 @@ document.getElementById('saveBtn').addEventListener('click', () => {
     .then(d => {
         btn.disabled = false;
         if (d.ok){
-            alert(`Attendance saved for ${d.saved} student(s).`);
+            notify(`Attendance saved for ${d.saved} student(s).`, 'success');
             document.getElementById('markedPill').style.display='inline-flex';
             document.getElementById('unmarkedPill').style.display='none';
-        } else { alert(d.error || 'Save failed.'); }
+        } else { notify(d.error || 'Save failed.', 'error'); }
     })
-    .catch(() => { btn.disabled = false; alert('Save failed.'); });
+    .catch(() => { btn.disabled = false; notify('Save failed.', 'error'); });
 });
 
 /* ---------- Init ---------- */

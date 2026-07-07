@@ -1,0 +1,71 @@
+{% extends 'coordinator/base.html' %}
+{% load static %}
+
+{% block title %}Assign Thinking Coaches - Program Coordinator{% endblock %}
+
+{% block content %}
+<div class="py-4 py-sm-5 py-lg-5">
+    <div class="container-xl" style="max-width: 1200px;">
+        <header class="mb-4 d-flex flex-column flex-lg-row align-items-start align-items-lg-center justify-content-between gap-3">
+            <div>
+                <h1 class="h4 mb-0 fw-bold text-dark">Assign Thinking Coaches</h1>
+                <p class="text-muted mb-0 mt-1" style="font-size:0.875rem;">Assign a Thinking Coach to each class in your {{ total_schools }} assigned school(s).</p>
+            </div>
+        </header>
+
+        <main class="card">
+            <div class="table-responsive">
+                <table class="table mb-0 align-middle">
+                    <thead>
+                        <tr>
+                            <th scope="col">School</th>
+                            <th scope="col">Grade / Division</th>
+                            <th scope="col">Current Coach</th>
+                            <th scope="col">Assign Coach</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for klass in classes %}
+                        <tr>
+                            <td class="fw-semibold">{{ klass.school.school_name }}</td>
+                            <td class="text-muted">Grade {{ klass.grade }} - {{ klass.division }}</td>
+                            <td class="text-muted">
+                                {% if klass.thinking_coach %}
+                                    {{ klass.thinking_coach.get_full_name|default:klass.thinking_coach.username }}
+                                {% else %}
+                                    <span class="text-danger">Not assigned</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <form method="post" action="{% url 'coordinator:assign_coaches' %}" class="d-flex align-items-center gap-2">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="class_id" value="{{ klass.id }}">
+                                    <select name="thinking_coach" class="form-select form-select-sm" style="max-width:240px;">
+                                        <option value="">— Unassigned —</option>
+                                        {% for coach in thinking_coaches %}
+                                        <option value="{{ coach.id }}" {% if klass.thinking_coach_id == coach.id %}selected{% endif %}>
+                                            {{ coach.get_full_name|default:coach.username }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="submit" class="btn btn-sm text-white" style="background-color:#6b277e;">Save</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center py-5">
+                                <div class="text-muted">
+                                    <span class="material-symbols-outlined" style="font-size: 48px;">assignment_ind</span>
+                                    <p class="mt-2">No classes found in your assigned schools.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

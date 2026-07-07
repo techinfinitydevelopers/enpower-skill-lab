@@ -858,7 +858,7 @@
                         {% endif %}
                     </a>
                     {% endfor %}
-                    {% if pillar.is_kb or is_csl %}
+                    {# Add Sub-Pillar available for all pillars (non-destructive) #}
                     <!-- Editable: Add Sub-Pillar button -->
                     <div style="padding:4px 10px;">
                         <button type="button" class="lp-csl-add-sp-btn" onclick="toggleEl('addSpForm{{ pillar.id }}')">
@@ -876,7 +876,6 @@
                             </div>
                         </form>
                     </div>
-                    {% endif %}
                 </div>
             </div>
             {% endfor %}
