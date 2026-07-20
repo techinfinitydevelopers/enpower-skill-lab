@@ -19,7 +19,22 @@
       "Bash(./venv/Scripts/python.exe manage.py makemigrations --check --dry-run)",
       "Bash(PYTHONIOENCODING=utf-8 ./venv/Scripts/python.exe ck.py)",
       "Bash(venv/Scripts/python.exe *3)",
-      "Bash(venv/Scripts/python.exe manage.py shell)"
+      "Bash(venv/Scripts/python.exe manage.py shell)",
+      "Bash(venv/Scripts/python.exe manage.py findstatic css/common/toast.css js/common/toast.js)",
+      "Bash(pip install *)",
+      "Bash(venv/Scripts/python.exe manage.py check)",
+      "Bash(venv/Scripts/python.exe manage.py shell -c ' *)",
+      "Bash(venv/Scripts/python.exe manage.py runserver 127.0.0.1:8000)",
+      "Bash(grep -nA4 \"stud-dash-stats-card-glow\" static/css/student/dashboard.css)",
+      "Bash(curl -s \"http://127.0.0.1:8000/static/css/student/dashboard.css\")",
+      "Bash(venv/Scripts/python.exe manage.py makemigrations student)",
+      "Bash(venv/Scripts/python.exe manage.py migrate student)",
+      "Bash(venv/Scripts/python.exe manage.py migrate student 0001)",
+      "Bash(venv/Scripts/python.exe manage.py makemigrations student --check --dry-run)",
+      "Bash(git add *)",
+      "Bash(git commit -m '@ *)",
+      "Bash(git commit *)",
+      "Bash(git push *)"
     ]
   }
 }
