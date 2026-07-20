@@ -630,6 +630,51 @@
     margin: 0;
 }
 
+/* Badges tiles grid — attendance tiers Star/Champion/Legend (PPT slide 45) */
+.stud-dash-badges-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 4px;
+}
+.stud-dash-badge-tile {
+    text-align: center;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.75rem;
+    padding: 16px 8px;
+    background: #f9fafb;
+    transition: all 0.2s ease;
+}
+.stud-dash-badge-tile.earned {
+    background: #faf5ff;
+    border-color: #6b277e;
+}
+.stud-dash-badge-tile:not(.earned) {
+    opacity: 0.6;
+}
+.stud-dash-badge-emoji {
+    font-size: 1.75rem;
+    line-height: 1;
+    margin-bottom: 6px;
+}
+.stud-dash-badge-name {
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: #1f2937;
+    margin: 0 0 2px;
+}
+.stud-dash-badge-tile:not(.earned) .stud-dash-badge-name {
+    color: #9ca3af;
+}
+.stud-dash-badge-range {
+    font-size: 0.6875rem;
+    color: #6b7280;
+    margin: 0;
+}
+@media (max-width: 420px) {
+    .stud-dash-badges-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
 .stud-dash-badges-link {
     font-size: 0.75rem;
     color: var(--stud-blue-500);
@@ -817,7 +862,15 @@
     display: grid;
     grid-template-columns: 1fr;
     gap: 24px;
-    align-items: start;
+}
+
+/* Each report card fills its grid cell so rows are equal height and aligned. */
+.stud-dash-reports-grid > div {
+    display: flex;
+    flex-direction: column;
+}
+.stud-dash-reports-grid > div > .stud-dash-card {
+    flex: 1;
 }
 
 .stud-dash-report-link {
@@ -1278,18 +1331,14 @@
 
 /* Responsive Styles */
 @media (min-width: 768px) {
+    /* 2×2 grid with equal-height rows — cards line up across columns.
+       Row 1: Project Completion | Event Calendar
+       Row 2: Featured Newsletter | Success Story */
     .stud-dash-reports-grid {
         grid-template-columns: repeat(2, 1fr);
         gap: 20px;
-        align-items: start;
+        align-items: stretch;
     }
-
-    /* Left column: Project Completion (tall). Right column stacks
-       Event Calendar → Featured Newsletter → Success Story. */
-    .stud-dash-reports-grid > div:nth-child(1) { grid-column: 1; grid-row: 1 / span 3; }
-    .stud-dash-reports-grid > div:nth-child(2) { grid-column: 2; grid-row: 1; }
-    .stud-dash-reports-grid > div:nth-child(3) { grid-column: 2; grid-row: 2; }
-    .stud-dash-reports-grid > div:nth-child(4) { grid-column: 2; grid-row: 3; }
 }
 
 @media (min-width: 1024px) {
@@ -1304,11 +1353,29 @@
 
     .stud-dash-reports-grid {
         gap: 24px;
-        align-items: start;
+        align-items: stretch;
     }
 
-    .stud-dash-reports-grid > div:nth-child(3) {
-        margin-top: 0;
+    /* Equal-height rows: row 1 (Project | Event) and row 2 (Newsletter | Success)
+       each match the taller card. Center content in shorter cards so the extra
+       height doesn't read as empty space. */
+    .stud-dash-reports-grid > div:nth-child(1) .stud-dash-card,
+    .stud-dash-reports-grid > div:nth-child(4) .stud-dash-card {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .stud-dash-stats-overview-card {
+        min-height: 400px;
+    }
+
+    /* Spread the stats card content over the taller card. */
+    .stud-dash-stats-overview-card {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 8px;
     }
 }
 

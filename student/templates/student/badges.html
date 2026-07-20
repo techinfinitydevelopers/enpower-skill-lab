@@ -1,0 +1,25 @@
+{% extends 'student/base.html' %}
+{% load static %}
+
+{% block title %}Badges - Student{% endblock %}
+
+{% block content %}
+<div style="max-width:900px;margin:0 auto;">
+    <h1 style="font-size:1.5rem;font-weight:700;color:#1f2937;margin-bottom:0.25rem;">Attendance Badges</h1>
+    <p style="color:#6b7280;margin-bottom:1.5rem;">Badges are earned on your <strong>monthly attendance</strong>. This month: <strong>{{ monthly_percent }}%</strong>.</p>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem;">
+        {% for tier in tiers %}
+        <div style="text-align:center;border:2px solid {% if tier.earned %}#6b277e{% else %}#e5e7eb{% endif %};border-radius:0.75rem;padding:1.5rem;{% if not tier.earned %}opacity:0.7;{% endif %}">
+            <div style="font-size:3rem;line-height:1;margin-bottom:0.5rem;">{% if tier.earned %}{{ tier.emoji }}{% else %}🔒{% endif %}</div>
+            <h3 style="font-size:1.125rem;font-weight:700;color:#1f2937;margin:0 0 0.25rem;">{{ tier.name }}</h3>
+            <p style="color:#6b277e;font-weight:600;font-size:0.875rem;margin:0 0 0.5rem;">{{ tier.min }}–{{ tier.max }}% attendance</p>
+            <p style="color:#6b7280;font-size:0.8125rem;margin:0 0 0.75rem;">{{ tier.tagline }}</p>
+            <span style="display:inline-block;font-size:0.75rem;font-weight:600;padding:4px 12px;border-radius:999px;{% if tier.earned %}background:#6b277e;color:#fff;{% else %}background:#f3f4f6;color:#9ca3af;{% endif %}">
+                {% if tier.earned %}Earned{% else %}Locked{% endif %}
+            </span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -35,13 +35,17 @@ def student_dashboard(request):
     except Exception:
         context['total_registered_students'] = 0
 
-    # Published announcements: event calendar / newsletter / success story.
+    # Published announcements targeted to this student (slide 8 targeting).
     try:
-        from competencies.models import Announcement
-        published = Announcement.objects.filter(is_published=True)
-        context['events'] = list(published.filter(announcement_type='event').order_by('event_date')[:5])
-        context['newsletter'] = published.filter(announcement_type='newsletter').order_by('-newsletter_date', '-created_at').first()
-        context['success_story'] = published.filter(announcement_type='success_story').order_by('-created_at').first()
+        events = announcements_for_student(student, 'event')
+        events.sort(key=lambda a: (a.event_date is None, a.event_date))
+        context['events'] = events[:5]
+        newsletters = announcements_for_student(student, 'newsletter')
+        newsletters.sort(key=lambda a: (a.newsletter_date or a.created_at.date()), reverse=True)
+        context['newsletter'] = newsletters[0] if newsletters else None
+        stories = announcements_for_student(student, 'success_story')
+        stories.sort(key=lambda a: a.created_at, reverse=True)
+        context['success_story'] = stories[0] if stories else None
     except Exception:
         context['events'] = []
         context['newsletter'] = None
@@ -95,14 +99,31 @@ def student_dashboard(request):
     else:
         context['attendance'] = {
             'total_sessions': 0, 'attended': 0, 'percent': 0,
-            'monthly_percent': 0, 'current_streak': 0, 'badge': None,
+            'monthly_percent': 0, 'monthly_attended': 0, 'monthly_total': 0,
+            'current_streak': 0, 'badge': None,
         }
         context['projects_completed'] = 0
-        context['projects_total'] = 3
+        context['projects_total'] = 12
         context['sessions_completed'] = 0
         context['project_uploads'] = []
 
+    # Badges grid (PPT slide 45 text): based on MONTHLY attendance %.
+    context['badge_tiers'] = attendance_badge_tiers(context['attendance'].get('monthly_percent') or 0)
+
     return render(request, 'student/dashboard.html', context)
+
+
+def attendance_badge_tiers(monthly_percent):
+    """Star/Champion/Legend tiers (PPT slide 45), earned by MONTHLY attendance %.
+    Cumulative: reaching a higher tier also marks the lower ones earned."""
+    tiers = [
+        {'name': 'Star',     'emoji': '\U0001F949', 'min': 90, 'max': 94,  'tagline': 'Showing up and staying committed.'},
+        {'name': 'Champion', 'emoji': '\U0001F948', 'min': 95, 'max': 98,  'tagline': 'Consistency is the key to success.'},
+        {'name': 'Legend',   'emoji': '\U0001F947', 'min': 99, 'max': 100, 'tagline': 'A model of dedication and reliability.'},
+    ]
+    for t in tiers:
+        t['earned'] = monthly_percent >= t['min']
+    return tiers
 
 
 @login_required
@@ -230,6 +251,86 @@ def student_annual_passport(request):
         })
 
     return render(request, 'student/annual-passport.html', context)
+
+
+def _student(request):
+    return getattr(request.user, 'student_profile', None) or getattr(request.user, 'student', None)
+
+
+def announcements_for_student(student, ann_type=None):
+    """Published announcements targeted to this student (PPT slide 8 targeting):
+    matches the student's program, applicable schools, applicable grades, and
+    (for events) the publish-to audience. Empty targeting fields = 'all'."""
+    from competencies.models import Announcement
+    qs = Announcement.objects.filter(is_published=True).prefetch_related('applicable_schools')
+    if ann_type:
+        qs = qs.filter(announcement_type=ann_type)
+    if not student:
+        return []
+    program = getattr(student.school, 'skill_program', None) if student.school else None
+    grade = str(student.student_class)
+    school_id = student.school_id
+
+    out = []
+    for a in qs:
+        if a.program and program and a.program != program:
+            continue
+        sids = list(a.applicable_schools.values_list('id', flat=True))
+        if sids and school_id not in sids:
+            continue
+        grades = [str(g) for g in (a.applicable_grades or [])]
+        if grades and grade not in grades:
+            continue
+        pt = a.publish_to or []
+        if pt and 'student' not in pt:
+            continue
+        out.append(a)
+    return out
+
+
+@login_required
+@user_passes_test(is_student)
+def student_badges(request):
+    """Attendance badges page (PPT slide 45): Star/Champion/Legend by monthly attendance."""
+    from attendance.services import student_attendance_stats
+
+    student = _student(request)
+    attendance = student_attendance_stats(student) if student else {
+        'percent': 0, 'monthly_percent': 0, 'monthly_attended': 0, 'current_streak': 0, 'badge': None,
+    }
+    monthly = attendance.get('monthly_percent') or 0
+    tiers = attendance_badge_tiers(monthly)
+
+    return render(request, 'student/badges.html', {
+        'student': student, 'attendance': attendance, 'tiers': tiers, 'monthly_percent': monthly,
+    })
+
+
+@login_required
+@user_passes_test(is_student)
+def student_event_calendar(request):
+    """Events targeted to this student (PPT slide 46: event data from SA dashboard, slide 8)."""
+    events = announcements_for_student(_student(request), 'event')
+    events.sort(key=lambda a: (a.event_date is None, a.event_date))
+    return render(request, 'student/event-calendar.html', {'events': events})
+
+
+@login_required
+@user_passes_test(is_student)
+def student_newsletter(request):
+    """Newsletters targeted to this student (PPT slide 46 / slide 8)."""
+    newsletters = announcements_for_student(_student(request), 'newsletter')
+    newsletters.sort(key=lambda a: (a.newsletter_date or a.created_at.date()), reverse=True)
+    return render(request, 'student/newsletter.html', {'newsletters': newsletters})
+
+
+@login_required
+@user_passes_test(is_student)
+def student_announcements(request):
+    """All announcements targeted to this student — events, newsletters, success stories."""
+    announcements = announcements_for_student(_student(request))
+    announcements.sort(key=lambda a: a.created_at, reverse=True)
+    return render(request, 'student/announcements.html', {'announcements': announcements})
 
 
 @login_required

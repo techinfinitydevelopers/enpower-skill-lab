@@ -104,43 +104,42 @@
                 <div class="stud-dash-streak-item">
                     <span class="material-symbols-outlined stud-dash-streak-icon fire">local_fire_department</span>
                     <div>
-                        <p class="stud-dash-streak-value">{{ attendance.current_streak }} {% if attendance.current_streak == 1 %}Session{% else %}Sessions{% endif %}</p>
-                        <p class="stud-dash-streak-label">Attendance Streak</p>
+                        <p class="stud-dash-streak-value">{{ attendance.current_streak }} {% if attendance.current_streak == 1 %}Week{% else %}Weeks{% endif %}</p>
+                        <p class="stud-dash-streak-label">Current Streak</p>
                     </div>
                 </div>
                 <div class="stud-dash-streak-item">
                     <span class="material-symbols-outlined stud-dash-streak-icon trophy">event_available</span>
                     <div>
-                        <p class="stud-dash-streak-value">{{ attendance.percent }}%</p>
-                        <p class="stud-dash-streak-label">Overall Attendance</p>
+                        <p class="stud-dash-streak-value">{{ attendance.monthly_attended }} {% if attendance.monthly_attended == 1 %}Day{% else %}Days{% endif %}</p>
+                        <p class="stud-dash-streak-label">Monthly Streak</p>
                     </div>
                 </div>
             </div>
 
-            <!-- Attendance Badge -->
+            <!-- Badges — based on monthly attendance (PPT slide 45 text) -->
             <div class="stud-dash-badges-section">
-                <div class="stud-dash-badges-header">
-                    <h4 class="stud-dash-badges-title">Attendance Badge</h4>
+                <div class="stud-dash-badges-header" style="display:flex;align-items:center;justify-content:space-between;">
+                    <h4 class="stud-dash-badges-title">Badges</h4>
+                    <a href="{% url 'student:student_badges' %}" style="font-size:0.8125rem;font-weight:600;color:#6b277e;text-decoration:none;display:inline-flex;align-items:center;gap:2px;">
+                        View All <span class="material-symbols-outlined" style="font-size:16px;">arrow_forward</span>
+                    </a>
                 </div>
-                {% if attendance.badge %}
-                <div class="stud-dash-streak-section">
-                    <div class="stud-dash-streak-item">
-                        <span style="font-size: 2rem; line-height: 1;">{{ attendance.badge.emoji }}</span>
-                        <div>
-                            <p class="stud-dash-streak-value">{{ attendance.badge.name }}</p>
-                            <p class="stud-dash-streak-label">{{ attendance.badge.tagline }}</p>
-                        </div>
+                <div class="stud-dash-badges-grid tiers">
+                    {% for tier in badge_tiers %}
+                    <div class="stud-dash-badge-tile {% if tier.earned %}earned{% endif %}" title="{{ tier.tagline }}">
+                        <div class="stud-dash-badge-emoji">{% if tier.earned %}{{ tier.emoji }}{% else %}🔒{% endif %}</div>
+                        <p class="stud-dash-badge-name">{{ tier.name }}</p>
+                        <p class="stud-dash-badge-range">{{ tier.min }}–{{ tier.max }}%</p>
                     </div>
+                    {% endfor %}
                 </div>
-                {% else %}
-                <p class="stud-dash-xp-progress-text">Keep attending to earn an attendance badge (90%+).</p>
-                {% endif %}
             </div>
 
             <!-- Leaderboard section removed per slide 45 -->
         </div>
 
-        <!-- Reports Grid -->
+        <!-- Reports Grid — 2×2 grid, equal-height rows -->
         <div class="stud-dash-reports-grid">
             <!-- Project Completion Report -->
             <div>
@@ -318,4 +317,22 @@
 
 {% block extra_js %}
 <script src="{% static 'js/student/dashboard.js' %}"></script>
+<script>
+    // Keep the sidebar "Total Registered Students" card the same height as the
+    // "Project Completion Report" card so the top row reads as one aligned unit.
+    (function () {
+        function equalizeTopCards() {
+            var a = document.querySelector('.stud-dash-stats-overview-card');
+            var b = document.querySelector('.stud-dash-reports-grid > div:nth-child(1) .stud-dash-card');
+            if (!a || !b) return;
+            a.style.height = '';
+            if (window.innerWidth >= 1024) {
+                a.style.height = b.offsetHeight + 'px';
+            }
+        }
+        window.addEventListener('load', equalizeTopCards);
+        window.addEventListener('resize', equalizeTopCards);
+        document.addEventListener('DOMContentLoaded', equalizeTopCards);
+    })();
+</script>
 {% endblock %}

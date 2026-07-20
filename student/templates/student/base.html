@@ -187,7 +187,7 @@
 
         /* User Dropdown Menu */
         .student-user-dropdown-menu {
-            position: absolute; top: calc(100% + 8px); right: 0; width: auto;
+            position: absolute; top: calc(100% + 8px); right: 0; width: 300px; max-width: calc(100vw - 32px);
             background-color: var(--card-light); border-radius: 12px;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15); opacity: 0; visibility: hidden;
             transform: translateY(-10px); transition: all 0.3s ease; z-index: 1000; border: 1px solid var(--border-light);
@@ -195,9 +195,9 @@
         .student-user-dropdown-menu.active { opacity: 1; visibility: visible; transform: translateY(0); }
         .student-dropdown-header { display: flex; align-items: center; gap: 12px; padding: 20px; }
         .student-dropdown-avatar { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 3px solid var(--blue-500); }
-        .student-dropdown-user-info { flex: 1; }
-        .student-dropdown-user-name { font-size: 1rem; font-weight: 700; color: var(--heading-light); margin: 0 0 4px 0; }
-        .student-dropdown-user-email { font-size: 0.8125rem; color: var(--gray-500); margin: 0; }
+        .student-dropdown-user-info { flex: 1; min-width: 0; }
+        .student-dropdown-user-name { font-size: 1rem; font-weight: 700; color: var(--heading-light); margin: 0 0 4px 0; overflow-wrap: anywhere; }
+        .student-dropdown-user-email { font-size: 0.8125rem; color: var(--gray-500); margin: 0; overflow-wrap: anywhere; }
         .student-dropdown-divider { height: 1px; background-color: var(--border-light); margin: 0 12px; }
         .student-dropdown-item { display: flex; align-items: center; gap: 12px; padding: 12px 20px; font-size: 0.9375rem; font-weight: 500; color: var(--gray-600); text-decoration: none; transition: all 0.3s ease; }
         .student-dropdown-item:hover { background-color: var(--gray-100); }
@@ -272,25 +272,25 @@
                 </a>
 
                 <!-- Badges -->
-                <a href="#" id="nav-badges" class="student-sidebar-nav-link">
+                <a href="{% url 'student:student_badges' %}" id="nav-badges" class="student-sidebar-nav-link">
                     <span class="material-symbols-outlined">military_tech</span>
                     Badges
                 </a>
 
                 <!-- Event Calendar -->
-                <a href="#" id="nav-event-calendar" class="student-sidebar-nav-link">
+                <a href="{% url 'student:student_event_calendar' %}" id="nav-event-calendar" class="student-sidebar-nav-link">
                     <span class="material-symbols-outlined">event</span>
                     Event Calendar
                 </a>
 
                 <!-- Newsletter -->
-                <a href="#" id="nav-newsletter" class="student-sidebar-nav-link">
+                <a href="{% url 'student:student_newsletter' %}" id="nav-newsletter" class="student-sidebar-nav-link">
                     <span class="material-symbols-outlined">newspaper</span>
                     Newsletter
                 </a>
 
                 <!-- Announcements -->
-                <a href="#" id="nav-announcements" class="student-sidebar-nav-link">
+                <a href="{% url 'student:student_announcements' %}" id="nav-announcements" class="student-sidebar-nav-link">
                     <span class="material-symbols-outlined">campaign</span>
                     Announcements
                 </a>

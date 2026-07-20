@@ -10,8 +10,9 @@ from datetime import date
 
 from django.db.models import Count
 
-# Number of projects a student is expected to complete in a year (PPT: "1 of 3").
-DEFAULT_PROJECTS_PER_YEAR = 3
+# Projects/levels a student is expected to complete in a year
+# (PPT slide 45: "3 of 12 projects/levels annually, Grades 6-9").
+DEFAULT_PROJECTS_PER_YEAR = 12
 
 # Attendance status values counted as "attended".
 ATTENDED = ('present', 'late')
@@ -100,12 +101,17 @@ def student_attendance_stats(student):
     month_attended = sum(1 for r in month_records if r.status in ATTENDED)
     monthly_percent = _pct(month_attended, month_total)
 
-    # current streak = consecutive most-recent sessions attended
-    ordered = sorted([r for r in records if r.session and r.session.date],
-                     key=lambda r: r.session.date, reverse=True)
+    # current streak = consecutive most-recent weeks of PERFECT attendance
+    # (PPT slide 45: "Weekly perfect attendance = Current streak").
+    from collections import defaultdict
+    weeks = defaultdict(list)
+    for r in records:
+        if r.session and r.session.date:
+            iso = r.session.date.isocalendar()   # (iso_year, iso_week, weekday)
+            weeks[(iso[0], iso[1])].append(r)
     streak = 0
-    for r in ordered:
-        if r.status in ATTENDED:
+    for wk in sorted(weeks.keys(), reverse=True):
+        if all(rr.status in ATTENDED for rr in weeks[wk]):
             streak += 1
         else:
             break
@@ -115,6 +121,8 @@ def student_attendance_stats(student):
         'attended': attended,
         'percent': percent,
         'monthly_percent': monthly_percent,
+        'monthly_attended': month_attended,   # PPT slide 45: "Monthly days attended = Monthly streak"
+        'monthly_total': month_total,
         'current_streak': streak,
         'badge': attendance_badge(percent),
     }

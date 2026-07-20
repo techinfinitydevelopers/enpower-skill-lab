@@ -1,0 +1,38 @@
+{% extends 'student/base.html' %}
+{% load static %}
+
+{% block title %}Newsletter - Student{% endblock %}
+
+{% block content %}
+<div style="max-width:960px;margin:0 auto;">
+    <h1 style="font-size:1.5rem;font-weight:700;color:#1f2937;margin-bottom:0.25rem;">Newsletters</h1>
+    <p style="color:#6b7280;margin-bottom:1.5rem;">Latest newsletters from your program.</p>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem;">
+        {% for n in newsletters %}
+        <div style="background:#fff;border:1px solid #e5e7eb;border-radius:0.75rem;padding:1.25rem;">
+            <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem;">
+                <div style="width:44px;height:44px;border-radius:0.5rem;background:linear-gradient(135deg,#6b277e 0%,#A67DB1 100%);display:flex;align-items:center;justify-content:center;">
+                    <span class="material-symbols-outlined" style="color:#fff;">mail</span>
+                </div>
+                <div>
+                    <div style="font-size:0.75rem;color:#9ca3af;">{{ n.newsletter_date|date:"F j, Y"|default:"—" }}</div>
+                    <div style="font-weight:600;color:#1f2937;">{{ n.newsletter_month|default:"Newsletter" }}</div>
+                </div>
+            </div>
+            {% if n.newsletter_file or n.newsletter_weblink %}
+            <a href="{% if n.newsletter_weblink %}{{ n.newsletter_weblink }}{% else %}{{ n.newsletter_file.url }}{% endif %}" target="_blank" rel="noopener"
+               style="display:inline-flex;align-items:center;gap:6px;color:#6b277e;font-weight:600;font-size:0.875rem;">
+                Read Newsletter <span class="material-symbols-outlined" style="font-size:18px;">arrow_forward</span>
+            </a>
+            {% endif %}
+        </div>
+        {% empty %}
+        <div style="grid-column:1/-1;background:#fff;border:1px solid #e5e7eb;border-radius:0.75rem;padding:2.5rem;text-align:center;color:#6b7280;">
+            <span class="material-symbols-outlined" style="font-size:48px;color:#d1d5db;">mail</span>
+            <p style="margin-top:0.5rem;">No newsletters yet.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
