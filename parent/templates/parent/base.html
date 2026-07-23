@@ -1153,61 +1153,32 @@
                         <button id="notificationToggle">
                             <span class="material-symbols-outlined">notifications</span>
                         </button>
-                        <span class="notification-badge">4</span>
+                        {% if nav_announcement_count %}<span class="notification-badge">{{ nav_announcement_count }}</span>{% endif %}
 
                         <!-- Notification Dropdown Menu -->
                         <div class="notification-dropdown-menu" id="notificationDropdownMenu">
                             <div class="notification-dropdown-header">
                                 <h4 class="notification-dropdown-title">Notifications</h4>
-                                <span class="notification-count">4 new</span>
+                                <span class="notification-count">{{ nav_announcement_count }} new</span>
                             </div>
                             <div class="notification-dropdown-body">
-                                <a href="#" class="notification-item unread">
-                                    <div class="notification-icon bg-blue">
-                                        <span class="material-symbols-outlined">assignment</span>
+                                {% for ann in nav_announcements %}
+                                <a href="{% url 'parent_dashboard' %}" class="notification-item unread">
+                                    <div class="notification-icon {% if ann.announcement_type == 'event' %}bg-orange{% elif ann.announcement_type == 'newsletter' %}bg-blue{% else %}bg-green{% endif %}">
+                                        <span class="material-symbols-outlined">{% if ann.announcement_type == 'event' %}event{% elif ann.announcement_type == 'newsletter' %}newspaper{% else %}star{% endif %}</span>
                                     </div>
                                     <div class="notification-content">
-                                        <p class="notification-text"><strong>New Assignment Posted</strong></p>
-                                        <p class="notification-description">Mathematics homework due by Friday</p>
-                                        <span class="notification-time">10 minutes ago</span>
+                                        <p class="notification-text"><strong>{% if ann.announcement_type == 'event' %}{{ ann.event_name|default:"New Event" }}{% elif ann.announcement_type == 'newsletter' %}{{ ann.newsletter_month|default:"New Newsletter" }} Newsletter{% else %}{{ ann.story_student_name|default:"Success Story" }}{% endif %}</strong></p>
+                                        <p class="notification-description">{% if ann.announcement_type == 'event' %}{{ ann.event_description|truncatewords:10|default:"New event announced" }}{% elif ann.announcement_type == 'success_story' %}{{ ann.story_text|truncatewords:10 }}{% else %}New newsletter published{% endif %}</p>
+                                        <span class="notification-time">{{ ann.created_at|timesince }} ago</span>
                                     </div>
                                 </a>
-
-                                <a href="#" class="notification-item unread">
-                                    <div class="notification-icon bg-green">
-                                        <span class="material-symbols-outlined">grade</span>
-                                    </div>
-                                    <div class="notification-content">
-                                        <p class="notification-text"><strong>Grade Published</strong></p>
-                                        <p class="notification-description">Your child's Science test results are available</p>
-                                        <span class="notification-time">2 hours ago</span>
-                                    </div>
-                                </a>
-
-                                <a href="#" class="notification-item unread">
-                                    <div class="notification-icon bg-orange">
-                                        <span class="material-symbols-outlined">event</span>
-                                    </div>
-                                    <div class="notification-content">
-                                        <p class="notification-text"><strong>Upcoming Test</strong></p>
-                                        <p class="notification-description">History exam scheduled for next Monday</p>
-                                        <span class="notification-time">4 hours ago</span>
-                                    </div>
-                                </a>
-
-                                <a href="#" class="notification-item unread">
-                                    <div class="notification-icon bg-purple">
-                                        <span class="material-symbols-outlined">emoji_events</span>
-                                    </div>
-                                    <div class="notification-content">
-                                        <p class="notification-text"><strong>Achievement Unlocked</strong></p>
-                                        <p class="notification-description">Your child earned a Perfect Attendance badge!</p>
-                                        <span class="notification-time">1 day ago</span>
-                                    </div>
-                                </a>
+                                {% empty %}
+                                <p style="padding:24px;text-align:center;color:#9ca3af;font-size:0.875rem;">No new notifications.</p>
+                                {% endfor %}
                             </div>
                             <div class="notification-dropdown-footer">
-                                <a href="#" class="notification-footer-link">View All Notifications</a>
+                                <a href="{% url 'parent_dashboard' %}" class="notification-footer-link">View All Notifications</a>
                             </div>
                         </div>
                     </div>

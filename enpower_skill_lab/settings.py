@@ -90,6 +90,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'school_admin.context_processors.school_admin_profile',
+                'competencies.context_processors.nav_notifications',
             ],
         },
     },
