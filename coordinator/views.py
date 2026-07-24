@@ -769,3 +769,13 @@ def bulk_import_view(request, role):
 def coming_soon(request):
     """Simple placeholder page for features not yet built."""
     return render(request, 'coordinator/coming-soon.html')
+
+
+@login_required
+@user_passes_test(is_coordinator)
+def coordinator_announcements(request):
+    """Announcements targeted to this Program Coordinator (scoped to assigned schools)."""
+    from competencies.announcements import announcements_for_user
+    announcements = announcements_for_user(request.user)
+    announcements.sort(key=lambda a: a.created_at, reverse=True)
+    return render(request, 'coordinator/announcements.html', {'announcements': announcements})

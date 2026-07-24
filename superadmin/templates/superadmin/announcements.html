@@ -219,6 +219,17 @@
                             {% endfor %}
                         </div>
                     </div>
+
+                    <!-- Publish To (target roles) — applies to every announcement type -->
+                    <div class="publish-to-row" style="flex-wrap: wrap;">
+                        <label>Publish to:</label>
+                        {% for val, label in publish_to_choices %}
+                        <label class="al-pill-label">
+                            <input type="checkbox" name="publish_to" value="{{ val }}" {% if selected_publish_to and val in selected_publish_to %}checked{% endif %}>
+                            {{ label }}
+                        </label>
+                        {% endfor %}
+                    </div>
                 </div>
 
                 <!-- STEP 2: Type Tabs -->
@@ -265,14 +276,6 @@
                         <div class="mb-0">
                             <label class="al-form-label">Event Description</label>
                             <textarea class="al-form-control al-textarea" name="event_description" rows="3" placeholder="Describe the event...">{% if ann %}{{ ann.event_description }}{% endif %}</textarea>
-                        </div>
-
-                        <!-- Publish To -->
-                        <div class="publish-to-row">
-                            <label>Publish to:</label>
-                            <label class="al-pill-label"><input type="checkbox" name="publish_to" value="school" {% if selected_publish_to and 'school' in selected_publish_to %}checked{% endif %}> School</label>
-                            <label class="al-pill-label"><input type="checkbox" name="publish_to" value="student" {% if selected_publish_to and 'student' in selected_publish_to %}checked{% endif %}> Student</label>
-                            <label class="al-pill-label"><input type="checkbox" name="publish_to" value="parent" {% if selected_publish_to and 'parent' in selected_publish_to %}checked{% endif %}> Parent</label>
                         </div>
                     </div>
                 </div>

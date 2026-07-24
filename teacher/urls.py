@@ -38,4 +38,7 @@ urlpatterns = [
     path('weekly-feedback/', views.weekly_feedback, name='weekly_feedback'),
     path('student-project-upload/', views.student_project_upload, name='student_project_upload'),
     path('api/class-students/', views.api_class_students, name='api_class_students'),
+
+    # Announcements (published by Super Admin, targeted to teachers)
+    path('announcements/', views.teacher_announcements, name='teacher_announcements'),
 ]

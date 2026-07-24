@@ -3631,9 +3631,10 @@ def announcement_add(request):
             ann_type = request.POST.get('announcement_type', 'event')
             ann = Announcement(announcement_type=ann_type)
 
-            # Common fields for all types
+            # Common fields for all types (targeting applies to every type)
             ann.program = request.POST.get('program') or None
             ann.applicable_grades = [int(g) for g in request.POST.getlist('applicable_grades')]
+            ann.publish_to = request.POST.getlist('publish_to')
             ann.is_published = request.POST.get('action') == 'publish'
 
             # Type-specific fields
@@ -3642,7 +3643,6 @@ def announcement_add(request):
                 ann.event_date = request.POST.get('event_date') or None
                 ann.event_description = request.POST.get('event_description', '')
                 ann.event_link = request.POST.get('event_link', '')
-                ann.publish_to = request.POST.getlist('publish_to')
 
             elif ann_type == 'newsletter':
                 ann.newsletter_date = request.POST.get('newsletter_date') or None
@@ -3680,6 +3680,8 @@ def announcement_add(request):
         'form_mode': 'add',
         'schools': schools,
         'program_choices': Announcement.PROGRAM_CHOICES,
+        'publish_to_choices': Announcement.PUBLISH_TO_CHOICES,
+        'selected_publish_to': [],
         'grade_list': list(range(1, 13)),
         'month_list': ['January','February','March','April','May','June','July','August','September','October','November','December'],
     })
@@ -3694,28 +3696,25 @@ def announcement_edit(request, ann_id):
     if request.method == 'POST':
         try:
             ann_type = ann.announcement_type
+
+            # Common targeting fields (apply to every announcement type)
             ann.program = request.POST.get('program') or None
+            ann.applicable_grades = [int(g) for g in request.POST.getlist('applicable_grades')]
+            ann.publish_to = request.POST.getlist('publish_to')
+            ann.is_published = request.POST.get('action') == 'publish'
 
             if ann_type == 'event':
-                ann.applicable_grades = [int(g) for g in request.POST.getlist('applicable_grades')]
                 ann.event_name = request.POST.get('event_name', '')
                 ann.event_date = request.POST.get('event_date') or None
                 ann.event_description = request.POST.get('event_description', '')
                 ann.event_link = request.POST.get('event_link', '')
-                ann.publish_to = request.POST.getlist('publish_to')
-                ann.is_published = request.POST.get('action') == 'publish'
-                ann.save()
-                school_ids = request.POST.getlist('applicable_schools')
-                ann.applicable_schools.set(School.objects.filter(id__in=school_ids))
 
             elif ann_type == 'newsletter':
                 ann.newsletter_date = request.POST.get('newsletter_date') or None
                 ann.newsletter_month = request.POST.get('newsletter_month', '')
                 ann.newsletter_weblink = request.POST.get('newsletter_weblink', '')
-                ann.is_published = request.POST.get('action') == 'publish'
                 if 'newsletter_file' in request.FILES:
                     ann.newsletter_file = request.FILES['newsletter_file']
-                ann.save()
 
             elif ann_type == 'success_story':
                 ann.story_student_name = request.POST.get('story_student_name', '')
@@ -3724,12 +3723,15 @@ def announcement_edit(request, ann_id):
                 ann.story_school = School.objects.filter(id=story_school_id).first() if story_school_id else None
                 ann.story_text = request.POST.get('story_text', '')[:500]
                 ann.story_youtube_link = request.POST.get('story_youtube_link', '')
-                ann.is_published = request.POST.get('action') == 'publish'
                 if 'story_photo_1' in request.FILES:
                     ann.story_photo_1 = request.FILES['story_photo_1']
                 if 'story_photo_2' in request.FILES:
                     ann.story_photo_2 = request.FILES['story_photo_2']
-                ann.save()
+
+            ann.save()
+            # Applicable schools (M2M) — set for all types
+            school_ids = request.POST.getlist('applicable_schools')
+            ann.applicable_schools.set(School.objects.filter(id__in=school_ids))
 
             messages.success(request, 'Announcement updated successfully!')
             return redirect('announcements_list')
@@ -3742,8 +3744,9 @@ def announcement_edit(request, ann_id):
         'ann': ann,
         'schools': schools,
         'program_choices': Announcement.PROGRAM_CHOICES,
+        'publish_to_choices': Announcement.PUBLISH_TO_CHOICES,
         'grade_list': list(range(1, 13)),
-        'selected_schools': list(ann.applicable_schools.values_list('id', flat=True)) if ann.announcement_type == 'event' else [],
+        'selected_schools': list(ann.applicable_schools.values_list('id', flat=True)),
         'selected_grades': ann.applicable_grades or [],
         'selected_publish_to': ann.publish_to or [],
         'month_list': ['January','February','March','April','May','June','July','August','September','October','November','December'],

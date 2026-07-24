@@ -35,3 +35,34 @@ models.py, views.py, urls.py, admin.py, templatetags/, templates listing, plus r
 
 **Outcome:** No files modified (read-only task as instructed). Findings written to memory.md (knowledge
 base) for future reference before any code changes are made to these apps.
+
+---
+
+## 2026-07-24 — Feature: role-based announcement delivery (all 5 roles) + notification bell
+
+**Task:** Super Admin publishes an announcement selecting target role(s) + school(s); every selected role
+sees it on both a dedicated Announcements page AND the header notification bell. Extends prior behaviour
+(only student + parent, event-type only) to all 5 roles and all 3 announcement types.
+
+**Changes:**
+- NEW `competencies/announcements.py` — single delivery helper `announcements_for_user(user, ann_type=None)`
+  + `_user_scope(user)`. Resolves each role's schools/programs/grades and filters published announcements by
+  publish_to (target role), program, applicable_schools, applicable_grades (grade only for student/parent).
+  Legacy publish_to key 'school' still honoured for school admins.
+- `competencies/models.py` — added `Announcement.PUBLISH_TO_CHOICES` (student/parent/teacher/coordinator/
+  school_admin); updated publish_to help_text. Migration `0023_alter_announcement_publish_to` (cosmetic).
+- `competencies/context_processors.py` — `nav_notifications` now delegates to `announcements_for_user` for
+  ALL roles (was student/parent-only), so the bell works everywhere from one source of truth.
+- `superadmin/views.py` — `announcement_add`/`announcement_edit`: publish_to + applicable_schools +
+  applicable_grades now saved for ALL types (were event-only). Added publish_to_choices/selected_publish_to
+  to both contexts; selected_schools now for all types.
+- `superadmin/templates/superadmin/announcements.html` — "Publish to" moved into common card, expanded to
+  5 role checkboxes from publish_to_choices; removed old event-only 3-option block.
+- `parent/views.py` — dashboard now uses `announcements_for_user` (fixes prior loose scoping that ignored
+  program/grade).
+- teacher/ coordinator/ school_admin/: new `*_announcements` view + url + `announcements.html` template each;
+  base.html notification bell rewired from hardcoded static items to dynamic nav_announcements/count.
+
+**Verification:** `manage.py check` clean. Shell test (rolled back): coach at target school sees the
+teacher-targeted school-scoped event + a global success story; coach at another school sees only the global
+story; student-only newsletter and unpublished draft correctly excluded. PASS.

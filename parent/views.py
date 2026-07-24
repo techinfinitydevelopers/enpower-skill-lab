@@ -176,68 +176,24 @@ def parent_dashboard(request):
     except Parent.DoesNotExist:
         pass
 
-    # Collect the schools of this parent's children for announcement scoping.
-    child_school_ids = set()
-    try:
-        for child in children:
-            if child.school_id:
-                child_school_ids.add(child.school_id)
-    except Exception:
-        child_school_ids = set()
-
-    def _scope_announcement(ann):
-        """An announcement is relevant if:
-        - applicable_schools is empty (global) OR includes one of the children's schools, AND
-        - publish_to is empty OR contains 'parent'.
-        Defensive: never raise.
-        """
-        try:
-            pub = ann.publish_to or []
-            if pub and 'parent' not in pub:
-                return False
-            sids = [s.id for s in ann.applicable_schools.all()]
-            if sids and not (child_school_ids & set(sids)):
-                return False
-            return True
-        except Exception:
-            return False
-
-    # Events, Newsletters & success stories (slide 48), scoped to children's schools.
+    # Announcements (slide 48) — scoped to this parent via the shared targeting
+    # helper (publish_to 'parent' + program + children's schools + grades).
     events, newsletters, success_stories = [], [], []
     try:
-        seen_event_ids = set()
-        event_qs = (Announcement.objects
-                    .filter(announcement_type='event', is_published=True)
-                    .prefetch_related('applicable_schools')
-                    .order_by('-event_date', '-created_at'))
-        for a in event_qs:
-            if a.id in seen_event_ids:
-                continue
-            if _scope_announcement(a):
-                seen_event_ids.add(a.id)
-                events.append(a)
-            if len(events) >= 20:
-                break
-
-        news_qs = (Announcement.objects
-                   .filter(announcement_type='newsletter', is_published=True)
-                   .prefetch_related('applicable_schools')
-                   .order_by('-created_at'))
-        for a in news_qs:
-            if _scope_announcement(a):
-                newsletters.append(a)
-            if len(newsletters) >= 10:
-                break
-
-        story_qs = (Announcement.objects
-                    .filter(announcement_type='success_story', is_published=True)
-                    .prefetch_related('applicable_schools')
-                    .order_by('-created_at'))
-        for a in story_qs:
-            if _scope_announcement(a):
-                success_stories.append(a)
-            if len(success_stories) >= 10:
-                break
+        from competencies.announcements import announcements_for_user
+        events = sorted(
+            announcements_for_user(request.user, 'event'),
+            key=lambda a: (a.event_date is None, a.event_date, a.created_at),
+            reverse=True,
+        )[:20]
+        newsletters = sorted(
+            announcements_for_user(request.user, 'newsletter'),
+            key=lambda a: a.created_at, reverse=True,
+        )[:10]
+        success_stories = sorted(
+            announcements_for_user(request.user, 'success_story'),
+            key=lambda a: a.created_at, reverse=True,
+        )[:10]
     except Exception:
         pass
 

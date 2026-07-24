@@ -1,0 +1,49 @@
+{% extends 'coordinator/base.html' %}
+{% load static %}
+
+{% block title %}Announcements - Coordinator{% endblock %}
+
+{% block content %}
+<div style="max-width:960px;margin:0 auto;">
+    <h1 style="font-size:1.5rem;font-weight:700;color:#1f2937;margin-bottom:0.25rem;">Announcements</h1>
+    <p style="color:#6b7280;margin-bottom:1.5rem;">Events, newsletters and success stories shared with you.</p>
+
+    <div style="display:flex;flex-direction:column;gap:0.75rem;">
+        {% for a in announcements %}
+        <div style="background:#fff;border:1px solid #e5e7eb;border-radius:0.75rem;padding:1.25rem;display:flex;gap:1rem;align-items:flex-start;">
+            <div style="flex-shrink:0;width:44px;height:44px;border-radius:0.5rem;display:flex;align-items:center;justify-content:center;
+                {% if a.announcement_type == 'event' %}background:#e0f2fe;color:#0369a1;{% elif a.announcement_type == 'newsletter' %}background:#f3e8ff;color:#6b277e;{% else %}background:#dcfce7;color:#15803d;{% endif %}">
+                <span class="material-symbols-outlined">
+                    {% if a.announcement_type == 'event' %}event{% elif a.announcement_type == 'newsletter' %}newspaper{% else %}star{% endif %}
+                </span>
+            </div>
+            <div style="flex:1;min-width:0;">
+                <span style="font-size:0.6875rem;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;color:#9ca3af;">{{ a.get_announcement_type_display }}</span>
+                <h3 style="font-size:1.0625rem;font-weight:600;color:#1f2937;margin:0.15rem 0 0.35rem;">
+                    {% if a.announcement_type == 'event' %}{{ a.event_name|default:"Event" }}
+                    {% elif a.announcement_type == 'newsletter' %}{{ a.newsletter_month|default:"Newsletter" }}
+                    {% else %}{{ a.story_student_name|default:"Success Story" }}{% if a.story_grade %} — Grade {{ a.story_grade }}{% endif %}{% endif %}
+                </h3>
+                {% if a.announcement_type == 'event' and a.event_description %}
+                <p style="color:#4b5563;font-size:0.875rem;margin:0;">{{ a.event_description }}</p>
+                {% elif a.announcement_type == 'success_story' and a.story_text %}
+                <p style="color:#4b5563;font-size:0.875rem;margin:0;">{{ a.story_text }}</p>
+                {% endif %}
+                {% if a.event_link or a.newsletter_weblink or a.newsletter_file or a.story_youtube_link %}
+                <a href="{% if a.event_link %}{{ a.event_link }}{% elif a.newsletter_weblink %}{{ a.newsletter_weblink }}{% elif a.newsletter_file %}{{ a.newsletter_file.url }}{% else %}{{ a.story_youtube_link }}{% endif %}"
+                   target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;color:#6b277e;font-weight:600;font-size:0.875rem;margin-top:0.5rem;">
+                    Open <span class="material-symbols-outlined" style="font-size:18px;">arrow_forward</span>
+                </a>
+                {% endif %}
+            </div>
+            <span style="flex-shrink:0;font-size:0.75rem;color:#9ca3af;">{{ a.created_at|date:"d M Y" }}</span>
+        </div>
+        {% empty %}
+        <div style="background:#fff;border:1px solid #e5e7eb;border-radius:0.75rem;padding:2.5rem;text-align:center;color:#6b7280;">
+            <span class="material-symbols-outlined" style="font-size:48px;color:#d1d5db;">campaign</span>
+            <p style="margin-top:0.5rem;">No announcements yet.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -339,6 +339,17 @@ class Announcement(models.Model):
     ]
     program = models.CharField(max_length=20, choices=PROGRAM_CHOICES, null=True, blank=True)
 
+    # Target roles an announcement can be published to (stored in `publish_to`
+    # JSON list). Super Admin picks these; each role's dashboard/bell filters on
+    # its own key. 'school' is a legacy alias still honoured for school admins.
+    PUBLISH_TO_CHOICES = [
+        ('student', 'Student'),
+        ('parent', 'Parent'),
+        ('teacher', 'Thinking Coach (Teacher)'),
+        ('coordinator', 'Program Coordinator'),
+        ('school_admin', 'School Admin'),
+    ]
+
     # Event fields
     # (Deprecated: kept for backward-compat; new announcements use `program`.)
     esl_product = models.ForeignKey('ESLProduct', on_delete=models.SET_NULL, null=True, blank=True, related_name='announcements')
@@ -348,7 +359,7 @@ class Announcement(models.Model):
     event_date = models.DateField(null=True, blank=True)
     event_description = models.TextField(blank=True)
     event_link = models.URLField(blank=True)
-    publish_to = models.JSONField(default=list, blank=True, help_text='e.g. ["school","student","parent"]')
+    publish_to = models.JSONField(default=list, blank=True, help_text='Target roles, e.g. ["student","parent","teacher","coordinator","school_admin"]')
 
     # Newsletter fields
     newsletter_date = models.DateField(null=True, blank=True)

@@ -20,5 +20,6 @@ urlpatterns = [
     path('timetable/<int:pk>/delete/', views.timetable_delete, name='timetable_delete'),
     path('profile/', views.coordinator_profile, name='coordinator_profile'),
     path('change-password/', views.coordinator_change_password, name='coordinator_change_password'),
+    path('announcements/', views.coordinator_announcements, name='coordinator_announcements'),
     path('logout/', views.coordinator_logout, name='coordinator_logout'),
 ]

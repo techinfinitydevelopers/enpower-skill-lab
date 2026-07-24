@@ -658,3 +658,13 @@ def school_admin_parent_list(request):
         'pending_parents': parents.filter(account_status='pending').count(),
     }
     return render(request, 'school_admin/parent-list.html', context)
+
+
+@login_required
+@user_passes_test(is_school_admin)
+def school_admin_announcements(request):
+    """Announcements targeted to this School Admin (scoped to their school)."""
+    from competencies.announcements import announcements_for_user
+    announcements = announcements_for_user(request.user)
+    announcements.sort(key=lambda a: a.created_at, reverse=True)
+    return render(request, 'school_admin/announcements.html', {'announcements': announcements})

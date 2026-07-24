@@ -11,4 +11,5 @@ urlpatterns = [
     path('students/', views.school_admin_student_list, name='school_admin_student_list'),
     path('onboard-parent/', views.school_admin_onboard_parent, name='school_admin_onboard_parent'),
     path('parents/', views.school_admin_parent_list, name='school_admin_parent_list'),
+    path('announcements/', views.school_admin_announcements, name='school_admin_announcements'),
 ]

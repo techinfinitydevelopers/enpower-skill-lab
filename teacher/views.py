@@ -1600,3 +1600,14 @@ def api_class_students(request):
         .values('id', 'first_name', 'last_name', 'student_class', 'division', 'gr_number')
     )
     return JsonResponse({'students': students})
+
+
+@login_required
+@user_passes_test(is_teacher)
+def teacher_announcements(request):
+    """Announcements targeted to this Thinking Coach (Super Admin publishes with
+    'teacher' selected; scoped to the coach's school/program)."""
+    from competencies.announcements import announcements_for_user
+    announcements = announcements_for_user(request.user)
+    announcements.sort(key=lambda a: a.created_at, reverse=True)
+    return render(request, 'teacher/announcements.html', {'announcements': announcements})
