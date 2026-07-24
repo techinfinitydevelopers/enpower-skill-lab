@@ -315,16 +315,25 @@ def school_admin_onboard_student(request):
             email = student.school_email
 
             # Check if user already exists
-            if User.objects.filter(email=email).exists():
+            if email and User.objects.filter(email=email).exists():
                 messages.error(request, f'A user with email {email} already exists.')
                 return redirect('school_admin_onboard_student')
 
-            # Generate temporary password
-            temp_password = ''.join(secrets.choice(string.ascii_letters + string.digits + '!@#$%') for _ in range(12))
+            # Structured onboarding ID (e.g. SV-RG-6A-222-26-stu) = login username
+            # = initial password (changeable after first login).
+            from accounts.onboarding_ids import student_id_for
+            skill_lab_reg_id = student_id_for(
+                student.school, student.first_name, student.last_name,
+                student.student_class, student.division, student.date_of_birth,
+                student.academic_year,
+                fallback_school_name=getattr(student, 'school_name', '') or '',
+            )
+            student.skill_lab_reg_id = skill_lab_reg_id
+            temp_password = skill_lab_reg_id
 
-            # Create User with STUDENT role
+            # Create User with STUDENT role (login by the structured ID)
             user = User.objects.create_user(
-                username=email,
+                username=skill_lab_reg_id,
                 email=email,
                 password=temp_password,
                 first_name=student.first_name,
@@ -349,7 +358,7 @@ Welcome to ENpower Skill Lab! Your student account has been created successfully
 
 Here are your login credentials:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📧 Email: {email}
+🆔 Login ID: {skill_lab_reg_id}
 🔑 Temporary Password: {temp_password}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -525,16 +534,29 @@ def school_admin_onboard_parent(request):
             email = parent.email
 
             # Check if user already exists
-            if User.objects.filter(email=email).exists():
+            if email and User.objects.filter(email=email).exists():
                 messages.error(request, f'A user with email {email} already exists.')
                 return redirect('school_admin_onboard_parent')
 
-            # Generate temporary password
-            temp_password = ''.join(secrets.choice(string.ascii_letters + string.digits + '!@#$%') for _ in range(12))
+            # Resolve linked students (this school only) first so the parent ID
+            # mirrors the child's structured ID (SV-RG-6A-222-26-par).
+            student_ids = request.POST.getlist('students')
+            students = list(Student.objects.filter(id__in=student_ids, school=school)) if student_ids else []
+
+            if students:
+                # ID = login username = initial password (changeable after login).
+                from accounts.onboarding_ids import parent_id_from_student
+                parent_login_id = parent_id_from_student(students[0])
+                parent.parent_id = parent_login_id
+                temp_password = parent_login_id
+                username = parent_login_id
+            else:
+                temp_password = ''.join(secrets.choice(string.ascii_letters + string.digits + '!@#$%') for _ in range(12))
+                username = email
 
             # Create User with PARENT role
             user = User.objects.create_user(
-                username=email,
+                username=username,
                 email=email,
                 password=temp_password,
                 first_name=parent.full_name.split()[0] if parent.full_name else '',
@@ -548,11 +570,9 @@ def school_admin_onboard_parent(request):
 
             parent.save()
 
-            # Link to students (ManyToMany relationship) - only students from this school
-            student_ids = request.POST.getlist('students')
+            # Link to students (this school only)
             linked_students = []
-            if student_ids:
-                students = Student.objects.filter(id__in=student_ids, school=school)
+            if students:
                 parent.students.set(students)
                 linked_students = [f"{s.first_name} {s.last_name}" for s in students]
 
@@ -567,7 +587,7 @@ Welcome to ENpower Skill Lab! Your parent account has been created successfully 
 
 Here are your login credentials:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📧 Email: {email}
+🆔 Login ID: {user.username}
 🔑 Temporary Password: {temp_password}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

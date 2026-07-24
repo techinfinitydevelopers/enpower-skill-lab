@@ -66,3 +66,30 @@ sees it on both a dedicated Announcements page AND the header notification bell.
 **Verification:** `manage.py check` clean. Shell test (rolled back): coach at target school sees the
 teacher-targeted school-scoped event + a global success story; coach at another school sees only the global
 story; student-only newsletter and unpublished draft correctly excluded. PASS.
+
+---
+
+## 2026-07-24 — Feature: structured student & parent onboarding IDs (slide 2 flow)
+
+**Task:** Replace random `SKILL{year}{rand}` ids with the client's structured, human-readable onboarding
+ID (`SV-RG-6A-222-26-stu` / `-par`), and use it as the login username + initial password across every
+onboarding entry point.
+
+**Changes:**
+- NEW `accounts/onboarding_ids.py` — single ID generator: `build_id_base`, `student_id_for`,
+  `generate_parent_id`, `parent_id_from_student`. Format = SchoolInitials-StudentInitials-Grade+Div-
+  Day+Month-YY-suffix, with collision counter before the suffix.
+- `superadmin/bulk_import.py` — `_process_student` and `_process_parent` now generate structured ids
+  (username=id, password=id, skill_lab_reg_id/parent_id=id); parent id derived from the first linked student;
+  `_send_welcome_email` gained `login_id`; email-dup check switched to `email=` field.
+- `superadmin/views.py` — `onboard_student` / `onboard_parent`: structured id as username/password;
+  parent onboarding resolves linked students up front to mirror the child's id; welcome emails show Login ID.
+- `school_admin/views.py` — `school_admin_onboard_student` / `school_admin_onboard_parent`: same treatment,
+  scoped to the admin's school.
+
+**Behaviour change:** newly onboarded students/parents log in with the structured ID (not email); existing
+seeded users are unaffected. Bulk parent imported before its student falls back to email + random password.
+
+**Verification:** `manage.py check` clean. Rolled-back shell test: slide example produced
+`SV-RG-6A-222-26-stu`/`-par` exactly; `authenticate(id, id)` succeeds; duplicate details yield
+`SV-RG-6A-222-26-2-stu`; parent shares the child's base. PASS.

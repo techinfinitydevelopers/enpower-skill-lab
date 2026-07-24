@@ -1052,7 +1052,7 @@ def _process_student(row, created_by):
     email = row['school_email']
     gr_number = row['gr_number']
 
-    if User.objects.filter(username=email).exists():
+    if email and User.objects.filter(email=email).exists():
         raise ValueError(f'Email "{email}" already exists')
 
     if Student.objects.filter(gr_number=gr_number).exists():
@@ -1065,13 +1065,20 @@ def _process_student(row, created_by):
         if not school:
             raise ValueError(f'School "{school_name}" not found')
 
-    password = generate_password()
-    year = datetime.now().year
-    reg_id = f"SKILL{year}{''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(6))}"
+    from accounts.onboarding_ids import student_id_for
+    dob = _parse_date(row['date_of_birth'])
+    # Structured onboarding ID (e.g. SV-RG-6A-222-26-stu) doubles as the login
+    # username and the initial password (changeable after first login).
+    reg_id = student_id_for(
+        school, row['first_name'], row['last_name'],
+        row['student_class'], row['division'], dob, row['academic_year'],
+        fallback_school_name=school_name,
+    )
+    password = reg_id
 
     with transaction.atomic():
         user = User.objects.create_user(
-            username=email, email=email, password=password,
+            username=reg_id, email=email, password=password,
             first_name=row['first_name'],
             last_name=row['last_name'],
             role='STUDENT',
@@ -1085,7 +1092,7 @@ def _process_student(row, created_by):
             middle_name=_opt(row.get('middle_name')),
             last_name=row['last_name'],
             gender=row['gender'].lower(),
-            date_of_birth=_parse_date(row['date_of_birth']),
+            date_of_birth=dob,
             nationality=row.get('nationality') or 'Indian',
             mother_tongue=_opt(row.get('mother_tongue')),
             blood_group=_opt(row.get('blood_group')),
@@ -1154,7 +1161,7 @@ def _process_student(row, created_by):
             except Parent.DoesNotExist:
                 pass  # Parent not imported yet — will auto-link when parent is imported later
 
-    _send_welcome_email(email, f"{row['first_name']} {row['last_name']}", password, 'Student')
+    _send_welcome_email(email, f"{row['first_name']} {row['last_name']}", password, 'Student', login_id=reg_id)
 
 
 def _process_parent(row, created_by):
@@ -1171,15 +1178,39 @@ def _process_parent(row, created_by):
             raise ValueError(f'{field} is required')
 
     email = row['email']
-    if User.objects.filter(username=email).exists():
+    if email and User.objects.filter(email=email).exists():
         raise ValueError(f'Email "{email}" already exists')
 
-    password = generate_password()
     name_parts = row['full_name'].split(' ', 1)
+
+    # Resolve linked students first so the parent ID can mirror the child's
+    # structured ID (SV-RG-6A-222-26-par shares the student's base).
+    from student.models import Student
+    from accounts.onboarding_ids import parent_id_from_student
+    student_emails_str = _opt(row.get('student_emails'))
+    linked_students = []
+    if student_emails_str:
+        emails = [e.strip() for e in student_emails_str.split(',') if e.strip()]
+        for semail in emails:
+            st = Student.objects.filter(school_email=semail).first()
+            if st:
+                linked_students.append(st)
+
+    if linked_students:
+        # ID = login username = initial password (changeable after first login).
+        parent_id = parent_id_from_student(linked_students[0])
+        username = parent_id
+        password = parent_id
+    else:
+        # No child imported yet — fall back to email login + random password;
+        # the model auto-generates a temporary P##### id.
+        parent_id = ''
+        username = email
+        password = generate_password()
 
     with transaction.atomic():
         user = User.objects.create_user(
-            username=email, email=email, password=password,
+            username=username, email=email, password=password,
             first_name=name_parts[0],
             last_name=name_parts[1] if len(name_parts) > 1 else '',
             role='PARENT',
@@ -1187,6 +1218,7 @@ def _process_parent(row, created_by):
 
         parent = Parent.objects.create(
             user=user,
+            parent_id=parent_id,
             # A. Primary Parent / Guardian Details
             full_name=row['full_name'],
             relation_to_student=row['relation_to_student'].lower(),
@@ -1236,19 +1268,11 @@ def _process_parent(row, created_by):
             is_active=True,
         )
 
-        # B. Link students via school emails (student_names is reference only, ignored)
-        student_emails_str = _opt(row.get('student_emails'))
-        if student_emails_str:
-            from student.models import Student
-            emails = [e.strip() for e in student_emails_str.split(',') if e.strip()]
-            for semail in emails:
-                try:
-                    student = Student.objects.get(school_email=semail)
-                    parent.students.add(student)
-                except Student.DoesNotExist:
-                    pass  # Student not found — will auto-link when student is imported later
+        # B. Link the students resolved above (student_names is reference only)
+        for student in linked_students:
+            parent.students.add(student)
 
-    _send_welcome_email(email, row['full_name'], password, 'Parent')
+    _send_welcome_email(email, row['full_name'], password, 'Parent', login_id=username)
 
 
 def _process_coordinator(row, created_by):
@@ -1367,11 +1391,11 @@ def _parse_date(value):
     raise ValueError(f'Invalid date format: "{value}". Use YYYY-MM-DD')
 
 
-def _send_welcome_email(email, name, password, role_label):
+def _send_welcome_email(email, name, password, role_label, login_id=None):
     try:
         send_mail(
             subject=f'Welcome to Enpower Skill Lab — {role_label} Account',
-            message=f'Hello {name},\n\nYour {role_label} account has been created.\n\nLogin: {email}\nPassword: {password}\n\nPlease change your password after first login.\n\nTeam Enpower Skill Lab',
+            message=f'Hello {name},\n\nYour {role_label} account has been created.\n\nLogin: {login_id or email}\nPassword: {password}\n\nPlease change your password after first login.\n\nTeam Enpower Skill Lab',
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[email],
             fail_silently=True,

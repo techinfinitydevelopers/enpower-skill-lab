@@ -224,3 +224,45 @@ Targeting rule everywhere: EMPTY field = "all" (no restriction); non-empty = mus
    checks them. Same parent can see an event on dashboard that's absent from the bell.
 4. applicable_grades stored as ints (add:3636 `int(g)`), compared as strings everywhere (str(grade)) — works but fragile.
 5. All announcement delivery is READ-time filtered (no per-recipient records / read-receipts / notification table).
+
+---
+
+## [2026-07-24] STRUCTURED ONBOARDING IDs (student & parent) — slide 2 flow
+
+### Format (from client slide "Student & parent onboarding flow")
+`{SchoolInitials}-{StudentInitials}-{Grade}{Div}-{Day}{Month}-{YY}-{stu|par}`
+Example: Shiv Vani / Riddhima Guruji / grade 6A / born 22 Feb / AY 2026 →
+`SV-RG-6A-222-26-stu` (student) and `SV-RG-6A-222-26-par` (parent, shares child's base).
+- School initials = first letter of first two words of school_name (fallback school_code).
+- Student initials = first letter of first + last name.
+- DOB part = day+month, no padding (22 Feb → "222").
+- YY = last 2 digits of academic year (last 4-digit year in the string; "2025-2026" → "26").
+- On collision a counter is inserted before the suffix: `SV-RG-6A-222-26-2-stu`.
+
+### Helper: accounts/onboarding_ids.py (NEW — single source of truth)
+- `build_id_base(school, first, last, class, div, dob, academic_year, fallback_school_name)` → base string.
+- `student_id_for(...)` → unique `-stu` id (checks User.username + Student.skill_lab_reg_id).
+- `generate_parent_id(base)` / `parent_id_from_student(student)` → unique `-par` id (derives base from the CHILD).
+- dob accepts date or common string formats.
+
+### The ID IS the login credential
+- Student: `User.username = skill_lab_reg_id = structured id`; initial `password = same id` (changeable after login).
+- Parent: `User.username = parent_id = structured id (-par)`; initial `password = same id`.
+- Existing users (seeded/old) keep their email usernames — only NEW onboarded users get ID logins.
+
+### Wired into ALL onboarding paths
+- superadmin/bulk_import.py `_process_student` (username/password/reg_id) + `_process_parent`
+  (parent id derived from first linked student; falls back to email+random if the student isn't imported yet).
+- superadmin/views.py `onboard_student`, `onboard_parent` (resolve linked students first).
+- school_admin/views.py `school_admin_onboard_student`, `school_admin_onboard_parent`.
+- `_send_welcome_email` gained `login_id` param; all welcome emails now show "Login ID" = the structured id.
+- Email uniqueness checks changed from `username=email` to `email=email` (guarded with `if email`), since
+  username is no longer the email.
+
+### Edge cases / notes
+- Bulk parent imported BEFORE its student → parent keeps a fallback P##### id + email login (rare; recommend
+  importing students first). Student-side auto-link by parent_email still works but does NOT upgrade that id.
+- The old early `SKILL{year}{rand}` reg_id lines in the manual views are now overwritten before save (harmless).
+- Migration `0023` (announcement help_text) is the only DB migration; ID work is code-only.
+- Verified (rolled-back shell test): slide example matches exactly, login via ID/ID authenticates,
+  collision inserts `-2-`, parent shares the child's base.
