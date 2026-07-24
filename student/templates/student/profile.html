@@ -64,7 +64,7 @@
                     <div class="stud-prof-basic-row">
                         <div class="stud-prof-basic-item">
                             <label class="stud-prof-basic-label">Student ID</label>
-                            <p class="stud-prof-basic-value highlight">{{ user.student_profile.gr_number|default:"210903" }}</p>
+                            <p class="stud-prof-basic-value highlight">{{ user.student_profile.skill_lab_reg_id|default:user.student_profile.gr_number|default:"210903" }}</p>
                         </div>
                         <div class="stud-prof-basic-item">
                             <label class="stud-prof-basic-label">Class</label>
@@ -154,7 +154,7 @@
                 <div class="stud-prof-info-grid">
                     <div class="stud-prof-info-item">
                         <label class="stud-prof-info-label">Student ID</label>
-                        <p class="stud-prof-info-value highlight">{{ user.student_profile.gr_number|default:"210903" }}</p>
+                        <p class="stud-prof-info-value highlight">{{ user.student_profile.skill_lab_reg_id|default:user.student_profile.gr_number|default:"210903" }}</p>
                     </div>
                     <div class="stud-prof-info-item">
                         <label class="stud-prof-info-label">Class</label>

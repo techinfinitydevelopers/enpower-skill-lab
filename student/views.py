@@ -52,9 +52,10 @@ def student_dashboard(request):
         context['success_story'] = None
 
     if student:
-        # Header info (slide 44)
+        # Header info (slide 44) — show the structured onboarding ID
+        # (e.g. SV-RG-6A-222-26-stu); fall back to GR number for older students.
         try:
-            context['student_id'] = student.gr_number
+            context['student_id'] = student.skill_lab_reg_id or student.gr_number
         except Exception:
             context['student_id'] = None
         try:
