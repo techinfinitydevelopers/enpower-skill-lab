@@ -213,7 +213,10 @@
             </div>
             <div class="card-actions">
                 <a href="{% url 'esl_product_edit' p.id %}" class="act-edit">Edit</a>
-                <a href="{% url 'esl_product_delete' p.id %}" class="act-delete" onclick="return confirm('Delete this product?');">Delete</a>
+                <form method="POST" action="{% url 'esl_product_delete' p.id %}" style="display:inline;" onsubmit="return confirm('Delete this product?');">
+                    {% csrf_token %}
+                    <button type="submit" class="act-delete">Delete</button>
+                </form>
             </div>
         </div>
         {% endfor %}

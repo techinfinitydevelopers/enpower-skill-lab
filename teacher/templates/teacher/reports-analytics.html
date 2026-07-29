@@ -1,0 +1,95 @@
+{% extends 'teacher/base.html' %}
+{% load static %}
+
+{% block title %}Reports & Analytics - Thinking Coach{% endblock %}
+
+{% block extra_css %}
+<style>
+    .ra-page { --ra-purple:#5A1F6E; }
+    .ra-stat { background:#fff; border:1px solid #ede9f4; border-radius:16px; padding:20px 22px; height:100%; }
+    .ra-stat .ra-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:#9ca3af; }
+    .ra-stat .ra-value { font-size:30px; font-weight:800; color:#1e1b4b; line-height:1.1; margin-top:4px; }
+    .ra-stat .ra-sub { font-size:12px; color:#94a3b8; }
+    .ra-card { background:#fff; border:1px solid #ede9f4; border-radius:16px; padding:24px; }
+    .ra-card h2 { font-size:16px; font-weight:700; color:#1e1b4b; display:flex; align-items:center; gap:8px; margin:0 0 18px; }
+    .ra-card h2 .material-symbols-outlined { color:var(--ra-purple); font-size:20px; }
+    .ra-comp-row { display:flex; align-items:center; gap:16px; padding:12px 0; border-bottom:1px dashed #eee; }
+    .ra-comp-row:last-child { border-bottom:none; }
+    .ra-comp-name { min-width:200px; font-weight:600; font-size:14px; color:#1e1b4b; }
+    .ra-comp-name small { display:block; font-weight:700; font-size:10px; color:var(--ra-purple); text-transform:uppercase; letter-spacing:0.05em; }
+    .ra-bar-wrap { flex:1; height:14px; background:#eee; border-radius:999px; overflow:hidden; }
+    .ra-bar { height:100%; border-radius:999px; background:linear-gradient(90deg,#5A1F6E,#a855f7); }
+    .ra-score-pill { min-width:74px; text-align:center; padding:4px 10px; border-radius:999px; font-size:13px; font-weight:700; background:rgba(90,31,110,0.1); color:var(--ra-purple); white-space:nowrap; }
+    .ra-empty { text-align:center; color:#94a3b8; font-size:13px; padding:28px 0; }
+    .ra-table { width:100%; border-collapse:collapse; }
+    .ra-table th { font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:#9ca3af; text-align:left; padding:10px 12px; border-bottom:2px solid #f0f0f0; }
+    .ra-table td { padding:12px; border-bottom:1px solid #f5f5f5; font-size:14px; color:#374151; }
+    .ra-table tr:hover td { background:#faf8fd; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ra-page py-4 py-lg-5">
+    <div class="container-xl" style="max-width:1200px;">
+
+        <!-- Header -->
+        <div id="class-performance" class="mb-4">
+            <h1 class="h4 fw-bold text-dark mb-1" style="display:flex; align-items:center; gap:8px;">
+                <span class="material-symbols-outlined" style="color:#5A1F6E;">analytics</span>
+                Reports &amp; Analytics
+            </h1>
+            <p class="text-muted mb-0" style="font-size:13px;">Performance overview for {{ school_name }}</p>
+        </div>
+
+        <!-- Summary stats -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-lg-3"><div class="ra-stat"><div class="ra-label">Total Students</div><div class="ra-value">{{ total_students }}</div><div class="ra-sub">in your school</div></div></div>
+            <div class="col-6 col-lg-3"><div class="ra-stat"><div class="ra-label">Students Assessed</div><div class="ra-value">{{ assessed_students }}</div><div class="ra-sub">have at least 1 score</div></div></div>
+            <div class="col-6 col-lg-3"><div class="ra-stat"><div class="ra-label">Class Average</div><div class="ra-value">{% if class_avg %}{{ class_avg }}<span style="font-size:16px; color:#94a3b8;">/10</span>{% else %}—{% endif %}</div><div class="ra-sub">across all scores</div></div></div>
+            <div class="col-6 col-lg-3"><div class="ra-stat"><div class="ra-label">Competencies</div><div class="ra-value">{{ competencies_tracked }}</div><div class="ra-sub">tracked so far</div></div></div>
+        </div>
+
+        <!-- Competency Performance -->
+        <div id="competency-reports" class="ra-card mb-4">
+            <h2><span class="material-symbols-outlined">bar_chart</span> Competency Performance (class average)</h2>
+            {% if competency_rows %}
+            {% for c in competency_rows %}
+            <div class="ra-comp-row">
+                <div class="ra-comp-name"><small>{{ c.code }}</small>{{ c.name }}</div>
+                <div class="ra-bar-wrap"><div class="ra-bar" style="width: {% widthratio c.avg 10 100 %}%;"></div></div>
+                <div class="ra-score-pill">{{ c.avg }} / 10</div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="ra-empty">No competency scores recorded yet.</div>
+            {% endif %}
+        </div>
+
+        <!-- Student Performance -->
+        <div id="student-reports" class="ra-card">
+            <h2><span class="material-symbols-outlined">groups</span> Student Performance</h2>
+            {% if student_rows %}
+            <div class="table-responsive">
+                <table class="ra-table">
+                    <thead><tr><th>Student</th><th>Class</th><th>Average</th><th>Scores</th><th>Report</th></tr></thead>
+                    <tbody>
+                        {% for r in student_rows %}
+                        <tr>
+                            <td style="font-weight:600; color:#1e1b4b;">{{ r.student.full_name }}</td>
+                            <td>{{ r.class_name }}</td>
+                            <td>{% if r.avg %}<span class="ra-score-pill">{{ r.avg }} / 10</span>{% else %}<span class="text-muted">Not assessed</span>{% endif %}</td>
+                            <td>{{ r.count }}</td>
+                            <td><a href="{% url 'teacher:view_student' r.student.id %}" style="color:#5A1F6E; font-weight:600; text-decoration:none;">View <span class="material-symbols-outlined" style="font-size:14px; vertical-align:middle;">chevron_right</span></a></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="ra-empty">No students found for your school.</div>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+{% endblock %}

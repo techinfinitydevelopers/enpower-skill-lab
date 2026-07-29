@@ -132,9 +132,12 @@
                                         <a href="{% url 'edit_lesson' lesson.id %}" class="ll-action-btn" title="Edit">
                                             <span class="material-symbols-outlined">edit</span>
                                         </a>
-                                        <a href="{% url 'delete_lesson' lesson.id %}" class="ll-action-btn delete ll-delete-btn" title="Delete">
-                                            <span class="material-symbols-outlined">delete</span>
-                                        </a>
+                                        <form method="POST" action="{% url 'delete_lesson' lesson.id %}" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this lesson?');">
+                                            {% csrf_token %}
+                                            <button type="submit" class="ll-action-btn delete ll-delete-btn" title="Delete">
+                                                <span class="material-symbols-outlined">delete</span>
+                                            </button>
+                                        </form>
                                     </div>
                                 </td>
                             </tr>

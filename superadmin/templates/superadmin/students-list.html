@@ -86,9 +86,12 @@
                                         <a href="{% url 'view_student' student.id %}" class="action-btn" title="View">
                                             <span class="material-symbols-outlined">visibility</span>
                                         </a>
-                                        <a href="{% url 'delete_student' student.id %}" class="action-btn action-btn-delete" title="Delete" onclick="return confirm('Are you sure you want to delete this student?');">
-                                            <span class="material-symbols-outlined">delete</span>
-                                        </a>
+                                        <form method="POST" action="{% url 'delete_student' student.id %}" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this student?');">
+                                            {% csrf_token %}
+                                            <button type="submit" class="action-btn action-btn-delete" title="Delete">
+                                                <span class="material-symbols-outlined">delete</span>
+                                            </button>
+                                        </form>
                                     </div>
                                 </td>
                             </tr>

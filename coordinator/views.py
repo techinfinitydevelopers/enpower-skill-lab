@@ -743,8 +743,21 @@ def bulk_import_view(request, role):
     fail_count = 0
     processor = ROLE_PROCESSORS[role]
 
+    # Restrict imports to the coordinator's own schools — the shared processor
+    # resolves school by name globally, so we must gate each row here.
+    allowed_schools = {
+        name.strip().lower()
+        for name in _coordinator_schools(request).values_list('school_name', flat=True)
+    }
+
     for i, row in enumerate(rows):
         row = {k: (v.strip() if v else '') for k, v in row.items()}
+        row_school = row.get('school_name', '').strip().lower()
+        if not row_school or row_school not in allowed_schools:
+            fail_count += 1
+            results.append({'row': i + 1, 'name': _get_display_name(row, role),
+                            'status': 'failed', 'reason': 'School not assigned to you'})
+            continue
         try:
             processor(row, request.user)
             success_count += 1

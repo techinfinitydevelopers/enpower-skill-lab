@@ -2,218 +2,174 @@
 {% load static %}
 {% block title %}{{ report.project.title }} — Skill Passport{% endblock %}
 
-{% block extra_css %}
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<script id="tailwind-config">
-    tailwind.config = {
-        theme: {
-            extend: {
-                colors: { "primary": "#5A1F6E" },
-                fontFamily: { "display": ["Poppins", "sans-serif"] },
-            },
-        },
-    }
-</script>
-<style>
-    .rp * { font-family: 'Poppins', sans-serif !important; }
-    .rp .material-symbols-outlined { font-family: 'Material Symbols Outlined' !important; }
-</style>
-{% endblock %}
+{% block extra_css %}{% include 'student/_passport_styles.html' %}{% endblock %}
 
 {% block content %}
-<div class="rp max-w-[1100px] mx-auto">
+<div class="sp2">
 
-    <!-- Back link -->
-    <a href="{% url 'student:student_reports' %}" style="display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:500; color:#6b7280; text-decoration:none; margin-bottom:20px;"
-       onmouseover="this.style.color='#5A1F6E'" onmouseout="this.style.color='#6b7280'">
-        <span class="material-symbols-outlined" style="font-size:16px;">arrow_back</span>
-        Back to Reports
-    </a>
-
-    <!-- Project Header -->
-    <div style="margin-bottom:32px;">
-        <div style="display:inline-flex; align-items:center; gap:6px; padding:4px 14px; border-radius:999px; background:rgba(90,31,110,0.08); color:#5A1F6E; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:12px;">
-            <span class="material-symbols-outlined" style="font-size:14px;">workspace_premium</span>
-            Project Completion Report
-        </div>
-        <h1 style="font-size:32px; font-weight:800; color:#1e1b4b; margin:0 0 6px;">{{ report.project.title }}</h1>
-        <p style="font-size:14px; color:#94a3b8; margin:0;">
-            {{ report.project.project_type }} · {{ report.project.grade }}
-            {% if report.project.sequence_number %} · Project {{ report.project.sequence_number }}{% endif %}
-            · Generated {{ report.generated_at|date:"d M Y" }}
-        </p>
-        {% if report.is_outdated %}
-        <div style="margin-top:10px; display:inline-flex; align-items:center; gap:6px; padding:6px 14px; border-radius:8px; background:#fef3c7; border:1px solid #fde68a; font-size:12px; font-weight:600; color:#92400e;">
-            <span class="material-symbols-outlined" style="font-size:15px;">warning</span>
-            Scores were updated after this report was generated. Ask your teacher to regenerate.
-        </div>
-        {% endif %}
+    <!-- decorative background icons -->
+    <div class="bg-icons" aria-hidden="true">
+        <span class="material-symbols-outlined bg-icon-item">menu_book</span>
+        <span class="material-symbols-outlined bg-icon-item">science</span>
+        <span class="material-symbols-outlined bg-icon-item gold">workspace_premium</span>
+        <span class="material-symbols-outlined bg-icon-item">lightbulb</span>
+        <span class="material-symbols-outlined bg-icon-item">psychology</span>
+        <span class="material-symbols-outlined bg-icon-item gold">emoji_events</span>
+        <span class="material-symbols-outlined bg-icon-item">groups</span>
+        <span class="material-symbols-outlined bg-icon-item">hub</span>
+        <span class="material-symbols-outlined bg-icon-item gold">military_tech</span>
+        <span class="material-symbols-outlined bg-icon-item">biotech</span>
+        <span class="material-symbols-outlined bg-icon-item gold">grade</span>
+        <span class="material-symbols-outlined bg-icon-item">rocket_launch</span>
     </div>
 
-    <!-- Top 3 Profiles -->
+    <div class="sp-confetti-container" id="spConfetti"></div>
+
+    <!-- Project Header -->
+    <div class="student-header">
+        <div class="avatar" onclick="spBurst(this,'⭐')">{{ student.first_name|slice:":1" }}{{ student.last_name|slice:":1" }}</div>
+        <div class="student-info">
+            <div class="academic-year">{{ report.project.project_type }} · Project Report</div>
+            <div class="student-name-wrap">
+                <span class="student-name" id="spName">{{ report.project.title }}</span>
+            </div>
+            <div class="student-meta">
+                {% if report.project.grade %}<span class="meta-chip"><span class="material-symbols-outlined">school</span> {{ report.project.grade }}</span>{% endif %}
+                {% if report.project.sequence_number %}<span class="meta-chip"><span class="material-symbols-outlined">tag</span> Project {{ report.project.sequence_number }}</span>{% endif %}
+                <span class="meta-chip"><span class="material-symbols-outlined">event</span> {{ report.generated_at|date:"d M Y" }}</span>
+            </div>
+            {% if report.is_outdated %}
+            <div class="outdated-note">
+                <span class="material-symbols-outlined">warning</span>
+                Scores changed after this report — ask your coach to regenerate.
+            </div>
+            {% endif %}
+        </div>
+        <div class="stats-group">
+            <div class="stat-card">
+                <div class="stat-emoji">⚡</div>
+                <div class="stat-label">Overall Level</div>
+                <div class="stat-value" id="spLevel" data-target="{{ overall_score }}" data-decimals="1">0.0</div>
+                <div class="stat-sub">out of 10.0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-emoji">🎯</div>
+                <div class="stat-label">Top Match</div>
+                <div class="stat-value" id="spAtt" data-target="{{ best_match }}" data-decimals="0" data-suffix="%">0%</div>
+                <div class="stat-sub">best profile</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Career Matches (profiles) -->
     {% if report.top_3_profiles %}
-    <div style="background:#fff; border-radius:16px; border:1px solid #ede9f4; padding:24px; margin-bottom:24px;">
-        <h2 style="font-size:16px; font-weight:700; color:#1e1b4b; margin:0 0 16px; display:flex; align-items:center; gap:8px;">
-            <span class="material-symbols-outlined" style="font-size:20px; color:#5A1F6E;">person_celebrate</span>
-            Your Skill Profiles
-        </h2>
-        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px;">
+    <div class="section-block">
+        <div class="section-title">
+            <div class="section-icon"><span class="material-symbols-outlined">psychology</span></div>
+            Your Top Career Matches
+            <span class="section-badge">🎯 This Project</span>
+        </div>
+        <div class="profiles-row">
             {% for p in report.top_3_profiles %}
-            <div style="padding:16px; border-radius:12px; border:1.5px solid {% if forloop.first %}rgba(90,31,110,0.3){% else %}#e5e7eb{% endif %}; background:{% if forloop.first %}rgba(90,31,110,0.06){% else %}#f9fafb{% endif %};">
-                <div style="font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:{% if forloop.first %}#5A1F6E{% else %}#9ca3af{% endif %}; margin-bottom:6px;">
-                    {% if forloop.first %}Best Match{% elif forloop.counter == 2 %}2nd{% else %}3rd{% endif %}
+            <div class="profile-card{% if forloop.first %} active{% endif %}" onclick="spBurst(this,'🚀')">
+                {% if forloop.first %}<div class="stamp">🥇</div>{% endif %}
+                <div class="pc-top">
+                    <div class="pc-icon-wrap"><span class="material-symbols-outlined">{% cycle 'groups' 'biotech' 'military_tech' %}</span></div>
+                    <div class="pc-match-badge">{{ p.match_percent }}% Match {% if forloop.first %}🔥{% elif forloop.counter == 2 %}⚡{% else %}✨{% endif %}</div>
                 </div>
-                <div style="font-size:15px; font-weight:700; color:#1e1b4b; margin-bottom:4px;">{{ p.profile_name }}</div>
-                <div style="font-size:13px; font-weight:700; color:{% if forloop.first %}#5A1F6E{% else %}#374151{% endif %};">{{ p.score }} / 10</div>
+                <div class="pc-role">{{ p.profile_name }}</div>
+                <div class="pc-tags">
+                    {% for tag in p.tags %}<span class="pc-tag">{{ tag }}</span>{% endfor %}
+                </div>
             </div>
             {% endfor %}
         </div>
     </div>
     {% endif %}
 
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6" style="margin-bottom:24px;">
-
-        <!-- Left: Top 5 Competencies -->
-        {% if report.top_5_competencies %}
-        <div class="lg:col-span-5">
-            <div style="background:#fff; border-radius:16px; border:1px solid #ede9f4; padding:24px; height:100%;">
-                <h2 style="font-size:16px; font-weight:700; color:#1e1b4b; margin:0 0 16px; display:flex; align-items:center; gap:8px;">
-                    <span class="material-symbols-outlined" style="font-size:20px; color:#5A1F6E;">trending_up</span>
-                    My Top Skills
-                </h2>
-                <div style="display:flex; flex-direction:column; gap:10px;">
-                    {% for c in report.top_5_competencies %}
-                    <div style="display:flex; align-items:center; gap:12px; padding:14px 16px; background:#f9fafb; border-radius:10px; border:1px solid #e5e7eb;">
-                        <div style="width:40px; height:40px; border-radius:10px; background:rgba(90,31,110,0.08); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                            <span class="material-symbols-outlined" style="font-size:18px; color:#5A1F6E;">lightbulb</span>
-                        </div>
-                        <div style="flex:1; min-width:0;">
-                            <div style="font-size:10px; font-weight:700; color:#5A1F6E; text-transform:uppercase; letter-spacing:0.05em;">{{ c.competency_code }}</div>
-                            <div style="font-size:13px; font-weight:600; color:#1e1b4b; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ c.competency_name }}</div>
-                        </div>
-                        <span style="padding:4px 10px; border-radius:999px; font-size:12px; font-weight:700; background:rgba(90,31,110,0.1); color:#5A1F6E; white-space:nowrap; flex-shrink:0;">{{ c.score }}/10</span>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
+    <!-- Skills Report Card (all competencies) -->
+    {% if report.all_competency_scores %}
+    <div class="section-block">
+        <div class="section-title">
+            <div class="section-icon"><span class="material-symbols-outlined">dashboard_customize</span></div>
+            Your Skills Report Card
+            <span class="section-badge">📈 {{ report.all_competency_scores|length }} Skill{{ report.all_competency_scores|length|pluralize }}</span>
         </div>
-        {% endif %}
-
-        <!-- Right: Skill Profile by category -->
-        <div class="lg:col-span-7">
-            <div style="background:#fff; border-radius:16px; border:1px solid #ede9f4; padding:24px; height:100%;">
-                <h2 style="font-size:16px; font-weight:700; color:#1e1b4b; margin:0 0 16px; display:flex; align-items:center; gap:8px;">
-                    <span class="material-symbols-outlined" style="font-size:20px; color:#5A1F6E;">analytics</span>
-                    Skill Profile
-                </h2>
-                <div style="display:flex; flex-direction:column; gap:12px;">
-
-                    {% if very_strong %}
-                    <div style="padding:16px 18px; border-radius:12px; border-left:4px solid #5A1F6E; background:#f9f8fc;">
-                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
-                            <span class="material-symbols-outlined" style="font-size:18px; color:#5A1F6E;">stars</span>
-                            <span style="font-size:14px; font-weight:700; color:#1e1b4b;">Very Strong (8–10)</span>
-                        </div>
-                        <div style="display:flex; flex-wrap:wrap; gap:8px;">
-                            {% for c in very_strong %}
-                            <span style="padding:6px 14px; border-radius:8px; font-size:12px; font-weight:600; background:rgba(90,31,110,0.08); color:#374151; border:1px solid rgba(90,31,110,0.15);">{{ c.competency_name }}</span>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    {% if strong %}
-                    <div style="padding:16px 18px; border-radius:12px; border-left:4px solid #34d399; background:#f0fdf9;">
-                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
-                            <span class="material-symbols-outlined" style="font-size:18px; color:#10b981;">check_circle</span>
-                            <span style="font-size:14px; font-weight:700; color:#1e1b4b;">Strong (6–7)</span>
-                        </div>
-                        <div style="display:flex; flex-wrap:wrap; gap:8px;">
-                            {% for c in strong %}
-                            <span style="padding:6px 14px; border-radius:8px; font-size:12px; font-weight:600; background:#ecfdf5; color:#374151; border:1px solid #bbf7d0;">{{ c.competency_name }}</span>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    {% if emerging %}
-                    <div style="padding:16px 18px; border-radius:12px; border-left:4px solid #fbbf24; background:#fffdf0;">
-                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
-                            <span class="material-symbols-outlined" style="font-size:18px; color:#f59e0b;">trending_up</span>
-                            <span style="font-size:14px; font-weight:700; color:#1e1b4b;">Emerging (4–5)</span>
-                        </div>
-                        <div style="display:flex; flex-wrap:wrap; gap:8px;">
-                            {% for c in emerging %}
-                            <span style="padding:6px 14px; border-radius:8px; font-size:12px; font-weight:600; background:#fefce8; color:#374151; border:1px solid #fde68a;">{{ c.competency_name }}</span>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    {% if not very_strong and not strong and not emerging %}
-                    <p style="font-size:13px; color:#94a3b8; text-align:center; padding:20px 0;">No competency data available.</p>
-                    {% endif %}
-
+        <div class="comp-card" id="spCompCard">
+            {% for c in report.all_competency_scores %}
+            <div class="comp-row" data-pct="{{ c.score }}0" data-score="{{ c.score }}" onmouseenter="spRenderStars(this)">
+                <div class="cr-icon"><span class="material-symbols-outlined">{% cycle 'extension' 'psychology' 'forum' 'group' 'lightbulb' 'insights' %}</span></div>
+                <div class="cr-name">{{ c.competency_name }}</div>
+                <div class="cr-bar-wrap"><div class="cr-bar"></div></div>
+                <div class="cr-right">
+                    <div class="cr-score">{{ c.score }} / 10</div>
+                    <div class="comp-row-level"></div>
+                    <div class="cr-stars"></div>
                 </div>
             </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Skills to Work On + Teacher Feedback -->
+    <div class="section-block">
+        <div class="sp-grid2">
+
+            <!-- Skills to Work On -->
+            {% if report.skills_to_work_on %}
+            <div class="workon-card">
+                <div class="section-title" style="font-size:18px; margin-bottom:16px;">
+                    <div class="section-icon" style="background:linear-gradient(135deg,var(--gold),#F77F00);"><span class="material-symbols-outlined">construction</span></div>
+                    Skills to Work On
+                </div>
+                {% for c in report.skills_to_work_on %}
+                <div class="workon-item">
+                    <div class="workon-badge"><span class="material-symbols-outlined">build</span></div>
+                    <div>
+                        <div class="workon-meta">{{ c.competency_code }}</div>
+                        <div class="workon-name">{{ c.competency_name }}</div>
+                        <div class="workon-score">Score: {{ c.score }} / 10</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Teacher's Feedback -->
+            <div class="summary-card">
+                <div class="section-title" style="font-size:18px; margin-bottom:16px;">
+                    <div class="section-icon"><span class="material-symbols-outlined">rate_review</span></div>
+                    Coach's Feedback
+                </div>
+                {% if feedbacks %}
+                    {% for fb in feedbacks %}
+                    {% if fb.feedback %}
+                    <div class="fb-item">
+                        <div class="fb-meta">{{ fb.assessment.name }}{% if fb.entered_by %} · {{ fb.entered_by.get_full_name|default:fb.entered_by.username }}{% endif %}</div>
+                        <div class="fb-text">“{{ fb.feedback }}”</div>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                {% else %}
+                <p class="fb-empty">No feedback provided yet.</p>
+                {% endif %}
+            </div>
+
         </div>
     </div>
 
-    <!-- Bottom: Skills to Work On + Teacher Feedback -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6" style="margin-bottom:24px;">
-
-        <!-- Skills to Work On -->
-        {% if report.skills_to_work_on %}
-        <div style="background:#fff; border-radius:16px; border:1px solid #ede9f4; padding:24px;">
-            <h2 style="font-size:16px; font-weight:700; color:#1e1b4b; margin:0 0 16px; display:flex; align-items:center; gap:8px;">
-                <span class="material-symbols-outlined" style="font-size:20px; color:#f59e0b;">construction</span>
-                Skills to Work On
-            </h2>
-            <div style="display:flex; flex-direction:column; gap:12px;">
-                {% for c in report.skills_to_work_on %}
-                <div style="display:flex; align-items:flex-start; gap:12px;">
-                    <div style="width:40px; height:40px; border-radius:50%; background:#fef3c7; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                        <span class="material-symbols-outlined" style="font-size:18px; color:#d97706;">build</span>
-                    </div>
-                    <div>
-                        <div style="font-size:10px; font-weight:700; color:#d97706; text-transform:uppercase; letter-spacing:0.05em;">{{ c.competency_code }}</div>
-                        <div style="font-size:13px; font-weight:600; color:#1e1b4b; margin-top:1px;">{{ c.competency_name }}</div>
-                        <div style="font-size:12px; color:#94a3b8; margin-top:2px;">Score: {{ c.score }}/10</div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- Teacher Feedback -->
-        <div style="background:rgba(90,31,110,0.04); border-radius:16px; border:2px solid rgba(90,31,110,0.12); padding:24px; position:relative; overflow:hidden;">
-            <div style="position:absolute; right:-20px; top:-20px; font-size:120px; color:rgba(90,31,110,0.06); line-height:1; pointer-events:none;">
-                <span class="material-symbols-outlined">format_quote</span>
-            </div>
-            <h2 style="font-size:16px; font-weight:700; color:#1e1b4b; margin:0 0 16px; display:flex; align-items:center; gap:8px; position:relative;">
-                <span class="material-symbols-outlined" style="font-size:20px; color:#5A1F6E;">rate_review</span>
-                Teacher's Feedback
-            </h2>
-
-            {% if feedbacks %}
-                {% for fb in feedbacks %}
-                {% if fb.feedback %}
-                <div style="margin-bottom:14px; position:relative;">
-                    <div style="font-size:11px; font-weight:700; color:#9ca3af; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.06em;">
-                        {{ fb.assessment.name }}
-                        {% if fb.entered_by %} · {{ fb.entered_by.get_full_name|default:fb.entered_by.username }}{% endif %}
-                    </div>
-                    <p style="font-size:13px; color:#374151; line-height:1.7; font-style:italic;">"{{ fb.feedback }}"</p>
-                </div>
-                {% endif %}
-                {% endfor %}
-            {% else %}
-            <p style="font-size:13px; color:#94a3b8; font-style:italic;">No feedback provided yet.</p>
-            {% endif %}
-        </div>
-
+    <!-- Footer Nav -->
+    <div class="footer-nav">
+        <a class="sp-btn sp-btn-outline" href="{% url 'student:student_reports' %}">
+            <span class="material-symbols-outlined">arrow_back</span> Back to Skill Passport
+        </a>
+        <a class="sp-btn sp-btn-primary" href="{% url 'student:student_annual_passport' %}" onclick="spConfettiFire()">
+            <span class="material-symbols-outlined">verified</span> Annual Passport 🏅
+        </a>
     </div>
 
 </div>
 {% endblock %}
+
+{% block extra_js %}{% include 'student/_passport_scripts.html' %}{% endblock %}

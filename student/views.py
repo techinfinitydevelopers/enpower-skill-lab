@@ -153,7 +153,7 @@ def student_reports(request):
 @login_required
 @user_passes_test(is_student)
 def student_report_detail(request, project_id):
-    from competencies.models import ProjectReport
+    from competencies.models import ProjectReport, Profile
     from django.shortcuts import get_object_or_404
 
     student = getattr(request.user, 'student_profile', None) or getattr(request.user, 'student', None)
@@ -176,6 +176,21 @@ def student_report_detail(request, project_id):
     strong      = [c for c in all_scores if get_label(c['score']) == 'strong']
     emerging    = [c for c in all_scores if get_label(c['score']) == 'emerging']
 
+    # Overall level (mean) + enrich profiles with match % and competency tags (skill2 UI).
+    vals = [c['score'] for c in all_scores if c.get('score') is not None]
+    overall = round(sum(vals) / len(vals), 1) if vals else 0
+
+    profiles = report.top_3_profiles or []
+    prof_ids = [p['profile_id'] for p in profiles if p.get('profile_id')]
+    prof_tags = {}
+    if prof_ids:
+        for pr in Profile.objects.filter(id__in=prof_ids).prefetch_related('primary_competencies'):
+            prof_tags[pr.id] = [c.name for c in pr.primary_competencies.all()[:3]]
+    for p in profiles:
+        p['match_percent'] = int(round((p.get('score') or 0) * 10))
+        p['tags'] = prof_tags.get(p.get('profile_id'), [])
+    best_match = profiles[0]['match_percent'] if profiles else 0
+
     # Get teacher feedback
     from competencies.models import StudentAssessmentFeedback
     feedbacks = StudentAssessmentFeedback.objects.filter(
@@ -184,11 +199,14 @@ def student_report_detail(request, project_id):
     ).select_related('entered_by').order_by('-updated_at')
 
     return render(request, 'student/report-detail.html', {
+        'student':     student,
         'report':      report,
         'very_strong': very_strong,
         'strong':      strong,
         'emerging':    emerging,
         'feedbacks':   feedbacks,
+        'overall_score': overall,
+        'best_match':  best_match,
     })
 
 
@@ -202,6 +220,8 @@ def student_annual_passport(request):
     profile mechanics. Empty-state when no scores exist yet.
     """
     from competencies.engine import generate_annual_passport
+    from competencies.models import Profile
+    from django.utils import timezone
 
     student = getattr(request.user, 'student_profile', None) or getattr(request.user, 'student', None)
 
@@ -216,7 +236,27 @@ def student_annual_passport(request):
         'strong': [],
         'emerging': [],
         'work_on': [],
+        'overall_score': 0,
+        'attendance_percent': 0,
+        'summary_paragraphs': [],
+        'academic_year': '',
+        'issued_by': 'ENpower Skill Lab',
+        'issue_date': timezone.now(),
     }
+
+    # Header info that does not depend on competency scores.
+    if student:
+        context['academic_year'] = getattr(student, 'academic_year', '') or ''
+        try:
+            if student.school and student.school.school_name:
+                context['issued_by'] = student.school.school_name
+        except Exception:
+            pass
+        try:
+            from attendance.services import student_attendance_stats
+            context['attendance_percent'] = student_attendance_stats(student).get('percent') or 0
+        except Exception:
+            context['attendance_percent'] = 0
 
     data = None
     if student:
@@ -239,19 +279,79 @@ def student_annual_passport(request):
                 return 'emerging'
             return 'work_on'
 
+        # Overall level = mean of all assessed competency scores (1–10 scale).
+        vals = [c['score'] for c in all_scores if c.get('score') is not None]
+        overall = round(sum(vals) / len(vals), 1) if vals else 0
+
+        # Enrich each top profile with a match % and its primary competency tags.
+        profiles = data.get('top_3_profiles') or []
+        prof_tags = {}
+        prof_ids = [p['profile_id'] for p in profiles if p.get('profile_id')]
+        if prof_ids:
+            for pr in Profile.objects.filter(id__in=prof_ids).prefetch_related('primary_competencies'):
+                prof_tags[pr.id] = [c.name for c in pr.primary_competencies.all()[:3]]
+        for p in profiles:
+            p['match_percent'] = int(round((p.get('score') or 0) * 10))
+            p['tags'] = prof_tags.get(p.get('profile_id'), [])
+
+        very_strong = [c for c in all_scores if get_label(c['score']) == 'very_strong']
+        strong      = [c for c in all_scores if get_label(c['score']) == 'strong']
+        emerging    = [c for c in all_scores if get_label(c['score']) == 'emerging']
+        work_on     = data.get('skills_to_work_on') or []
+
         context.update({
             'has_data': True,
-            'top_3_profiles': data.get('top_3_profiles') or [],
+            'top_3_profiles': profiles,
             'top_5_competencies': data.get('top_5_competencies') or [],
-            'skills_to_work_on': data.get('skills_to_work_on') or [],
+            'skills_to_work_on': work_on,
             'all_competency_scores': all_scores,
-            'very_strong': [c for c in all_scores if get_label(c['score']) == 'very_strong'],
-            'strong': [c for c in all_scores if get_label(c['score']) == 'strong'],
-            'emerging': [c for c in all_scores if get_label(c['score']) == 'emerging'],
+            'very_strong': very_strong,
+            'strong': strong,
+            'emerging': emerging,
             'work_on': [c for c in all_scores if get_label(c['score']) == 'work_on'],
+            'overall_score': overall,
+            'summary_paragraphs': _build_passport_summary(student, all_scores, very_strong + strong, overall),
         })
 
     return render(request, 'student/annual-passport.html', context)
+
+
+def _build_passport_summary(student, all_scores, strengths, overall):
+    """Auto-generate a short 'Year in Review' narrative from real score data.
+    No manual text — always reflects the student's current competencies."""
+    name = (getattr(student, 'full_name', None) or 'This student').split(' ')[0]
+    paras = []
+
+    n = len(all_scores)
+    paras.append(
+        f"{name} was assessed across {n} competenc{'y' if n == 1 else 'ies'} this year, "
+        f"with an overall level of {overall}/10. Every score here comes straight from "
+        f"project assessments completed with the thinking coach."
+    )
+
+    if strengths:
+        top_names = ', '.join(c['competency_name'] for c in strengths[:3])
+        paras.append(
+            f"Standout strengths were {top_names}. These competencies scored in the strong-to-expert "
+            f"range and are {name}'s clearest areas of confidence."
+        )
+
+    # Focus only on competencies that genuinely need work (below the "strong" band),
+    # so a high-performer isn't told to "work on" their strengths.
+    focus = sorted((c for c in all_scores if c['score'] < 6), key=lambda x: x['score'])[:3]
+    if focus:
+        grow_names = ', '.join(c['competency_name'] for c in focus)
+        paras.append(
+            f"The focus for next year is {grow_names}. With steady practice on these, "
+            f"{name} can round out an already solid skill profile. 🚀"
+        )
+    elif strengths:
+        paras.append(
+            f"There are no major gaps this year — every competency is in the strong-to-expert range. "
+            f"The goal now is to keep stretching and take on tougher challenges. 🚀"
+        )
+
+    return paras
 
 
 def _student(request):

@@ -277,7 +277,7 @@ def api_save_score(request):
         return JsonResponse({'error': 'POST required'}, status=405)
 
     import json
-    from competencies.models import ScoreEntry
+    from competencies.models import ScoreEntry, AssessmentCompetency
 
     try:
         data     = json.loads(request.body)
@@ -293,9 +293,15 @@ def api_save_score(request):
     except (KeyError, ValueError, TypeError):
         return JsonResponse({'error': 'Invalid data'}, status=400)
 
+    # Validate the competency mapping exists before writing a score against it
+    if not AssessmentCompetency.objects.filter(id=ac_id).exists():
+        return JsonResponse({'error': 'Invalid competency'}, status=400)
+
     student = get_object_or_404(Student, id=student_id)
     teacher_profile = getattr(request.user, 'teacher_profile', None)
-    if teacher_profile and student.school != teacher_profile.school:
+    if not teacher_profile or not teacher_profile.school:
+        return JsonResponse({'error': 'No teacher profile'}, status=403)
+    if student.school != teacher_profile.school:
         return JsonResponse({'error': 'Student not in your school'}, status=403)
 
     entry, _ = ScoreEntry.objects.update_or_create(
@@ -396,7 +402,9 @@ def api_save_feedback(request):
     assessment = get_object_or_404(Assessment, id=assessment_id)
 
     teacher_profile = getattr(request.user, 'teacher_profile', None)
-    if teacher_profile and student.school != teacher_profile.school:
+    if not teacher_profile or not teacher_profile.school:
+        return JsonResponse({'error': 'No teacher profile'}, status=403)
+    if student.school != teacher_profile.school:
         return JsonResponse({'error': 'Student not in your school'}, status=403)
 
     StudentAssessmentFeedback.objects.update_or_create(
@@ -429,7 +437,9 @@ def api_save_project_feedback(request):
     project = get_object_or_404(Project, id=project_id)
 
     teacher_profile = getattr(request.user, 'teacher_profile', None)
-    if teacher_profile and student.school != teacher_profile.school:
+    if not teacher_profile or not teacher_profile.school:
+        return JsonResponse({'error': 'No teacher profile'}, status=403)
+    if student.school != teacher_profile.school:
         return JsonResponse({'error': 'Student not in your school'}, status=403)
 
     StudentProjectFeedback.objects.update_or_create(
@@ -440,6 +450,7 @@ def api_save_project_feedback(request):
     return JsonResponse({'ok': True})
 
 
+@login_required
 def teacher_logout(request):
     """Logout view for teacher"""
     logout(request)
@@ -626,6 +637,70 @@ def view_student(request, student_id):
         'student': student,
     }
     return render(request, 'teacher/view-student.html', context)
+
+
+@login_required
+@user_passes_test(is_teacher)
+def reports_analytics(request):
+    """Teacher Reports & Analytics (Skill Passport design Screen-6) wired to real data.
+    Shows class average, per-competency averages, and per-student performance for the
+    teacher's own school. Read-only — does not change any existing data or flows."""
+    from collections import defaultdict
+    from competencies.models import ScoreEntry
+
+    teacher_school = None
+    if hasattr(request.user, 'teacher_profile') and request.user.teacher_profile:
+        teacher_school = request.user.teacher_profile.school
+    if not teacher_school:
+        messages.error(request, 'No school assigned to your profile.')
+        return redirect('teacher:teacher_dashboard')
+
+    students = Student.objects.filter(school=teacher_school, is_active=True).order_by('first_name', 'last_name')
+
+    scores = ScoreEntry.objects.filter(
+        student__in=students, score__isnull=False
+    ).select_related('assessment_competency__competency')
+
+    comp_scores = defaultdict(list)   # competency name -> [scores]
+    comp_code   = {}                  # competency name -> code
+    stu_scores  = defaultdict(list)   # student id -> [scores]
+    for se in scores:
+        comp = se.assessment_competency.competency
+        comp_scores[comp.name].append(se.score)
+        comp_code[comp.name] = comp.code
+        stu_scores[se.student_id].append(se.score)
+
+    # Per-competency averages (aggregate across the class)
+    competency_rows = sorted(
+        [{'name': n, 'code': comp_code[n],
+          'avg': round(sum(v) / len(v), 1), 'count': len(v)}
+         for n, v in comp_scores.items()],
+        key=lambda x: x['avg'], reverse=True
+    )
+
+    # Per-student averages
+    student_rows = []
+    for s in students:
+        v = stu_scores.get(s.id, [])
+        student_rows.append({
+            'student': s,
+            'class_name': f"Class {s.student_class}-{s.division}" if s.division else f"Class {s.student_class}",
+            'avg': round(sum(v) / len(v), 1) if v else None,
+            'count': len(v),
+        })
+    student_rows.sort(key=lambda x: (x['avg'] is None, -(x['avg'] or 0)))
+
+    all_vals = [sc for v in stu_scores.values() for sc in v]
+    context = {
+        'school_name': teacher_school.school_name,
+        'total_students': students.count(),
+        'assessed_students': sum(1 for v in stu_scores.values() if v),
+        'class_avg': round(sum(all_vals) / len(all_vals), 1) if all_vals else None,
+        'competencies_tracked': len(competency_rows),
+        'competency_rows': competency_rows,
+        'student_rows': student_rows,
+    }
+    return render(request, 'teacher/reports-analytics.html', context)
 
 
 @login_required
@@ -1076,7 +1151,9 @@ def api_generate_report(request):
 
     # Ensure teacher can only generate for students in their school
     teacher_profile = getattr(request.user, 'teacher_profile', None)
-    if teacher_profile and student.school != teacher_profile.school:
+    if not teacher_profile or not teacher_profile.school:
+        return JsonResponse({'ok': False, 'error': 'No teacher profile'}, status=403)
+    if student.school != teacher_profile.school:
         return JsonResponse({'ok': False, 'error': 'Student not in your school'}, status=403)
 
     report, error = generate_project_report(student, project)

@@ -1,8 +1,9 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.views.decorators.http import require_POST
 from django.contrib import messages
 from django.http import JsonResponse
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Q
 from django.contrib.auth import get_user_model, logout
 from django.contrib.auth.hashers import make_password
@@ -501,6 +502,7 @@ def edit_school(request, school_id):
 
 @login_required
 @user_passes_test(is_superadmin)
+@require_POST
 def delete_school(request, school_id):
     """
     View to delete a school.
@@ -647,6 +649,7 @@ def edit_school_admin(request, admin_id):
 
 @login_required
 @user_passes_test(is_superadmin)
+@require_POST
 def delete_school_admin(request, admin_id):
     """
     View to delete a school admin.
@@ -997,7 +1000,7 @@ def onboard_student(request):
             student.middle_name = request.POST.get('middle_name', '')
             student.last_name = request.POST.get('last_name', '')
             student.gender = request.POST.get('gender', '')
-            student.date_of_birth = request.POST.get('date_of_birth', '')
+            student.date_of_birth = request.POST.get('date_of_birth') or None
             student.nationality = request.POST.get('nationality', 'Indian')
             student.mother_tongue = request.POST.get('mother_tongue', '')
             student.blood_group = request.POST.get('blood_group', '')
@@ -1023,7 +1026,7 @@ def onboard_student(request):
 
             # D. Skill Lab Specific Details
             student.skill_lab_reg_id = skill_lab_reg_id
-            student.enrollment_date = request.POST.get('enrollment_date', '')
+            student.enrollment_date = request.POST.get('enrollment_date') or None
             student.skills_enrolled = request.POST.get('skills_enrolled', '')
             student.current_skill_level = request.POST.get('current_skill_level', '')
             student.assigned_trainer = request.POST.get('assigned_trainer', '')
@@ -1070,7 +1073,6 @@ def onboard_student(request):
             if email and User.objects.filter(email=email).exists():
                 messages.error(request, f'A user with email {email} already exists.')
                 return redirect('onboard_student')
-
             # Structured onboarding ID (e.g. SV-RG-6A-222-26-stu) = login username
             # = initial password (changeable after first login).
             from accounts.onboarding_ids import student_id_for
@@ -1083,22 +1085,24 @@ def onboard_student(request):
             student.skill_lab_reg_id = skill_lab_reg_id
             temp_password = skill_lab_reg_id
 
-            # Create User with STUDENT role (login by the structured ID)
-            user = User.objects.create_user(
-                username=skill_lab_reg_id,
-                email=email,
-                password=temp_password,
-                first_name=student.first_name,
-                last_name=student.last_name,
-                is_active=True,
-                role='STUDENT'
-            )
-            
-            # Link user to student
-            student.user = user
+            # Create User + student atomically so a failed save never leaves an orphan User
+            with transaction.atomic():
+                # Create User with STUDENT role (login by the structured ID)
+                user = User.objects.create_user(
+                    username=skill_lab_reg_id,
+                    email=email,
+                    password=temp_password,
+                    first_name=student.first_name,
+                    last_name=student.last_name,
+                    is_active=True,
+                    role='STUDENT'
+                )
 
-            # Save the student
-            student.save()
+                # Link user to student
+                student.user = user
+
+                # Save the student
+                student.save()
             
             # Send welcome email with credentials
             try:
@@ -1254,7 +1258,7 @@ def onboard_teacher(request):
             teacher.employee_id = employee_id
             teacher.full_name = request.POST.get('full_name', '')
             teacher.gender = request.POST.get('gender', '')
-            teacher.date_of_birth = request.POST.get('date_of_birth', '')
+            teacher.date_of_birth = request.POST.get('date_of_birth') or None
             teacher.blood_group = request.POST.get('blood_group', '') or None
             teacher.nationality = request.POST.get('nationality', 'Indian')
             teacher.aadhar_number = request.POST.get('aadhar_number', '') or None
@@ -1296,7 +1300,7 @@ def onboard_teacher(request):
             total_students = request.POST.get('total_students', '')
             teacher.total_students = int(total_students) if total_students else 0
             teacher.dashboard_role = request.POST.get('dashboard_role', '') or None
-            teacher.joining_date = request.POST.get('joining_date', '')
+            teacher.joining_date = request.POST.get('joining_date') or None
             contract_end = request.POST.get('contract_end_date', '')
             teacher.contract_end_date = contract_end if contract_end else None
             teacher.employment_type = request.POST.get('employment_type', '')
@@ -1348,22 +1352,24 @@ def onboard_teacher(request):
             # Generate temporary password
             temp_password = ''.join(secrets.choice(string.ascii_letters + string.digits + '!@#$%') for _ in range(12))
             
-            # Create User with THINKING_COACH role
-            user = User.objects.create_user(
-                username=email,
-                email=email,
-                password=temp_password,
-                first_name=teacher.full_name.split()[0] if teacher.full_name else '',
-                last_name=' '.join(teacher.full_name.split()[1:]) if len(teacher.full_name.split()) > 1 else '',
-                is_active=True,
-                role='THINKING_COACH'
-            )
-            
-            # Link user to teacher
-            teacher.user = user
+            # Create User + teacher atomically so a failed save never leaves an orphan User
+            with transaction.atomic():
+                # Create User with THINKING_COACH role
+                user = User.objects.create_user(
+                    username=email,
+                    email=email,
+                    password=temp_password,
+                    first_name=teacher.full_name.split()[0] if teacher.full_name else '',
+                    last_name=' '.join(teacher.full_name.split()[1:]) if len(teacher.full_name.split()) > 1 else '',
+                    is_active=True,
+                    role='THINKING_COACH'
+                )
 
-            # Save the teacher
-            teacher.save()
+                # Link user to teacher
+                teacher.user = user
+
+                # Save the teacher
+                teacher.save()
             
             # Send welcome email with credentials
             try:
@@ -1506,6 +1512,7 @@ def edit_teacher(request, teacher_id):
 
 @login_required
 @user_passes_test(is_superadmin)
+@require_POST
 def delete_teacher(request, teacher_id):
     """View to delete a teacher"""
     from teacher.models import Teacher
@@ -1523,6 +1530,7 @@ def delete_teacher(request, teacher_id):
 
 @login_required
 @user_passes_test(is_superadmin)
+@require_POST
 def delete_student(request, student_id):
     """View to delete a student"""
     from student.models import Student
@@ -1642,7 +1650,6 @@ def onboard_parent(request):
             if email and User.objects.filter(email=email).exists():
                 messages.error(request, f'A user with email {email} already exists.')
                 return redirect('onboard_parent')
-
             # Resolve linked students first so the parent ID mirrors the child's
             # structured ID (SV-RG-6A-222-26-par shares the student's base).
             from student.models import Student
@@ -1662,27 +1669,28 @@ def onboard_parent(request):
                 temp_password = ''.join(secrets.choice(string.ascii_letters + string.digits + '!@#$%') for _ in range(12))
                 username = email
 
-            # Create User with PARENT role
-            user = User.objects.create_user(
-                username=username,
-                email=email,
-                password=temp_password,
-                first_name=parent.full_name.split()[0] if parent.full_name else '',
-                last_name=' '.join(parent.full_name.split()[1:]) if len(parent.full_name.split()) > 1 else '',
-                is_active=True,
-                role='PARENT'
-            )
-
-            # Link user to parent
-            parent.user = user
-
-            parent.save()
-
-            # Link to students (ManyToMany relationship)
+            # Create User + parent atomically so a failed save never leaves an orphan User
             linked_students = []
-            if students:
-                parent.students.set(students)
-                linked_students = [s.full_name for s in students]
+            with transaction.atomic():
+                # Create User with PARENT role
+                user = User.objects.create_user(
+                    username=username,
+                    email=email,
+                    password=temp_password,
+                    first_name=parent.full_name.split()[0] if parent.full_name else '',
+                    last_name=' '.join(parent.full_name.split()[1:]) if len(parent.full_name.split()) > 1 else '',
+                    is_active=True,
+                    role='PARENT'
+                )
+
+                # Link user to parent
+                parent.user = user
+                parent.save()
+
+                # Link to students (ManyToMany relationship)
+                if students:
+                    parent.students.set(students)
+                    linked_students = [s.full_name for s in students]
             
             # Send welcome email with credentials
             try:
@@ -1851,6 +1859,7 @@ def edit_parent(request, parent_id):
 
 @login_required
 @user_passes_test(is_superadmin)
+@require_POST
 def delete_parent(request, parent_id):
     """View to delete a parent"""
     from parent.models import Parent
@@ -2381,6 +2390,7 @@ def edit_class(request, class_id):
 
 @login_required
 @user_passes_test(is_superadmin)
+@require_POST
 def delete_class(request, class_id):
     """View to delete a class"""
     from schools.models import Class
@@ -2767,6 +2777,7 @@ def edit_lesson(request, lesson_id):
 
 @login_required
 @user_passes_test(is_superadmin)
+@require_POST
 def delete_lesson(request, lesson_id):
     """View to delete a lesson"""
     from lms.models import Lesson
@@ -3169,19 +3180,26 @@ def project_assessment(request):
             if request.FILES.get('rubric_file'):
                 a.rubric_file = request.FILES['rubric_file']
             a.save()
-            # Save competency mappings
-            a.competency_mappings.all().delete()
+            # Save competency mappings — skip duplicate competencies so the
+            # (assessment, competency) unique constraint can never be violated.
             comp_ids   = request.POST.getlist('comp_id')
             comp_types = request.POST.getlist('comp_type')
-            for i, (cid, ctype) in enumerate(zip(comp_ids, comp_types)):
-                if cid:
+            with transaction.atomic():
+                a.competency_mappings.all().delete()
+                seen = set()
+                order = 0
+                for cid, ctype in zip(comp_ids, comp_types):
+                    if not cid or cid in seen:
+                        continue
+                    seen.add(cid)
                     try:
                         AssessmentCompetency.objects.create(
                             assessment=a,
                             competency=Competency.objects.get(id=cid),
                             comp_type=ctype or 'individual',
-                            order=i
+                            order=order
                         )
+                        order += 1
                     except Competency.DoesNotExist:
                         pass
             messages.success(request, f'Assessment "{a.name}" saved!')
@@ -3584,6 +3602,7 @@ def esl_product_edit(request, product_id):
 
 @login_required
 @user_passes_test(is_superadmin)
+@require_POST
 def esl_product_delete(request, product_id):
     """Delete ESL Product."""
     from competencies.models import ESLProduct
@@ -3773,6 +3792,7 @@ def announcement_edit(request, ann_id):
 
 @login_required
 @user_passes_test(is_superadmin)
+@require_POST
 def announcement_delete(request, ann_id):
     """Delete an announcement."""
     ann = get_object_or_404(Announcement, id=ann_id)
