@@ -2,6 +2,10 @@
 
 Chronological record of completed tasks (per org policy: log after each completed task).
 
+## 2026-07-29 — Fix: teacher score-entry hides projects with NULL framework_ref
+- Teacher Score Entry project dropdown filtered `framework_ref=school.framework_ref`, which EXCLUDES super-admin projects whose framework_ref is NULL (only legacy `framework` CharField set). Reproduced: NULL-framework_ref FSL/Middle project hidden from FSL teacher.
+- Fixed `api_projects_by_grade` + `_teacher_projects` (teacher/views.py) to match `Q(framework_ref=fw) | Q(framework_ref__isnull=True, framework=fw.name)`. Verified: previously-hidden project now shows; real projects intact. check clean.
+
 ## 2026-07-29 — CSL+ competencies + seed management command
 - Diagnosed "assessment competency dropdown empty for CSL+" = CSL+ framework has full pillar/sub-pillar scaffold (5 pillars, 17 sub-pillars) but 0 competencies. Code is fine (verified end-to-end via Playwright: accordion toggle, dropdown options, add-row, save-fix all work; FSL shows 6 comps).
 - Added management command `competencies/management/commands/seed_csl_competencies.py` — idempotent, seeds 3 sample competencies per CSL+ sub-pillar (51 total), Active, stage=Middle. Run on prod: `python manage.py seed_csl_competencies`.

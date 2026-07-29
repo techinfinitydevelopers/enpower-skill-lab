@@ -49,7 +49,11 @@ def api_projects_by_grade(request):
 
     qs = Project.objects.filter(grade=grade, status='Active')
     if fw_obj:
-        qs = qs.filter(framework_ref=fw_obj)
+        # Match linked projects AND legacy projects that only set the old
+        # `framework` CharField (framework_ref left NULL) — otherwise a
+        # super-admin project created without a linked framework stays hidden.
+        from django.db.models import Q
+        qs = qs.filter(Q(framework_ref=fw_obj) | Q(framework_ref__isnull=True, framework=fw_obj.name))
     projects = list(
         qs
         .exclude(project_type='Plug In')
@@ -1183,8 +1187,10 @@ def _active_projects_for_teacher(user):
     from competencies.models import Project
     qs = Project.objects.filter(status='Active').exclude(project_type='Plug In')
     school = _teacher_school(user)
-    if school and getattr(school, 'framework_ref', None):
-        qs = qs.filter(framework_ref=school.framework_ref)
+    fw = getattr(school, 'framework_ref', None) if school else None
+    if fw:
+        from django.db.models import Q
+        qs = qs.filter(Q(framework_ref=fw) | Q(framework_ref__isnull=True, framework=fw.name))
     return qs.order_by('title')
 
 
