@@ -2,6 +2,11 @@
 
 Chronological record of completed tasks (per org policy: log after each completed task).
 
+## 2026-07-29 — CSL+ competencies + seed management command
+- Diagnosed "assessment competency dropdown empty for CSL+" = CSL+ framework has full pillar/sub-pillar scaffold (5 pillars, 17 sub-pillars) but 0 competencies. Code is fine (verified end-to-end via Playwright: accordion toggle, dropdown options, add-row, save-fix all work; FSL shows 6 comps).
+- Added management command `competencies/management/commands/seed_csl_competencies.py` — idempotent, seeds 3 sample competencies per CSL+ sub-pillar (51 total), Active, stage=Middle. Run on prod: `python manage.py seed_csl_competencies`.
+- Seeded locally: 51 CSL+ active competencies.
+
 ## 2026-07-29 — Fix IntegrityError on Project-Assessment save
 - superadmin project_assessment / save_assessment: duplicate competency in POST caused UNIQUE(assessment,competency) IntegrityError on AssessmentCompetency. Fixed by de-duping comp_ids (skip already-seen) + wrapping delete+recreate in transaction.atomic. views.py ~3167.
 - Reported on PROD (enpower.techinfinity.link); fix is in repo — needs deploy.
