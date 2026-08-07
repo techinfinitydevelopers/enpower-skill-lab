@@ -210,6 +210,8 @@ let sessions = [];
 let selSession = null;     // session dict
 let students = [];         // [{id,name,roll,initial}]
 let state = {};            // {id: 'present'|'absent'}
+let catState = {};         // {id: 'A'|'B'|'C'|''}  — optional A/B/C category
+let catVisible = false;    // whether the A/B/C category selector is shown
 let classStatus = 'held';
 
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -329,6 +331,9 @@ function loadStudents(){
             state = {};
             const recs = d.records || {};
             students.forEach(s => { state[s.id] = recs[String(s.id)] === 'absent' || recs[String(s.id)] === 'late' ? 'absent' : 'present'; });
+            catState = {};
+            const cats = d.categories || {};
+            students.forEach(s => { catState[s.id] = cats[String(s.id)] || ''; });
             renderStudents();
             recomputeStats();
         })
@@ -344,6 +349,12 @@ function renderStudents(){
     empty.style.display = 'none';
     el.innerHTML = list.map(s => {
         const st = state[s.id] || 'present';
+        const cat = catState[s.id] || '';
+        const catHtml = catVisible ? `
+            <div class="catseg" data-sid="${s.id}" style="display:flex; gap:4px; margin-left:8px;">
+                ${['A','B','C'].map(c => `<button data-cat="${c}" onclick="setCategory(${s.id},'${c}')"
+                    style="min-width:30px; padding:6px 0; border-radius:8px; border:1px solid #e2d6ef; cursor:pointer; font-weight:700; font-size:13px; ${cat===c?'background:#5A1F6E;color:#fff;border-color:#5A1F6E;':'background:#fff;color:#5A1F6E;'}">${c}</button>`).join('')}
+            </div>` : '';
         return `<div class="stu">
             <span class="avatar">${esc(s.initial)}</span>
             <div style="flex:1;">
@@ -354,6 +365,7 @@ function renderStudents(){
                 <button data-st="present" class="${st==='present'?'on-present':''}" onclick="setStatus(${s.id},'present')">Present</button>
                 <button data-st="absent" class="${st==='absent'?'on-absent':''}" onclick="setStatus(${s.id},'absent')">Absent</button>
             </div>
+            ${catHtml}
         </div>`;
     }).join('');
 }
@@ -365,10 +377,27 @@ window.setStatus = function(sid, st){
     recomputeStats();
 };
 
+window.setCategory = function(sid, cat){
+    // toggle off if the same category is clicked again
+    catState[sid] = (catState[sid] === cat) ? '' : cat;
+    const seg = document.querySelector(`.catseg[data-sid="${sid}"]`);
+    if (seg) seg.querySelectorAll('button').forEach(b => {
+        const on = b.dataset.cat === catState[sid];
+        b.style.background = on ? '#5A1F6E' : '#fff';
+        b.style.color = on ? '#fff' : '#5A1F6E';
+        b.style.borderColor = on ? '#5A1F6E' : '#e2d6ef';
+    });
+};
+
 document.getElementById('allPresent').addEventListener('click', () => { students.forEach(s => state[s.id]='present'); renderStudents(); recomputeStats(); });
 document.getElementById('allAbsent').addEventListener('click', () => { students.forEach(s => state[s.id]='absent'); renderStudents(); recomputeStats(); });
 document.getElementById('findStu').addEventListener('input', renderStudents);
-document.getElementById('catBtn').addEventListener('click', () => { const n=document.getElementById('catNote'); n.style.display = n.style.display==='none'?'block':'none'; });
+document.getElementById('catBtn').addEventListener('click', () => {
+    catVisible = !catVisible;
+    const note = document.getElementById('catNote');
+    if (note) { note.style.display = catVisible ? 'block' : 'none'; note.textContent = catVisible ? 'Tap A, B or C next to a student to set their category. Tap again to clear.' : ''; }
+    renderStudents();
+});
 
 function recomputeStats(){
     const total = students.length;
@@ -396,12 +425,13 @@ document.getElementById('saveBtn').addEventListener('click', () => {
     if (!selClassroom || !selSession){ notify('Select a classroom and session first.', 'warning'); return; }
     const btn = document.getElementById('saveBtn'); btn.disabled = true;
     const records = {}; students.forEach(s => records[s.id] = state[s.id] || 'present');
+    const categories = {}; students.forEach(s => categories[s.id] = catState[s.id] || '');
     fetch(SAVE_URL, {
         method:'POST',
         headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},
         body: JSON.stringify({
             classroom: selClassroom.id, date: selSession.date,
-            time: selSession.start_time || '', class_status: classStatus, records
+            time: selSession.start_time || '', class_status: classStatus, records, categories
         })
     })
     .then(r => r.json())

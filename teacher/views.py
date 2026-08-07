@@ -1365,12 +1365,15 @@ def api_attendance_students(request):
     ).order_by('session_number', 'id').first()
 
     records = {}
+    categories = {}
     already_marked = False
     class_status = 'held'
     if session:
         class_status = session.class_status or 'held'
-        for r in AttendanceRecord.objects.filter(session=session).values('student_id', 'status'):
+        for r in AttendanceRecord.objects.filter(session=session).values('student_id', 'status', 'category'):
             records[str(r['student_id'])] = r['status']
+            if r['category']:
+                categories[str(r['student_id'])] = r['category']
         already_marked = len(records) > 0
 
     # Effective status per student (existing or default present) for live stats.
@@ -1384,6 +1387,7 @@ def api_attendance_students(request):
     return JsonResponse({
         'students': student_dicts,
         'records': records,
+        'categories': categories,
         'class_status': class_status,
         'already_marked': already_marked,
         'stats': stats,
@@ -1416,6 +1420,7 @@ def api_save_attendance(request):
     if class_status not in ('held', 'cancelled'):
         class_status = 'held'
     records = data.get('records', {}) or {}
+    categories = data.get('categories', {}) or {}
 
     tt = _resolve_teacher_timetable(request.user, data.get('classroom'))
     if tt:
@@ -1465,8 +1470,14 @@ def api_save_attendance(request):
             continue
         if school and student.school_id != school.id:
             continue
+        rec_defaults = {'status': status}
+        # Only touch category when the client sends it, so present/absent-only
+        # saves never wipe an existing A/B/C tag.
+        if sid in categories:
+            cat = str(categories.get(sid) or '').strip().upper()
+            rec_defaults['category'] = cat if cat in ('A', 'B', 'C') else ''
         AttendanceRecord.objects.update_or_create(
-            session=session, student=student, defaults={'status': status},
+            session=session, student=student, defaults=rec_defaults,
         )
         effective[str(sid)] = status
         saved += 1

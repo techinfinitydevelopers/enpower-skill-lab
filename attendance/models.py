@@ -116,9 +116,17 @@ class AttendanceRecord(models.Model):
         ('absent', 'Absent'),
         ('late', 'Late'),
     ]
+    CATEGORY_CHOICES = [
+        ('A', 'A'),
+        ('B', 'B'),
+        ('C', 'C'),
+    ]
     session = models.ForeignKey(AttendanceSession, on_delete=models.CASCADE, related_name='records')
     student = models.ForeignKey('student.Student', on_delete=models.CASCADE, related_name='attendance_records')
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='present')
+    # Optional A/B/C performance/engagement category the coach can tag per session.
+    # Blank by default so it never affects existing present/absent behaviour.
+    category = models.CharField(max_length=1, choices=CATEGORY_CHOICES, blank=True, default='')
     marked_at = models.DateTimeField(auto_now=True)
 
     class Meta:
