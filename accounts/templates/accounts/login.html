@@ -18,12 +18,14 @@
         .right-section { width: 50%; }
         .form-container { max-width: 420px; margin: auto; }
         .input-wrapper { position: relative; }
-        .input-wrapper iconify-icon { position: absolute; left: 15px; top: 50%; font-size: 20px; transform: translateY(-50%); color: #7b7b7b; }
+        /* Anchor icons to the INPUT's vertical centre (height 52px -> 26px), not the
+           wrapper, so an error message below the field doesn't push them down. */
+        .input-wrapper iconify-icon { position: absolute; left: 15px; top: 26px; font-size: 20px; transform: translateY(-50%); color: #7b7b7b; }
         .main-head { font-weight: 500 !important; }
         .form-control { height: 52px; border-radius: 12px; padding-left: 45px; background: #f2f2f7; border: 1px solid #e0e0e0; }
         .form-control.error { border-color: red !important; }
         .error-text { color: red; font-size: 13px; margin-top: 5px; }
-        .toggle-eye { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); font-size: 20px; cursor: pointer; color: #7b7b7b; }
+        .toggle-eye { position: absolute; right: 15px; top: 26px; transform: translateY(-50%); font-size: 20px; cursor: pointer; color: #7b7b7b; }
         .btn-primary { height: 52px; border-radius: 12px; background: #6b30ee; border: none; }
         .btn-primary:hover { background: #5b25db; }
         .social-btn { border: 1px solid #dedede; border-radius: 12px; padding: 12px 16px; width: 48%; background: white; }
@@ -50,6 +52,8 @@
             body { padding: 0 !important; }
             .right-section { padding: 30px 15px !important; margin-top: 40px; }
             .form-control { height: 48px !important; padding-left: 42px !important; }
+            /* input height 48px -> centre 24px */
+            .input-wrapper iconify-icon, .toggle-eye, .input-wrapper .bi-chevron-down { top: 24px !important; }
             .toggle-eye { right: 12px !important; }
             .divider:before, .divider:after { width: 28% !important; }
             .social-btn { padding: 10px 12px !important; }
@@ -92,7 +96,7 @@
                                 <option value="PROGRAM_COORDINATOR">Program Coordinator</option>
                                 <option value="SUPER_ADMIN">Super Admin</option>
                             </select>
-                            <span class="bi bi-chevron-down" style="position:absolute; right:15px; top:50%; transform:translateY(-50%); pointer-events:none; color:#7b7b7b; font-size:16px;"></span>
+                            <span class="bi bi-chevron-down" style="position:absolute; right:15px; top:26px; transform:translateY(-50%); pointer-events:none; color:#7b7b7b; font-size:16px;"></span>
                             <div class="error-text" id="roleError"></div>
                         </div>
                         <div class="mb-3 input-wrapper">
