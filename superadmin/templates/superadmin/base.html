@@ -298,7 +298,13 @@
                     </div>
                 </div>
 
-                <!-- My Account -->
+                <!-- Announcements (second last) -->
+                <a href="{% url 'announcements_list' %}" id="nav-announcements" class="sidebar-nav-link">
+                    <span class="material-symbols-outlined">campaign</span>
+                    Announcements
+                </a>
+
+                <!-- My Account (last) -->
                 <div class="sidebar-dropdown">
                     <a href="#" class="sidebar-dropdown-toggle" id="account-dropdown">
                         <span class="material-symbols-outlined">account_circle</span>
@@ -320,12 +326,6 @@
                         </a>
                     </div>
                 </div>
-
-                <!-- Announcements -->
-                <a href="{% url 'announcements_list' %}" id="nav-announcements" class="sidebar-nav-link">
-                    <span class="material-symbols-outlined">campaign</span>
-                    Announcements
-                </a>
             </nav>
         </aside>
 
