@@ -1157,11 +1157,53 @@ def _process_student(row, created_by):
             from parent.models import Parent
             try:
                 parent = Parent.objects.get(email=parent_email)
-                parent.students.add(Student.objects.get(user=user))
+                this_student = Student.objects.get(user=user)
+                parent.students.add(this_student)
+                # If the parent was created before this child (so it only got a
+                # temporary random P##### id / email login), upgrade it now to the
+                # structured <child-base>-par id and sync its login. No-op if the
+                # parent already has a structured id.
+                _ensure_structured_parent_id(parent, this_student)
             except Parent.DoesNotExist:
                 pass  # Parent not imported yet — will auto-link when parent is imported later
 
     _send_welcome_email(email, f"{row['first_name']} {row['last_name']}", password, 'Student', login_id=reg_id)
+
+
+import re as _re
+_RANDOM_PARENT_ID = _re.compile(r'^P[A-Z0-9]{5}$')
+
+
+def _ensure_structured_parent_id(parent, student):
+    """Upgrade a parent's temporary/random id to the structured `<child-base>-par`.
+
+    Fires only when the parent's current id is blank or matches the random
+    P##### fallback pattern. Regenerates the id from the linked child and syncs
+    the login username + initial password to it (spec: the id doubles as the
+    login, initial password == id). No-op when the parent already has a
+    structured id, so it never disturbs correctly-onboarded parents.
+    """
+    from accounts.onboarding_ids import parent_id_from_student
+    current = (parent.parent_id or '').strip()
+    if current and not _RANDOM_PARENT_ID.match(current):
+        return  # already structured — leave untouched
+    try:
+        new_id = parent_id_from_student(student)
+    except Exception:
+        return
+    parent.parent_id = new_id
+    try:
+        parent.save(update_fields=['parent_id'])
+    except Exception:
+        parent.save()
+    u = getattr(parent, 'user', None)
+    if u:
+        try:
+            u.username = new_id
+            u.set_password(new_id)
+            u.save(update_fields=['username', 'password'])
+        except Exception:
+            pass
 
 
 def _process_parent(row, created_by):

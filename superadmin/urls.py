@@ -55,6 +55,8 @@ urlpatterns = [
     path('test-messages/', views.test_messages, name='test_messages'),  # Remove in production
     # Bulk Upload / Manage Users
     path('bulk-upload/', views.bulk_upload_page, name='bulk_upload_page'),
+    # Download onboarding credentials (Login ID + initial password) as CSV
+    path('export-credentials/', views.export_credentials, name='export_credentials'),
     # Bulk Import URLs
     path('bulk-import/<str:role>/sample-csv/', download_sample_csv, name='download_sample_csv'),
     path('bulk-import/<str:role>/upload/', bulk_import, name='bulk_import'),

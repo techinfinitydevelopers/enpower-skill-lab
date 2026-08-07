@@ -677,6 +677,25 @@ def download_sample_view(request, role):
     return response
 
 
+def _parent_row_in_scope(row, allowed_schools):
+    """Parent rows have no school column, so scope them by the schools of the
+    students they link to (via `student_emails`). In-scope only if every linked
+    student resolves and belongs to a school assigned to this coordinator.
+    Returns (in_scope: bool, reason: str)."""
+    from student.models import Student
+    emails = [e.strip() for e in (row.get('student_emails') or '').split(',') if e.strip()]
+    if not emails:
+        return False, 'No student email provided to determine school'
+    for semail in emails:
+        st = Student.objects.filter(school_email=semail).first()
+        if not st:
+            return False, f'Student "{semail}" not found (import students first)'
+        sname = ((st.school.school_name if st.school else '') or st.school_name or '').strip().lower()
+        if sname not in allowed_schools:
+            return False, "Linked student's school is not assigned to you"
+    return True, ''
+
+
 @login_required
 @user_passes_test(is_coordinator)
 def bulk_import_view(request, role):
@@ -752,11 +771,19 @@ def bulk_import_view(request, role):
 
     for i, row in enumerate(rows):
         row = {k: (v.strip() if v else '') for k, v in row.items()}
-        row_school = row.get('school_name', '').strip().lower()
-        if not row_school or row_school not in allowed_schools:
+        # School-scope check depends on role. Students carry a `school_name`
+        # column; parents do not, so their school is derived from the schools of
+        # the students they link to (via `student_emails`).
+        if role == 'parent':
+            in_scope, scope_reason = _parent_row_in_scope(row, allowed_schools)
+        else:
+            row_school = row.get('school_name', '').strip().lower()
+            in_scope = bool(row_school) and row_school in allowed_schools
+            scope_reason = 'School not assigned to you'
+        if not in_scope:
             fail_count += 1
             results.append({'row': i + 1, 'name': _get_display_name(row, role),
-                            'status': 'failed', 'reason': 'School not assigned to you'})
+                            'status': 'failed', 'reason': scope_reason})
             continue
         try:
             processor(row, request.user)

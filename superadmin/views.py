@@ -3898,3 +3898,74 @@ def api_save_rubric_grid(request):
         saved += 1
 
     return JsonResponse({'ok': True, 'saved': saved})
+
+
+@login_required
+@user_passes_test(is_superadmin)
+def export_credentials(request):
+    """Download a CSV of onboarded student & parent login credentials.
+
+    Login ID = the account username. The initial password is the SAME as the
+    Login ID (per the onboarding spec: "Password can be same as id"). This is
+    derived purely from existing data — it does NOT read or modify any stored
+    password. Optional ?school_id= filter and ?role=student|parent filter.
+
+    NOTE: if a user has already changed their password, the "Initial Password"
+    column no longer reflects their current password (hashes cannot be read).
+    """
+    import csv
+    from django.http import HttpResponse
+    from student.models import Student
+    from parent.models import Parent
+
+    school_id = request.GET.get('school_id')
+    role = (request.GET.get('role') or '').lower()
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="onboarding_credentials.csv"'
+    writer = csv.writer(response)
+    writer.writerow(['Role', 'Name', 'School', 'Grade', 'Division', 'Login ID', 'Initial Password'])
+
+    if role != 'parent':
+        students = Student.objects.select_related('user', 'school').order_by(
+            'school__school_name', 'student_class', 'division'
+        )
+        if school_id:
+            students = students.filter(school_id=school_id)
+        for s in students:
+            login_id = (s.user.username if s.user else None) or s.skill_lab_reg_id or ''
+            if not login_id:
+                continue
+            writer.writerow([
+                'Student',
+                s.full_name,
+                (s.school.school_name if s.school else (s.school_name or '')),
+                s.student_class or '',
+                s.division or '',
+                login_id,
+                login_id,  # initial password == login id
+            ])
+
+    if role != 'student':
+        parents = Parent.objects.select_related('user').prefetch_related('students__school').order_by('parent_id')
+        if school_id:
+            parents = parents.filter(students__school_id=school_id).distinct()
+        for p in parents:
+            login_id = (p.user.username if p.user else None) or p.parent_id or ''
+            if not login_id:
+                continue
+            first_student = p.students.first()
+            school_name = (first_student.school.school_name if (first_student and first_student.school) else '')
+            grade = (first_student.student_class if first_student else '')
+            div = (first_student.division if first_student else '')
+            writer.writerow([
+                'Parent',
+                p.full_name,
+                school_name,
+                grade,
+                div,
+                login_id,
+                login_id,
+            ])
+
+    return response

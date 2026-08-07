@@ -93,7 +93,7 @@ class Parent(models.Model):
     ]
 
     # Parent ID (auto-generated)
-    parent_id = models.CharField(max_length=20, unique=True, blank=True)
+    parent_id = models.CharField(max_length=30, unique=True, blank=True)
 
     # User Account Link
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='parent_profile')
