@@ -144,10 +144,20 @@ def student_reports(request):
     from competencies.models import ProjectReport
     student = getattr(request.user, 'student_profile', None) or getattr(request.user, 'student', None)
     reports = []
+    attendance_percent = 0
     if student:
         reports = ProjectReport.objects.filter(student=student).select_related('project').order_by('-project__sequence_number', '-generated_at')
+        try:
+            from attendance.services import student_attendance_stats
+            attendance_percent = student_attendance_stats(student).get('percent') or 0
+        except Exception:
+            attendance_percent = 0
 
-    return render(request, 'student/reports.html', {'reports': reports})
+    return render(request, 'student/reports.html', {
+        'student': student,
+        'reports': reports,
+        'attendance_percent': attendance_percent,
+    })
 
 
 @login_required

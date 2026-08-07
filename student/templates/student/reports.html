@@ -2,59 +2,149 @@
 {% load static %}
 {% block title %}Skill Passport — Student{% endblock %}
 
-{% block content %}
-<div style="max-width:860px; margin:0 auto; font-family:'Poppins',sans-serif;">
+{% block extra_css %}
+{% include 'student/_passport_styles.html' %}
+<style>
+    .sp2 .reports-list { display:flex; flex-direction:column; gap:16px; }
+    .sp2 .sp-report-card {
+        display:flex; align-items:center; gap:18px; background:var(--card);
+        border:2px solid var(--border); border-radius:var(--radius-lg); padding:20px 24px;
+        text-decoration:none; box-shadow:var(--shadow); transition:all 0.3s;
+        animation:sp-popIn 0.5s ease both; position:relative; overflow:hidden;
+    }
+    .sp2 .sp-report-card::before { content:''; position:absolute; inset:0; border-radius:var(--radius-lg); background:linear-gradient(135deg,transparent 60%,var(--purple-pale) 100%); opacity:0; transition:opacity 0.3s; }
+    .sp2 .sp-report-card:hover::before { opacity:1; }
+    .sp2 .sp-report-card:hover { border-color:var(--purple-light); box-shadow:var(--shadow-hover); transform:translateY(-4px); }
+    .sp2 .sp-report-card:nth-child(1){animation-delay:0.25s;} .sp2 .sp-report-card:nth-child(2){animation-delay:0.35s;}
+    .sp2 .sp-report-card:nth-child(3){animation-delay:0.45s;} .sp2 .sp-report-card:nth-child(4){animation-delay:0.55s;}
+    .sp2 .rc-icon { width:52px; height:52px; border-radius:16px; background:linear-gradient(135deg,var(--purple),var(--purple-mid)); display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 4px 14px rgba(90,45,130,0.28); position:relative; z-index:1; transition:transform 0.3s; }
+    .sp2 .sp-report-card:hover .rc-icon { transform:scale(1.08) rotate(-5deg); }
+    .sp2 .rc-icon .material-symbols-outlined { color:#fff; font-size:26px; font-variation-settings:'FILL' 1; }
+    .sp2 .rc-body { flex:1; min-width:0; position:relative; z-index:1; }
+    .sp2 .rc-type { font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:0.08em; color:var(--purple-light); margin-bottom:3px; }
+    .sp2 .rc-title { font-family:'Fredoka One',sans-serif; font-size:17px; color:var(--purple); line-height:1.3; }
+    .sp2 .rc-meta { font-size:12px; color:var(--text-muted); font-weight:700; margin-top:5px; }
+    .sp2 .rc-right { display:flex; align-items:center; gap:12px; flex-shrink:0; position:relative; z-index:1; }
+    .sp2 .rc-badge { padding:5px 13px; border-radius:var(--radius-pill); font-size:11px; font-weight:800; white-space:nowrap; }
+    .sp2 .rc-badge.ready { background:var(--green-light); color:#15803D; }
+    .sp2 .rc-badge.outdated { background:var(--gold-pale); color:#B45309; }
+    .sp2 .rc-chevron { color:var(--purple-light); display:flex; transition:transform 0.3s; }
+    .sp2 .sp-report-card:hover .rc-chevron { transform:translateX(4px); }
+    @media(max-width:768px){
+        .sp2 .sp-report-card { padding:16px; gap:12px; }
+        .sp2 .rc-title { font-size:15px; }
+        .sp2 .rc-right { flex-direction:column; gap:8px; align-items:flex-end; }
+    }
+</style>
+{% endblock %}
 
-    <div style="margin-bottom:28px;">
-        <h1 style="font-size:22px; font-weight:700; color:#1e1b4b; margin:0 0 4px; display:flex; align-items:center; gap:8px;">
-            <span class="material-symbols-outlined" style="font-size:24px; color:#5A1F6E;">workspace_premium</span>
-            Skill Passport
-        </h1>
-        <p style="font-size:13px; color:#94a3b8; margin:0;">Your project-wise competency reports</p>
+{% block content %}
+<div class="sp2">
+
+    <!-- decorative background icons -->
+    <div class="bg-icons" aria-hidden="true">
+        <span class="material-symbols-outlined bg-icon-item">workspace_premium</span>
+        <span class="material-symbols-outlined bg-icon-item">science</span>
+        <span class="material-symbols-outlined bg-icon-item gold">emoji_events</span>
+        <span class="material-symbols-outlined bg-icon-item">lightbulb</span>
+        <span class="material-symbols-outlined bg-icon-item">psychology</span>
+        <span class="material-symbols-outlined bg-icon-item gold">grade</span>
+        <span class="material-symbols-outlined bg-icon-item">menu_book</span>
+        <span class="material-symbols-outlined bg-icon-item">hub</span>
+        <span class="material-symbols-outlined bg-icon-item gold">military_tech</span>
+        <span class="material-symbols-outlined bg-icon-item">school</span>
+        <span class="material-symbols-outlined bg-icon-item gold">star</span>
+        <span class="material-symbols-outlined bg-icon-item">rocket_launch</span>
+    </div>
+
+    <div class="sp-confetti-container" id="spConfetti"></div>
+
+    <!-- Student Header -->
+    <div class="student-header">
+        <div class="avatar" onclick="spBurst(this,'⭐')">{{ student.first_name|slice:":1" }}{{ student.last_name|slice:":1" }}</div>
+        <div class="student-info">
+            <div class="academic-year">Skill Passport</div>
+            <div class="student-name-wrap">
+                <span class="student-name" id="spName">{{ student.full_name|default:user.get_full_name|default:user.username }}</span>
+            </div>
+            <div class="student-meta">
+                {% if student.student_class %}<span class="meta-chip"><span class="material-symbols-outlined">school</span> Grade {{ student.student_class }}{% if student.division %} – {{ student.division }}{% endif %}</span>{% endif %}
+                {% if student.skill_lab_reg_id %}<span class="meta-chip"><span class="material-symbols-outlined">badge</span> {{ student.skill_lab_reg_id }}</span>{% endif %}
+                <span class="meta-chip"><span class="material-symbols-outlined">verified</span> Project Reports</span>
+            </div>
+        </div>
+        <div class="stats-group">
+            <div class="stat-card">
+                <div class="stat-emoji">📄</div>
+                <div class="stat-label">Projects</div>
+                <div class="stat-value" id="spLevel" data-target="{{ reports|length }}" data-decimals="0">0</div>
+                <div class="stat-sub">report{{ reports|length|pluralize }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-emoji">🏆</div>
+                <div class="stat-label">Attendance</div>
+                <div class="stat-value" id="spAtt" data-target="{{ attendance_percent }}" data-decimals="0" data-suffix="%">0%</div>
+                <div class="stat-sub">this year</div>
+            </div>
+        </div>
     </div>
 
     {% if reports %}
-    <div style="display:flex; flex-direction:column; gap:14px;">
-        {% for report in reports %}
-        <a href="{% url 'student:student_report_detail' report.project.id %}" style="text-decoration:none; display:block;">
-            <div style="background:#fff; border-radius:14px; border:1px solid #ede9f4; padding:20px 24px; display:flex; align-items:center; justify-content:space-between; gap:16px; transition:box-shadow 0.15s;"
-                 onmouseover="this.style.boxShadow='0 4px 16px rgba(90,31,110,0.1)'" onmouseout="this.style.boxShadow='none'">
-                <div style="display:flex; align-items:center; gap:16px;">
-                    <div style="width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg,#3b0f50,#5A1F6E); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                        <span class="material-symbols-outlined" style="font-size:22px; color:#fff;">workspace_premium</span>
-                    </div>
-                    <div>
-                        <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:#9ca3af; margin-bottom:3px;">{{ report.project.project_type }}</div>
-                        <div style="font-size:15px; font-weight:700; color:#1e1b4b;">{{ report.project.title }}</div>
-                        <div style="font-size:12px; color:#94a3b8; margin-top:2px;">
-                            {{ report.project.grade }}
-                            {% if report.project.sequence_number %} · Project {{ report.project.sequence_number }}{% endif %}
-                            · Generated {{ report.generated_at|date:"d M Y" }}
-                        </div>
+    <!-- Project Reports -->
+    <div class="section-block">
+        <div class="section-title">
+            <div class="section-icon"><span class="material-symbols-outlined">workspace_premium</span></div>
+            Your Project Reports
+            <span class="section-badge">📈 {{ reports|length }} Report{{ reports|length|pluralize }}</span>
+        </div>
+        <div class="reports-list">
+            {% for report in reports %}
+            <a class="sp-report-card" href="{% url 'student:student_report_detail' report.project.id %}">
+                <div class="rc-icon"><span class="material-symbols-outlined">workspace_premium</span></div>
+                <div class="rc-body">
+                    <div class="rc-type">{{ report.project.project_type }}</div>
+                    <div class="rc-title">{{ report.project.title }}</div>
+                    <div class="rc-meta">
+                        {{ report.project.grade }}
+                        {% if report.project.sequence_number %} · Project {{ report.project.sequence_number }}{% endif %}
+                        · Generated {{ report.generated_at|date:"d M Y" }}
                     </div>
                 </div>
-                <div style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
+                <div class="rc-right">
                     {% if report.is_outdated %}
-                    <span style="padding:4px 10px; border-radius:999px; font-size:11px; font-weight:600; background:#fef3c7; color:#d97706;">Outdated</span>
+                    <span class="rc-badge outdated">Outdated</span>
                     {% else %}
-                    <span style="padding:4px 10px; border-radius:999px; font-size:11px; font-weight:600; background:#f0fdf4; color:#16a34a;">Ready</span>
+                    <span class="rc-badge ready">Ready</span>
                     {% endif %}
-                    <span class="material-symbols-outlined" style="font-size:20px; color:#9ca3af;">chevron_right</span>
+                    <span class="rc-chevron"><span class="material-symbols-outlined">chevron_right</span></span>
                 </div>
-            </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Footer Nav -->
+    <div class="footer-nav">
+        <a class="sp-btn sp-btn-outline" href="{% url 'student:student_annual_passport' %}">
+            <span class="material-symbols-outlined">verified</span> Annual Passport
         </a>
-        {% endfor %}
+        <a class="sp-btn sp-btn-primary" href="{% url 'student:student_dashboard' %}" onclick="spConfettiFire()">
+            <span class="material-symbols-outlined">home</span> Dashboard 🏠
+        </a>
     </div>
 
     {% else %}
-    <div style="background:#fff; border-radius:16px; border:1px solid #ede9f4; padding:60px 20px; text-align:center;">
-        <div style="width:72px; height:72px; border-radius:50%; background:rgba(90,31,110,0.08); display:flex; align-items:center; justify-content:center; margin:0 auto 16px;">
-            <span class="material-symbols-outlined" style="font-size:32px; color:#5A1F6E;">workspace_premium</span>
+    <!-- Empty State -->
+    <div class="sp-empty">
+        <div style="width:72px; height:72px; border-radius:50%; background:var(--purple-pale); display:flex; align-items:center; justify-content:center; margin:0 auto 16px;">
+            <span class="material-symbols-outlined" style="font-size:32px; color:var(--purple);">workspace_premium</span>
         </div>
-        <h3 style="font-size:16px; font-weight:700; color:#1e1b4b; margin:0 0 6px;">No Reports Yet</h3>
-        <p style="font-size:13px; color:#94a3b8; margin:0;">Your Skill Passport reports will appear here once your teacher generates them.</p>
+        <h3 style="font-size:18px; font-weight:900; color:var(--purple); margin:0 0 6px; font-family:'Fredoka One',sans-serif;">No Reports Yet</h3>
+        <p style="font-size:14px; color:var(--text-muted); margin:0; font-weight:700;">Your Skill Passport reports will appear here once your teacher generates them.</p>
     </div>
     {% endif %}
 
 </div>
 {% endblock %}
+
+{% block extra_js %}{% include 'student/_passport_scripts.html' %}{% endblock %}
