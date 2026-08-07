@@ -532,4 +532,59 @@
         </div>
     </div>
 </div>
+
+<script>
+/* Schools Assigned multi-select — open dropdown, add/remove chips, search.
+   (edit page previously had no JS, so a 3rd school could not be added.) */
+document.addEventListener('DOMContentLoaded', function () {
+    const selectedItemsContainer = document.getElementById('selectedSchools');
+    const dropdown = document.getElementById('schoolsDropdown');
+    const checkboxes = document.querySelectorAll('input[name="schools"]');
+    const searchInput = document.getElementById('schoolSearch');
+    if (!selectedItemsContainer || !dropdown) return;
+
+    selectedItemsContainer.addEventListener('click', function () {
+        dropdown.classList.toggle('active');
+        selectedItemsContainer.classList.toggle('active');
+    });
+    document.addEventListener('click', function (e) {
+        if (!e.target.closest('.opc-multi-select-container')) {
+            dropdown.classList.remove('active');
+            selectedItemsContainer.classList.remove('active');
+        }
+    });
+    checkboxes.forEach(cb => cb.addEventListener('change', updateSelectedSchools));
+
+    function updateSelectedSchools() {
+        const selected = Array.from(checkboxes).filter(cb => cb.checked)
+            .map(cb => ({ value: cb.value, label: cb.nextElementSibling.textContent.trim() }));
+        if (selected.length === 0) {
+            selectedItemsContainer.innerHTML = '<span class="placeholder">Select schools to assign</span>';
+        } else {
+            selectedItemsContainer.innerHTML = selected.map(item =>
+                `<span class="opc-selected-tag">${item.label} <span class="remove" data-value="${item.value}">&times;</span></span>`
+            ).join('');
+            selectedItemsContainer.querySelectorAll('.remove').forEach(btn => {
+                btn.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    const cb = document.querySelector(`input[name="schools"][value="${this.getAttribute('data-value')}"]`);
+                    if (cb) { cb.checked = false; updateSelectedSchools(); }
+                });
+            });
+        }
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener('input', function () {
+            const term = this.value.toLowerCase();
+            document.querySelectorAll('.opc-checkbox-option').forEach(opt => {
+                opt.style.display = opt.textContent.toLowerCase().includes(term) ? 'flex' : 'none';
+            });
+        });
+    }
+
+    // Normalise the initially server-rendered chips to the JS-managed version.
+    updateSelectedSchools();
+});
+</script>
 {% endblock %}
