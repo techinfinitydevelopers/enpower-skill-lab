@@ -1434,16 +1434,22 @@ def _parse_date(value):
 
 
 def _send_welcome_email(email, name, password, role_label, login_id=None):
+    # Send is non-blocking (a mail failure must never abort the import), but we
+    # now LOG failures instead of swallowing them silently, so "email not
+    # arriving" can actually be diagnosed from the server log.
     try:
         send_mail(
             subject=f'Welcome to Enpower Skill Lab — {role_label} Account',
             message=f'Hello {name},\n\nYour {role_label} account has been created.\n\nLogin: {login_id or email}\nPassword: {password}\n\nPlease change your password after first login.\n\nTeam Enpower Skill Lab',
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[email],
-            fail_silently=True,
+            fail_silently=False,
         )
-    except Exception:
-        pass  # Email failure should not block import
+    except Exception as e:
+        import logging
+        logging.getLogger('enpower.email').error(
+            'Welcome email FAILED for %s (%s): %s: %s',
+            email, role_label, type(e).__name__, e)
 
 
 ROLE_PROCESSORS = {
