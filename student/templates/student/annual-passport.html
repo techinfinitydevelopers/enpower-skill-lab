@@ -55,9 +55,11 @@
         </div>
     </div>
 
-    {% if has_data %}
-
-    <!-- Strongest project of the year + its work-firm category -->
+    <!-- Strongest project of the year + its work-firm category.
+         Deliberately outside the has_data block: the annual passport only
+         counts projects that have a sequence_number, so a student can have a
+         scored project report and still have no annual data. Their best
+         project is still worth showing. -->
     {% if top_project %}
     <div class="section-block">
         <div class="section-title">
@@ -82,6 +84,8 @@
         <div class="topproj-note">This is where you performed best this year — a good hint at the kind of work that suits you.</div>
     </div>
     {% endif %}
+
+    {% if has_data %}
 
     <!-- Top Career Matches -->
     {% if top_3_profiles %}
