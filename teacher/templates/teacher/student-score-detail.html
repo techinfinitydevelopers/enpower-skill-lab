@@ -207,6 +207,29 @@
         </div>
     </div>
 
+    <!-- Overall project feedback — one per student per project, shown to parents -->
+    <div class="bg-white rounded-xl shadow-sm p-6 space-y-4" style="border:1px solid #ede9f4; margin-top:20px;">
+        <label style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:#94a3b8; display:block; margin-bottom:8px;">
+            <span class="material-symbols-outlined" style="font-size:14px; vertical-align:middle; margin-right:4px;">workspace_premium</span>
+            Overall Project Feedback
+            <span style="font-size:10px; font-weight:600; text-transform:none; letter-spacing:0; color:#b0a8bc; margin-left:6px;">— {{ project.title }}</span>
+        </label>
+        <p style="font-size:12px; color:#94a3b8; margin:-4px 0 4px;">
+            One summary for the whole project, separate from the per-assessment feedback above. Visible to the student's parent.
+        </p>
+        <textarea id="projectFeedbackInput" rows="4" placeholder="Summarise this student's journey across the whole project..."
+            style="width:100%; border:1.5px solid #e2e8f0; border-radius:10px; padding:12px 16px; font-size:14px; color:#374151; outline:none; resize:vertical; font-family:'Poppins',sans-serif; transition:border-color 0.15s;"
+            onfocus="this.style.borderColor='#5A1F6E'" onblur="this.style.borderColor='#e2e8f0'">{{ project_feedback_text }}</textarea>
+
+        <div class="flex items-center justify-end">
+            <button onclick="saveProjectFeedback(this)" style="display:inline-flex; align-items:center; gap:8px; background:#5A1F6E; color:#fff; border:none; border-radius:10px; padding:11px 28px; font-size:14px; font-weight:700; cursor:pointer; transition:background 0.15s; font-family:'Poppins',sans-serif;"
+                onmouseover="this.style.background='#4a1860'" onmouseout="this.style.background='#5A1F6E'">
+                <span class="material-symbols-outlined" style="font-size:18px;">save</span>
+                Save Project Feedback
+            </button>
+        </div>
+    </div>
+
 
 </div>
 
@@ -250,6 +273,7 @@
 <script>
 const SAVE_SCORE_URL    = "{% url 'teacher:api_save_score' %}";
 const SAVE_FEEDBACK_URL = "{% url 'teacher:api_save_feedback' %}";
+const SAVE_PROJECT_FEEDBACK_URL = "{% url 'teacher:api_save_project_feedback' %}";
 const CSRF_TOKEN          = "{{ csrf_token }}";
 const STUDENT_ID          = {{ student.id }};
 
@@ -357,12 +381,53 @@ function saveFeedback() {
     .then(data => {
         if (data.ok) {
             showSaved();
-            if (window.showToast) showToast('Feedback saved', 'success');
+            if (window.showToast) showToast('Assessment feedback saved', 'success');
         } else if (window.showToast) {
             showToast(data.error || 'Could not save feedback', 'error');
         }
     })
     .catch(() => { if (window.showToast) showToast('Could not save feedback', 'error'); });
+}
+
+
+// Overall project feedback — one row per student per project (StudentProjectFeedback).
+// Separate from the per-assessment feedback above; parents see this one.
+function saveProjectFeedback(btn) {
+    const el = document.getElementById('projectFeedbackInput');
+    const feedback = el.value.trim();
+
+    // Disable while in flight so a double click can't fire two writes
+    const label = btn.innerHTML;
+    btn.disabled = true;
+    btn.style.opacity = '0.6';
+    btn.style.cursor = 'wait';
+
+    const restore = () => {
+        btn.disabled = false;
+        btn.style.opacity = '';
+        btn.style.cursor = 'pointer';
+        btn.innerHTML = label;
+    };
+
+    fetch(SAVE_PROJECT_FEEDBACK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+        body: JSON.stringify({ student_id: STUDENT_ID, project_id: PROJECT_ID, feedback })
+    })
+    .then(r => r.json())
+    .then(data => {
+        restore();
+        if (data.ok) {
+            showSaved();
+            if (window.showToast) showToast('Project feedback saved', 'success');
+        } else if (window.showToast) {
+            showToast(data.error || 'Could not save project feedback', 'error');
+        }
+    })
+    .catch(() => {
+        restore();
+        if (window.showToast) showToast('Could not save project feedback', 'error');
+    });
 }
 
 

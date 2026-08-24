@@ -30,6 +30,9 @@
     .eye-btn:hover { color: #5A1F6E; background: rgba(90,31,110,0.07); }
     .fb-input { width: 100%; min-width: 200px; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; font-size: 12px; color: #374151; outline: none; resize: vertical; font-family: 'Poppins', sans-serif; line-height: 1.45; transition: border-color 0.15s; }
     .fb-input::placeholder { color: #cbd5e1; font-style: italic; }
+    .fb-save-btn { display: inline-flex; align-items: center; gap: 4px; margin-top: 6px; background: rgba(90,31,110,0.07); border: 1.5px solid rgba(90,31,110,0.28); color: #5A1F6E; border-radius: 8px; padding: 5px 12px; font-size: 11px; font-weight: 700; cursor: pointer; font-family: 'Poppins', sans-serif; transition: background 0.15s, border-color 0.15s; }
+    .fb-save-btn:hover:not(:disabled) { background: rgba(90,31,110,0.16); border-color: rgba(90,31,110,0.45); }
+    .fb-save-btn:disabled { cursor: wait; }
     .saving-indicator { display: none; }
     .saving-indicator.show { display: inline-flex; }
 </style>
@@ -492,11 +495,13 @@ function renderTable(data) {
         bodyHTML += `<td style="padding:12px 20px; text-align:center; min-width:90px; background:#faf9fc;">
             <span id="avg-${st.id}" class="student-avg">${formatStudentAvg(studentAvg(st.id))}</span>
         </td>`;
-        bodyHTML += `<td style="padding:10px 16px; min-width:220px;">
+        bodyHTML += `<td style="padding:10px 16px; min-width:230px;">
             <textarea id="fb-${st.id}" class="fb-input" rows="1" placeholder="Short feedback…"
                 onfocus="this.rows=3; this.style.borderColor='#5A1F6E'"
-                onblur="saveStudentFeedback(${st.id})"
             >${escHtml(feedbackFor(st.id))}</textarea>
+            <button id="fbbtn-${st.id}" class="fb-save-btn" onclick="saveStudentFeedback(${st.id}, this)">
+                <span class="material-symbols-outlined" style="font-size:14px;">save</span>Save
+            </button>
         </td>`;
         bodyHTML += `<td style="padding:12px 20px; text-align:center; min-width:80px;">
             <button class="eye-btn" title="View student" onclick="viewStudent(${st.id})">
@@ -613,14 +618,33 @@ function feedbackFor(studentId) {
     return (currentData && currentData.feedback && currentData.feedback[String(studentId)]) || '';
 }
 
-function saveStudentFeedback(studentId) {
+function saveStudentFeedback(studentId, btn) {
     const el = document.getElementById(`fb-${studentId}`);
     if (!el) return;
     el.rows = 1;
     el.style.borderColor = '#e2e8f0';
 
     const text = el.value.trim();
-    if (text === feedbackFor(studentId)) return;   // nothing changed — skip the round-trip
+    const name = studentNameFor(studentId);
+
+    if (text === feedbackFor(studentId)) {
+        // Nothing changed — say so rather than firing a pointless write and
+        // claiming a save the teacher didn't make.
+        if (window.showToast) showToast('No changes to save', 'info');
+        return;
+    }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.style.opacity = '0.6';
+        btn.style.cursor = 'wait';
+    }
+    const restore = () => {
+        if (!btn) return;
+        btn.disabled = false;
+        btn.style.opacity = '';
+        btn.style.cursor = 'pointer';
+    };
 
     showSaving();
     fetch(FEEDBACK_URL, {
@@ -630,16 +654,25 @@ function saveStudentFeedback(studentId) {
     })
     .then(r => r.json())
     .then(data => {
+        restore();
         if (data.ok) {
             if (!currentData.feedback) currentData.feedback = {};
             currentData.feedback[String(studentId)] = text;
             showSaved();
-            if (window.showToast) showToast('Feedback saved', 'success');
+            if (window.showToast) showToast(`Feedback saved for ${name}`, 'success');
         } else {
             if (window.showToast) showToast(data.error || 'Could not save feedback', 'error');
         }
     })
-    .catch(() => { if (window.showToast) showToast('Could not save feedback', 'error'); });
+    .catch(() => {
+        restore();
+        if (window.showToast) showToast('Could not save feedback', 'error');
+    });
+}
+
+function studentNameFor(studentId) {
+    const s = (currentData && currentData.students || []).find(x => x.id === studentId);
+    return s ? `${s.first_name} ${s.last_name}`.trim() : 'student';
 }
 
 function refreshStats() {
