@@ -38,9 +38,16 @@
     border-left: 4px solid var(--esl-toast-purple);
     box-shadow: 0 10px 30px rgba(108, 50, 168, 0.18), 0 2px 8px rgba(0, 0, 0, 0.08);
     overflow: hidden;
-    transform: translateX(120%);
-    opacity: 0;
-    animation: esl-toast-in 0.35s cubic-bezier(0.21, 1.02, 0.73, 1) forwards;
+
+    /* Visible by default. The slide-in is decoration only.
+       This used to be opacity:0 / translateX(120%) with the animation as the
+       ONLY thing that revealed it — so whenever the animation did not run
+       (reduced-motion, devtools animation emulation, extensions that disable
+       animations) the toast sat in the DOM fully built and permanently
+       invisible. */
+    opacity: 1;
+    transform: translateX(0);
+    animation: esl-toast-in 0.35s cubic-bezier(0.21, 1.02, 0.73, 1);
 }
 
 .toast.closing {
@@ -48,11 +55,20 @@
 }
 
 @keyframes esl-toast-in {
-    to { transform: translateX(0); opacity: 1; }
+    from { transform: translateX(120%); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
 }
 
 @keyframes esl-toast-out {
-    to { transform: translateX(120%); opacity: 0; }
+    from { transform: translateX(0);    opacity: 1; }
+    to   { transform: translateX(120%); opacity: 0; }
+}
+
+/* Respect reduced motion, but never at the cost of the toast being seen. */
+@media (prefers-reduced-motion: reduce) {
+    .toast { animation: none; }
+    .toast.closing { animation: none; opacity: 0; }
+    .toast-progress-bar { animation: none; }
 }
 
 /* ---- Icon ---- */
