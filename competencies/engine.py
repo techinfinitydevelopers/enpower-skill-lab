@@ -470,6 +470,50 @@ def get_annual_kb_scores(student):
     return rows
 
 
+def get_top_project(student):
+    """The student's single best-performing project, for the annual passport.
+
+    Ranks the student's generated ProjectReports by the mean of their
+    competency scores and returns the highest. The project's `project_type`
+    is the "work firm category" (Life Form, Machines & Materials, Human
+    Services, ...) the meeting asked to surface alongside it.
+
+    Returns None when the student has no report with any scores yet.
+    Returns:
+        {'project_id', 'title', 'category', 'average', 'competency_count'}
+    """
+    from .models import ProjectReport
+
+    best = None
+    reports = (
+        ProjectReport.objects
+        .filter(student=student)
+        .select_related('project')
+    )
+
+    for report in reports:
+        values = [
+            row['score'] for row in (report.all_competency_scores or [])
+            if row.get('score') is not None
+        ]
+        if not values:
+            continue
+
+        average = sum(values) / len(values)
+        # Tie-break on the later project so the most recent win is shown.
+        rank = (average, report.project.sequence_number or 0)
+        if best is None or rank > best[0]:
+            best = (rank, {
+                'project_id':       report.project_id,
+                'title':            report.project.title,
+                'category':         report.project.project_type,
+                'average':          round(average, 1),
+                'competency_count': len(values),
+            })
+
+    return best[1] if best else None
+
+
 def generate_annual_passport(student):
     """
     Runs the profiling engine on annual scores.

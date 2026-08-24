@@ -57,6 +57,32 @@
 
     {% if has_data %}
 
+    <!-- Strongest project of the year + its work-firm category -->
+    {% if top_project %}
+    <div class="section-block">
+        <div class="section-title">
+            <div class="section-icon" style="background:linear-gradient(135deg,var(--gold),#F77F00);"><span class="material-symbols-outlined">trophy</span></div>
+            Your Strongest Area
+            <span class="section-badge">🏆 Best Project</span>
+        </div>
+        <div class="topproj-card">
+            <div class="topproj-main">
+                <div class="topproj-label">Top-scoring project</div>
+                <div class="topproj-title">{{ top_project.title }}</div>
+                <div class="topproj-cat">
+                    <span class="material-symbols-outlined" style="font-size:15px;">category</span>
+                    {{ top_project.category }}
+                </div>
+            </div>
+            <div class="topproj-score">
+                <div class="topproj-num">{{ top_project.average }}<span>/10</span></div>
+                <div class="topproj-sub">across {{ top_project.competency_count }} skill{{ top_project.competency_count|pluralize }}</div>
+            </div>
+        </div>
+        <div class="topproj-note">This is where you performed best this year — a good hint at the kind of work that suits you.</div>
+    </div>
+    {% endif %}
+
     <!-- Top Career Matches -->
     {% if top_3_profiles %}
     <div class="section-block">

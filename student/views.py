@@ -258,6 +258,7 @@ def student_annual_passport(request):
         'emerging': [],
         'work_on': [],
         'kb_scores': [],
+        'top_project': None,
         'overall_score': 0,
         'attendance_percent': 0,
         'summary_paragraphs': [],
@@ -287,6 +288,13 @@ def student_annual_passport(request):
             context['kb_scores'] = get_annual_kb_scores(student)
         except Exception:
             context['kb_scores'] = []
+
+        # Strongest project of the year + its work-firm category.
+        try:
+            from competencies.engine import get_top_project
+            context['top_project'] = get_top_project(student)
+        except Exception:
+            context['top_project'] = None
 
     data = None
     if student:
