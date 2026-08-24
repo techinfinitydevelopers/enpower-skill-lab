@@ -552,9 +552,12 @@ function saveScore(input, studentId, acId, key) {
     const val = input.value.trim();
     const scoreVal = val === '' ? null : parseInt(val);
 
+    const name = studentNameFor(parseInt(studentId));
+
     if (scoreVal !== null && (isNaN(scoreVal) || scoreVal < 1 || scoreVal > 10)) {
         input.style.borderColor = '#dc2626';
         setTimeout(() => { input.style.borderColor = '#5A1F6E'; }, 1000);
+        notify('Score must be between 1 and 10', 'error');
         return;
     }
 
@@ -573,8 +576,15 @@ function saveScore(input, studentId, acId, key) {
             refreshStudentAvg(studentId);
             refreshStats();
             showSaved();
+            notify(scoreVal === null ? `Score cleared for ${name}`
+                                     : `Score ${scoreVal}/10 saved for ${name}`, 'success');
+        } else {
+            // Previously this branch did not exist, so a rejected save looked
+            // identical to a successful one.
+            notify(data.error || 'Could not save score', 'error');
         }
-    });
+    })
+    .catch(() => notify('Could not save score', 'error'));
 }
 
 function renderCell(wrapper, key, score) {

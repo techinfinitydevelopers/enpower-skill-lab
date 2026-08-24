@@ -215,7 +215,7 @@
 
     <!-- Dashboard Page Styles -->
     <link rel="stylesheet" href="{% static 'css/school_admin/school-admin-dash.css' %}">
-    <link rel="stylesheet" href="{% static 'css/common/toast.css' %}">
+    <link rel="stylesheet" href="{% static 'css/common/toast.css' %}?v=2">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -406,7 +406,7 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{% static 'js/school_admin/school-admin-dash.js' %}"></script>
-    <script src="{% static 'js/common/toast.js' %}"></script>
+    <script src="{% static 'js/common/toast.js' %}?v=2"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const currentPath = window.location.pathname;

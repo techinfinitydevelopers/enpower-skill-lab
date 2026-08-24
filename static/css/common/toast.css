@@ -137,20 +137,36 @@
     to { transform: scaleX(0); }
 }
 
-/* ---- Type variants ---- */
-.toast-success { border-left-color: var(--esl-toast-success); }
+/* ---- Type variants ----
+   Each type tints the whole toast, not just the left border, so the status is
+   readable at a glance instead of needing the thin edge to be noticed. */
+.toast-success { border-left-color: var(--esl-toast-success); background: #f0fdf4; }
 .toast-success .toast-icon { background: var(--esl-toast-success); }
 .toast-success .toast-progress-bar { background: var(--esl-toast-success); }
+.toast-success .toast-title { color: #14532d; }
+.toast-success .toast-message { color: #166534; }
+.toast-success .toast-close { color: #4d7c5a; }
 
-.toast-error { border-left-color: var(--esl-toast-error); }
+.toast-error { border-left-color: var(--esl-toast-error); background: #fef2f2; }
 .toast-error .toast-icon { background: var(--esl-toast-error); }
 .toast-error .toast-progress-bar { background: var(--esl-toast-error); }
+.toast-error .toast-title { color: #7f1d1d; }
+.toast-error .toast-message { color: #991b1b; }
+.toast-error .toast-close { color: #a56464; }
 
-.toast-warning { border-left-color: var(--esl-toast-yellow); }
+.toast-warning { border-left-color: var(--esl-toast-yellow); background: #fffbeb; }
 .toast-warning .toast-icon { background: var(--esl-toast-yellow); }
 .toast-warning .toast-progress-bar { background: var(--esl-toast-yellow); }
+.toast-warning .toast-title { color: #713f12; }
+.toast-warning .toast-message { color: #854d0e; }
 
-/* info + default keep brand purple (set above) */
+.toast-info { border-left-color: var(--esl-toast-info); background: #faf5ff; }
+.toast-info .toast-icon { background: var(--esl-toast-info); }
+.toast-info .toast-progress-bar { background: var(--esl-toast-info); }
+.toast-info .toast-title { color: #4c1d95; }
+.toast-info .toast-message { color: #5b21b6; }
+
+
 
 @media (max-width: 480px) {
     .toast-container {

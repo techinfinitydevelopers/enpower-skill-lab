@@ -231,7 +231,7 @@
 
     <!-- Dashboard Page Styles -->
     <link rel="stylesheet" href="{% static 'css/teacher/teacher-dashboard.css' %}">
-    <link rel="stylesheet" href="{% static 'css/common/toast.css' %}">
+    <link rel="stylesheet" href="{% static 'css/common/toast.css' %}?v=2">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -560,7 +560,7 @@
         });
     </script>
     <!-- Loaded before extra_js so page scripts can rely on showToast() -->
-    <script src="{% static 'js/common/toast.js' %}"></script>
+    <script src="{% static 'js/common/toast.js' %}?v=2"></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>
