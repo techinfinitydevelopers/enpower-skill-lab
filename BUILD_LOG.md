@@ -2,6 +2,28 @@
 
 Chronological record of completed tasks (per org policy: log after each completed task).
 
+## OPEN — Toasts still not visible on the teacher scoring page (2026-08-24)
+
+**Status: unresolved. Parked at the user's request.** Everything below is deployed and verified; the toast still does not appear on screen for the user.
+
+Symptom: `showToast('TEST', 'success')` in the browser console returns
+`<div class="toast toast-success closing" data-toast></div>` — **with no children** — and nothing renders. The element is created and auto-dismisses on schedule.
+
+Ruled out (each checked, not assumed):
+- Server markup — the page serves `fb-save-btn`, `notify()`, `saveStudentFeedback`, and the toast asset tags.
+- Asset delivery — `toast.css` and `toast.js` both return 200; the served `toast.js` is byte-identical to the repo once CRLF/LF is normalised, and its `showToast()` does populate `innerHTML` with icon/title/message/close/progress.
+- Script order — `toast.js` now loads before `{% block extra_js %}` in all six role base templates (it was after, in teacher + superadmin; fixed in `691f78b`).
+- Silent failure paths — the `if (window.showToast)` guards were replaced with `notify()`, which falls back to building the toast itself and logs a warning. No warning appears in the user's console.
+- Missing call sites — the grid's `saveScore()` genuinely had no toast, no else branch and no `.catch()`; added in `9c1fd3b`.
+- CSS visibility — `.toast` was `opacity:0; translateX(120%)` and depended entirely on the `esl-toast-in` animation (keyframes had only `to`). Base state is now visible with the animation as decoration, plus a reduced-motion block (`5611155`).
+- Browser HTML caching — `NoStoreHTMLMiddleware` added (`35b7400`); assets cache-busted to `?v=3`.
+
+Leading hypothesis, **not yet confirmed**: a browser extension is stripping the children after creation. The user's console shows `content.js:13 FloatingButton ~ config: {disabledSites: Array(0), enable: true, hasToast: true, position: 501}` and heavy `wordSelectionTranslate.tsx` output. Our class name `.toast` is generic enough to collide with an extension that has its own toast feature.
+
+Next step when resumed: reproduce in an Incognito window (extensions off). If the toast appears there, namespace the markup/CSS to `esl-toast-*` so nothing external can match it. If it does not appear there, the fault is ours and the empty-children behaviour needs to be traced live in the DOM.
+
+Note on process: three "fixes" were announced as resolving this before the cause was actually known. Verification only ever showed that the code reached the page, which does not establish that the toast renders.
+
 ## 2026-08-24 — Aug-11 meeting changes: 8 implemented, 3 verified, 6 flagged
 
 Worked from the Aug-11 Google Meet summary. Implemented the unambiguous items, verified the "confirm this" ones, left the ambiguous/blocked ones untouched (listed at the bottom with the reason).
