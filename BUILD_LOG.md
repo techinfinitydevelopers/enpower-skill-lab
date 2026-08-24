@@ -2,6 +2,87 @@
 
 Chronological record of completed tasks (per org policy: log after each completed task).
 
+## 2026-08-24 — Aug-11 meeting changes: 8 implemented, 3 verified, 6 flagged
+
+Worked from the Aug-11 Google Meet summary. Implemented the unambiguous items, verified the "confirm this" ones, left the ambiguous/blocked ones untouched (listed at the bottom with the reason).
+
+### Implemented
+- **Competency dropdowns show full descriptions** (`superadmin/templates/superadmin/project-assessment.html`). Both the server-rendered `<option>` list and the JS-built `buildCompSelect` rows now render `CODE — Name · Description`, plus a `title=` tooltip. `COMP_OPTIONS` carries a new `desc` field.
+- **Per-student average on the scoring grid** (`teacher/templates/teacher/score-entry.html`). New "Average" column; `studentAvg()` averages only the competencies actually scored for that student (so a half-scored student isn't dragged down by unscored ones) and shows `n/total scored` underneath. Recomputes live on each score save via `refreshStudentAvg()`.
+- **Inline per-student feedback box on the scoring grid.** New "Feedback" column with a 1-row textarea that expands to 3 on focus and saves on blur to the existing `api_save_feedback`. `api_score_entry_data` now returns a `feedback` map so boxes render pre-filled. Skips the round-trip when text is unchanged.
+- **Per-assessment breakdown on the student project report.** New `get_per_assessment_breakdown()` in `competencies/engine.py` — one entry per assessment in order, with per-competency scores, assessment average and `scored/total`. Includes plug-in project assessments (they merge into the parent) and keeps unscored assessments visible as "Not scored yet" rather than hiding them. Rendered as a new "Assessment by Assessment" card grid in `report-detail.html`.
+- **Full competency descriptions on student-facing reports.** `build_report_data` / `generate_annual_passport` now store `competency_desc`. Added `attach_competency_descriptions()` which backfills the field at render time in one query — **reports generated before this change display correctly without being regenerated**. Wired into both `student_report_detail` and `student_annual_passport`; descriptions render on the report card, the skills-to-work-on list and the annual passport.
+- **Kaushal Bodh now reported separately on the annual passport** — this was the "verify, fix if missing" item and it *was* missing. The engine supported `include_kb=True` but nothing in `student/` ever called it, so KB scores surfaced nowhere. Added `get_annual_kb_scores()` (same latest-project-wins rule as the passport) and a distinct KB section on `annual-passport.html` with an explicit note that these scores are not part of the passport calculation. Verified end-to-end with a temporary KB score: section renders, and the KB competency stays out of `all_competency_scores`.
+- **Program Coordinator bank details are now optional.** `bank_name`, `branch_name`, `account_number`, `ifsc_code` → `blank=True, null=True` (migration `coordinator/0002`). Dropped `required` + the `*` markers on `onboard-pc.html` and `edit-pc.html`, marked the section "(optional)", `view-pc.html` shows `—` when empty, and the create view stores `None` instead of `''`.
+
+### Verified (no code change needed)
+- **KB excluded from the Skill Passport calculation** — confirmed. `_exclude_kb_scores` runs by default; a direct test showed zero KB competency ids leaking into the passport score set.
+- **"Generate Report" is cumulative** — confirmed. `generate_project_report` → `build_report_data` aggregates every assessment in the project and `update_or_create`s the single `ProjectReport`.
+- **Attendance badges exist and were kept** — `student/templates/student/badges.html` renders monthly-attendance tiers.
+
+### Testing
+`manage.py check` clean, `makemigrations --check` reports no changes, all migrations applied. Swept every parameterless page for all six roles while logged in as each: **86/86 pages, zero 5xx** (super admin 33, coordinator 11, school admin 10, thinking coach 17, parent 4, student 11).
+
+### Grade field → individual grades (done after user confirmed single-grade + dummy data)
+User chose: one individual grade per project, dropdown listing plain numbers `1, 2, 3 … 12` (not "Grade 1", not stage ranges). Confirmed existing projects are all dummy, so the narrowing side effect was accepted.
+
+- `competencies/models.py`: added `GRADE_CHOICES = [(str(i), str(i)) for i in range(1, 13)]`, `DEFAULT_PROGRAM_GRADES = ['6','7','8','9']`, and `STAGE_TO_GRADES` (kept for the migration and for any legacy stage value still arriving). `Project.grade` now uses `GRADE_CHOICES` instead of `STAGE_CHOICES`. `STAGE_CHOICES` itself stays — `Competency.stage` still uses it.
+- Migration `competencies/0024_project_grade_individual`: `RunPython` collapses each stage to the lowest grade of that stage (Foundational→1, Preparatory→3, Middle→6, Secondary→9) **before** the `AlterField`, with a working reverse that maps grades back to stages. Applied: 8 projects converted (1→`1`, 3→`3`×3, 6→`6`×3, 9→`9`).
+- `teacher/views.py`: student filtering in `api_score_entry_data` no longer expands a stage into a class range — it uses `[project.grade]`, falling back through `STAGE_TO_GRADES` if a legacy stage value is seen. `teacher_dashboard` and `score_entry` now pass `grade_choices` instead of `stage_choices`.
+- Templates: the two hardcoded 4-option stage dropdowns in `project-assessment.html` (create + edit) now loop `grade_choices`; `teacher/dashboard.html` and `teacher/score-entry.html` grade selects likewise. Display spots that would otherwise render a bare number now read `Grade 6` (project list tag, project subtitle, scoring breadcrumb).
+- `superadmin/views.py` `project_assessment` passes `grade_choices` + `default_program_grades`.
+
+**Verified:** dropdown renders exactly `1, 2, …, 12`; no `Foundational — Class` options remain anywhere; filtering proven positively by temporarily repointing a project's grade — grade 8 returned exactly the two class-8 students, grade 5 the one class-5 student, grade 7 the one class-7 student, then reverted. (The first negative test returned 0 students only because no student in the DB is in class 6.)
+
+**Known consequence, accepted:** a project now shows only its one grade's students in the scoring grid, where a `Middle` project previously showed grades 6–8. Existing scores are untouched in the DB; they just aren't listed under a project whose grade no longer matches. Real projects will need their grade set deliberately.
+
+### NOT done — needs a decision or is blocked
+- **Save Feedback bug — could not reproduce.** `api_save_feedback` returns `{"ok": true}` and the row persists; the `saveFeedback()` JS, `saveStatus` element and both feedback forms (`daily-feedback.html` enctype/csrf, `weekly-feedback.html`) are all correct. Most likely cause on prod: a Thinking Coach whose `teacher_profile` or `school` is unset gets a 403 "No teacher profile" and the UI just shows a failure toast. All six local teachers have both, so it can't be reproduced here. Needs the specific coach account it failed for.
+- **Program-based project visibility / auto-assign FSL projects** — assignment mechanics not specified (per-school? per-student? on project create or on school onboard? what happens to already-created projects?).
+- **Kaushal Bodh competencies into Learning Pillars** — blocked on Ritu's final list.
+- **Annual passport top-project + work-firm-category highlight** — blocked on the reference image.
+- **Three top career matches** — profiling already returns top 3; the meeting asked to *confirm the logic*, which needs a product decision on the "sufficient data" threshold (currently unlock needs ≥2 primary competencies).
+- **Parent self-onboarding via Student ID** — largest item, needs model work, and the security model needs a call first: a Student ID is shared (report cards, teachers, classmates), so anyone who knows it can claim the parent account before the real parent does. Forced password change on first login doesn't close that window.
+
+## 2026-08-24 — Local repo switched to company remote + production audit
+
+### Root cause of "local looks in sync but server has more commits"
+Local clone was wired to the **personal fork** `iamKunaaal/enpower-skill-lab`, while production pulls from the **org repo** `techinfinitydevelopers/enpower-skill-lab`. `git ls-remote` from local reported "in sync" because it was querying the wrong repo. Local was 34 commits behind the real main.
+
+### Remote switch (done)
+- Safety tag `backup-before-company-switch-e30c615` created on the old local tip.
+- `origin` renamed to `personal`; `origin` now points at `techinfinitydevelopers/enpower-skill-lab`.
+- Local edit to `.claude/settings.local.json` stashed (`stash@{0}`) — upstream also modified that file.
+- Fast-forward `e30c615..ac220b4` — clean, no merge, no conflicts. 110 files, +10857/-1531. Local now 61 commits, tracking `origin/main`.
+- Local DB backed up to `db_backup_before_pull_20260824.sqlite3`, then 9 pending migrations applied (attendance 0001-0004, competencies 0021-0023, parent 0002, schools 0009). `manage.py check` clean.
+- Dev server on :8005 verified — `/login/` 200, `/student/dashboard/` 302.
+- Test student login: `aaravjoshi1768033944@yahoo.com` / `Student@123` (id 9, password reset locally). Note: `accounts.User.role` values are UPPERCASE (`STUDENT`, `THINKING_COACH`, …).
+
+### Production server access
+Root password was lost. Recovered via DigitalOcean **Web Console** (DOTTY agent grants a passwordless root shell) instead of "Reset root password", avoiding a droplet reboot and site downtime. Local pubkey `kunal@Lenovo` appended to `/root/.ssh/authorized_keys`; key-based SSH to `root@68.183.93.246` now works.
+
+### Production audit — clean
+Server HEAD == `origin/main` (0 ahead / 0 behind), no working-tree drift on tracked files, `git fsck` clean, all migrations applied, `makemigrations --check` reports no changes, `manage.py check` 0 issues, `db.sqlite3` correctly gitignored, SSL valid to 2026-10-10, gunicorn + nginx active, disk 20%.
+
+### Production audit — OPEN ISSUES (nothing changed on server; needs decision)
+CRITICAL
+1. `DEBUG = True` in production (`settings.py:27`, set in `664d6ed`). **Verified publicly exploitable** — `GET /audit-check-nonexistent-xyz` returns a 3940-byte Django debug 404 leaking ~16 internal URL patterns; any 500 exposes full traceback with local variables. Bots actively probing (`103.153.183.69`, `195.178.110.102` hitting `/signin`, `/signup`, `/register`, `/auth/callback`, `/admin`).
+2. `SECRET_KEY` committed to GitHub (`settings.py:24`, still `django-insecure-` auto-generated). Anyone with it can forge session cookies for any user including super admin.
+3. Mailtrap `EMAIL_HOST_USER` / `EMAIL_HOST_PASSWORD` committed in plaintext (`settings.py:170-171`). No `.env` file exists — all secrets hardcoded.
+
+HIGH
+4. `ufw` inactive — all ports open.
+5. No DB backup automation (no root crontab). Only a manual `db_backup_before_backfill_20260807_082803.sqlite3` from 2026-08-07. DO panel backup status unverified.
+6. HTTPS not enforced — `SECURE_SSL_REDIRECT`, HSTS, `SESSION_COOKIE_SECURE`, `CSRF_COOKIE_SECURE` all unset.
+7. Gunicorn runs as `User=root`.
+
+MEDIUM
+8. Ubuntu 25.10 is **EOL** — no further security updates; 26.04 LTS available.
+9. Pending kernel restart on the droplet.
+10. SQLite + 3 gunicorn workers — write-lock contention risk as usage grows.
+11. 959MB RAM, ~375MB available, no swap.
+12. `/admin` throws `RuntimeError: APPEND_SLASH` on POST (bot-triggered, minor).
+
 ## 2026-07-29 — Fix: teacher score-entry hides projects with NULL framework_ref
 - Teacher Score Entry project dropdown filtered `framework_ref=school.framework_ref`, which EXCLUDES super-admin projects whose framework_ref is NULL (only legacy `framework` CharField set). Reproduced: NULL-framework_ref FSL/Middle project hidden from FSL teacher.
 - Fixed `api_projects_by_grade` + `_teacher_projects` (teacher/views.py) to match `Q(framework_ref=fw) | Q(framework_ref__isnull=True, framework=fw.name)`. Verified: previously-hidden project now shows; real projects intact. check clean.

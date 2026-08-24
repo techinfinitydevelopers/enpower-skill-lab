@@ -18,7 +18,7 @@ def is_teacher(user):
 @user_passes_test(is_teacher)
 def teacher_dashboard(request):
     """Teacher dashboard view"""
-    from competencies.models import STAGE_CHOICES
+    from competencies.models import GRADE_CHOICES
 
     teacher_profile = None
     if hasattr(request.user, 'teacher_profile'):
@@ -26,7 +26,7 @@ def teacher_dashboard(request):
 
     context = {
         'teacher_profile': teacher_profile,
-        'stage_choices': STAGE_CHOICES,
+        'grade_choices': GRADE_CHOICES,
     }
     return render(request, 'teacher/dashboard.html', context)
 
@@ -176,8 +176,8 @@ def assessment_detail(request, assessment_id):
 @user_passes_test(is_teacher)
 def score_entry(request):
     """Score Entry page"""
-    from competencies.models import STAGE_CHOICES
-    context = {'stage_choices': STAGE_CHOICES}
+    from competencies.models import GRADE_CHOICES
+    context = {'grade_choices': GRADE_CHOICES}
     return render(request, 'teacher/score-entry.html', context)
 
 
@@ -213,14 +213,12 @@ def api_score_entry_data(request):
     except (Assessment.DoesNotExist, ValueError):
         return JsonResponse({'error': 'Not found'}, status=404)
 
-    STAGE_TO_CLASSES = {
-        'Foundational': ['1', '2'],
-        'Preparatory':  ['3', '4', '5'],
-        'Middle':       ['6', '7', '8'],
-        'Secondary':    ['9', '10', '11', '12'],
-    }
+    # Projects now target one individual grade, so the student list is just that
+    # grade. Legacy stage values are still mapped, in case any project predates
+    # the migration to individual grades.
+    from competencies.models import STAGE_TO_GRADES
     grade = assessment.project.grade
-    class_range = STAGE_TO_CLASSES.get(grade, [])
+    class_range = STAGE_TO_GRADES.get(grade, [grade] if grade else [])
 
     teacher_obj = getattr(request.user, 'teacher_profile', None)
     students_qs = Student.objects.filter(
@@ -259,12 +257,23 @@ def api_score_entry_data(request):
     all_score_vals = [s['score'] for s in scores_qs if s['score'] is not None]
     class_avg = round(sum(all_score_vals) / len(all_score_vals), 1) if all_score_vals else None
 
+    # Existing per-student feedback for this assessment, so the inline
+    # feedback boxes render pre-filled instead of blank.
+    from competencies.models import StudentAssessmentFeedback
+    feedback = {
+        str(fb['student_id']): fb['feedback']
+        for fb in StudentAssessmentFeedback.objects.filter(
+            assessment=assessment, student_id__in=student_ids
+        ).values('student_id', 'feedback')
+    }
+
     return JsonResponse({
         'assessment': {'id': assessment.id, 'name': assessment.name, 'type': assessment.assessment_type},
         'project':    {'id': assessment.project.id, 'title': assessment.project.title, 'grade': assessment.project.grade},
         'students':    students,
         'competencies': comp_mappings,
         'scores':      scores,
+        'feedback':    feedback,
         'stats': {
             'total_students': len(students),
             'scored_count':   len(scored_student_ids),

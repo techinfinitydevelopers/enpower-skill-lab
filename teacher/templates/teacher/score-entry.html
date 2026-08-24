@@ -28,6 +28,8 @@
     .score-btn-empty:hover { border-color: rgba(90,31,110,0.3); color: #5A1F6E; background: rgba(90,31,110,0.04); }
     .eye-btn { background: transparent; border: none; cursor: pointer; padding: 6px; border-radius: 8px; color: #94a3b8; transition: color 0.15s, background 0.15s; display: inline-flex; align-items: center; justify-content: center; }
     .eye-btn:hover { color: #5A1F6E; background: rgba(90,31,110,0.07); }
+    .fb-input { width: 100%; min-width: 200px; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; font-size: 12px; color: #374151; outline: none; resize: vertical; font-family: 'Poppins', sans-serif; line-height: 1.45; transition: border-color 0.15s; }
+    .fb-input::placeholder { color: #cbd5e1; font-style: italic; }
     .saving-indicator { display: none; }
     .saving-indicator.show { display: inline-flex; }
 </style>
@@ -73,8 +75,8 @@
                     <div class="relative">
                         <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style="font-size:17px; color:#9c7bb5;">school</span>
                         <select id="gradeSelect" class="w-full rounded-lg cursor-pointer" style="outline:none; font-size:14px; color:#374151; padding:11px 40px 11px 36px; border:1.5px solid #e2e8f0; background:#fff; transition:border-color 0.15s;">
-                            <option value="">Select grade level</option>
-                            {% for value, label in stage_choices %}
+                            <option value="">Select grade</option>
+                            {% for value, label in grade_choices %}
                             <option value="{{ value }}">{{ label }}</option>
                             {% endfor %}
                         </select>
@@ -241,6 +243,7 @@ const GRADE_URL           = "{% url 'teacher:api_projects_by_grade' %}";
 const PROJECT_URL         = "{% url 'teacher:api_assessments_by_project' %}";
 const DATA_URL            = "{% url 'teacher:api_score_entry_data' %}";
 const SAVE_URL            = "{% url 'teacher:api_save_score' %}";
+const FEEDBACK_URL        = "{% url 'teacher:api_save_feedback' %}";
 const GENERATE_REPORT_URL = "{% url 'teacher:api_generate_report' %}";
 const CSRF_TOKEN          = "{{ csrf_token }}";
 
@@ -424,7 +427,7 @@ function renderTable(data) {
     emptyState.style.display = 'none';
     scoreSection.style.display = 'block';
 
-    breadcrumb.textContent = `${data.project.grade} / ${data.project.title} / ${data.assessment.name}`;
+    breadcrumb.textContent = `Grade ${data.project.grade} / ${data.project.title} / ${data.assessment.name}`;
 
     const thead = document.getElementById('scoreTableHead');
     const tbody = document.getElementById('scoreTableBody');
@@ -442,6 +445,8 @@ function renderTable(data) {
             <div style="font-size:9px; color:#b0a8bc; font-weight:600; text-transform:none; letter-spacing:0; margin-top:1px; white-space:normal; max-width:120px; margin-left:auto; margin-right:auto;">${escHtml(c.competency__name)}</div>
         </th>`;
     });
+    headerHTML += `<th style="padding:14px 20px; font-size:11px; font-weight:700; color:#5A1F6E; text-transform:uppercase; letter-spacing:0.08em; text-align:center; white-space:nowrap; min-width:90px; background:#f5f2f8;">Average</th>`;
+    headerHTML += `<th style="padding:14px 20px; font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.08em; text-align:left; white-space:nowrap; min-width:220px;">Feedback</th>`;
     headerHTML += `<th style="padding:14px 20px; font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.08em; text-align:center; white-space:nowrap; min-width:80px;">Actions</th>`;
     headerHTML += '</tr>';
     thead.innerHTML = headerHTML;
@@ -484,6 +489,15 @@ function renderTable(data) {
                 </div>
             </td>`;
         });
+        bodyHTML += `<td style="padding:12px 20px; text-align:center; min-width:90px; background:#faf9fc;">
+            <span id="avg-${st.id}" class="student-avg">${formatStudentAvg(studentAvg(st.id))}</span>
+        </td>`;
+        bodyHTML += `<td style="padding:10px 16px; min-width:220px;">
+            <textarea id="fb-${st.id}" class="fb-input" rows="1" placeholder="Short feedback…"
+                onfocus="this.rows=3; this.style.borderColor='#5A1F6E'"
+                onblur="saveStudentFeedback(${st.id})"
+            >${escHtml(feedbackFor(st.id))}</textarea>
+        </td>`;
         bodyHTML += `<td style="padding:12px 20px; text-align:center; min-width:80px;">
             <button class="eye-btn" title="View student" onclick="viewStudent(${st.id})">
                 <span class="material-symbols-outlined" style="font-size:20px;">visibility</span>
@@ -551,6 +565,7 @@ function saveScore(input, studentId, acId, key) {
             currentData.scores[key] = data.score;
             const wrapper = input.closest('.score-wrapper');
             renderCell(wrapper, key, data.score);
+            refreshStudentAvg(studentId);
             refreshStats();
             showSaved();
         }
@@ -562,6 +577,69 @@ function renderCell(wrapper, key, score) {
     wrapper.innerHTML = hasScore
         ? `<button class="score-btn-filled" onclick="openEdit(this)">${score}/10</button>`
         : `<button class="score-btn-empty" onclick="openEdit(this)">Add Score</button>`;
+}
+
+// ---- Individual student average ----
+// Averages only the competencies actually scored for that student, so a
+// half-scored student isn't dragged down by the unscored ones.
+function studentAvg(studentId) {
+    if (!currentData) return null;
+    const vals = [];
+    currentData.competencies.forEach(c => {
+        const s = currentData.scores[`${studentId}__${c.id}`];
+        if (s !== undefined && s !== null) vals.push(s);
+    });
+    if (vals.length === 0) return null;
+    return { avg: vals.reduce((a, b) => a + b, 0) / vals.length,
+             scored: vals.length,
+             total: currentData.competencies.length };
+}
+
+function formatStudentAvg(a) {
+    if (!a) return '<span style="color:#cbd5e1; font-size:13px;">—</span>';
+    const colour = a.avg >= 9 ? '#1d4ed8' : a.avg >= 7 ? '#15803d' : a.avg >= 4 ? '#c2410c' : '#b91c1c';
+    return `<span style="font-size:15px; font-weight:700; color:${colour};">${a.avg.toFixed(1)}</span>`
+         + `<span style="font-size:10px; color:#94a3b8;">/10</span>`
+         + `<div style="font-size:9px; color:#b0a8bc; margin-top:2px;">${a.scored}/${a.total} scored</div>`;
+}
+
+function refreshStudentAvg(studentId) {
+    const el = document.getElementById(`avg-${studentId}`);
+    if (el) el.innerHTML = formatStudentAvg(studentAvg(studentId));
+}
+
+// ---- Inline per-student feedback ----
+function feedbackFor(studentId) {
+    return (currentData && currentData.feedback && currentData.feedback[String(studentId)]) || '';
+}
+
+function saveStudentFeedback(studentId) {
+    const el = document.getElementById(`fb-${studentId}`);
+    if (!el) return;
+    el.rows = 1;
+    el.style.borderColor = '#e2e8f0';
+
+    const text = el.value.trim();
+    if (text === feedbackFor(studentId)) return;   // nothing changed — skip the round-trip
+
+    showSaving();
+    fetch(FEEDBACK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+        body: JSON.stringify({ student_id: studentId, assessment_id: currentAssessmentId, feedback: text })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.ok) {
+            if (!currentData.feedback) currentData.feedback = {};
+            currentData.feedback[String(studentId)] = text;
+            showSaved();
+            if (window.showToast) showToast('Feedback saved', 'success');
+        } else {
+            if (window.showToast) showToast(data.error || 'Could not save feedback', 'error');
+        }
+    })
+    .catch(() => { if (window.showToast) showToast('Could not save feedback', 'error'); });
 }
 
 function refreshStats() {

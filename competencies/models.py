@@ -24,6 +24,21 @@ STAGE_CHOICES = [
     ('Secondary',    'Secondary — Class 9–12'),
 ]
 
+# Projects target one individual grade (1–12) rather than a whole stage.
+# The program currently runs for grades 6–9; the full 1–12 range is offered
+# so it can expand without a code change.
+GRADE_CHOICES = [(str(i), str(i)) for i in range(1, 13)]
+DEFAULT_PROGRAM_GRADES = ['6', '7', '8', '9']
+
+# Used by the stage → individual-grade data migration and by any remaining
+# code that still receives a legacy stage value.
+STAGE_TO_GRADES = {
+    'Foundational': ['1', '2'],
+    'Preparatory':  ['3', '4', '5'],
+    'Middle':       ['6', '7', '8'],
+    'Secondary':    ['9', '10', '11', '12'],
+}
+
 STATUS_CHOICES = [
     ('Active', 'Active'),
     ('Draft',  'Draft'),
@@ -145,7 +160,8 @@ ASSESSMENT_TYPE_CHOICES = [
 class Project(models.Model):
     title           = models.CharField(max_length=200)
     project_type    = models.CharField(max_length=20, choices=PROJECT_TYPE_CHOICES, default='Capstone')
-    grade           = models.CharField(max_length=20, choices=STAGE_CHOICES)
+    grade           = models.CharField(max_length=20, choices=GRADE_CHOICES,
+                                       help_text='Individual grade this project runs for (1–12).')
     framework_ref   = models.ForeignKey(Framework, on_delete=models.SET_NULL, null=True, blank=True, related_name='projects')
     framework       = models.CharField(max_length=10, default='FSL', blank=True)  # Legacy
     status          = models.CharField(max_length=10, choices=STATUS_CHOICES, default='Draft')

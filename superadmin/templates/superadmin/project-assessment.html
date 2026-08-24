@@ -177,7 +177,7 @@
                class="pa-proj-item {% if project.id == active_id %}active{% endif %}">
                 <p class="pa-proj-title">{{ project.title }}</p>
                 <div class="pa-proj-meta">
-                    <span class="pa-grade-tag">{{ project.grade }}</span>
+                    <span class="pa-grade-tag">Grade {{ project.grade }}</span>
                     <span class="pa-type-tag">{{ project.project_type }}</span>
                     <span class="pa-status-tag {% if project.status == 'Active' %}active-s{% else %}draft{% endif %}">{{ project.status }}</span>
                 </div>
@@ -222,7 +222,7 @@
                         <span class="cur">{{ active_project.title|truncatechars:30 }}</span>
                     </div>
                     <h1 class="pa-title">{{ active_project.title }}</h1>
-                    <p class="pa-subtitle">{{ active_project.get_framework_display }} · {{ active_project.grade }} · {{ active_project.project_type }} · {{ active_project.assessments.count }} assessment{{ active_project.assessments.count|pluralize }}</p>
+                    <p class="pa-subtitle">{{ active_project.get_framework_display }} · Grade {{ active_project.grade }} · {{ active_project.project_type }} · {{ active_project.assessments.count }} assessment{{ active_project.assessments.count|pluralize }}</p>
                 </div>
             </div>
             <form method="post" id="saveProjectForm" style="display:inline;">
@@ -255,12 +255,11 @@
                     </select>
                 </div>
                 <div class="pa-field">
-                    <label>Grade / Stage</label>
+                    <label>Grade</label>
                     <select name="grade" form="saveProjectForm">
-                        <option value="Foundational" {% if active_project.grade == 'Foundational' %}selected{% endif %}>Foundational — Class 1–2</option>
-                        <option value="Preparatory"  {% if active_project.grade == 'Preparatory'  %}selected{% endif %}>Preparatory — Class 3–5</option>
-                        <option value="Middle"       {% if active_project.grade == 'Middle'       %}selected{% endif %}>Middle — Class 6–8</option>
-                        <option value="Secondary"    {% if active_project.grade == 'Secondary'    %}selected{% endif %}>Secondary — Class 9–12</option>
+                        {% for value, label in grade_choices %}
+                        <option value="{{ value }}" {% if active_project.grade == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
                     </select>
                 </div>
                 <div class="pa-field">
@@ -438,7 +437,7 @@
                                         <td>
                                             <select name="comp_id" class="pa-comp-select">
                                                 <option value="">— Select —</option>
-                                                {% for pillar in pillars %}{% for sp in pillar.sub_pillars.all %}{% if sp.competencies.exists %}<optgroup label="SP{{ sp.sp_number }}: {{ sp.name }}">{% for comp in sp.competencies.all %}{% if comp.status == 'Active' %}<option value="{{ comp.id }}" {% if comp.id == mapping.competency.id %}selected{% endif %}>{{ comp.code }} — {{ comp.name }}</option>{% endif %}{% endfor %}</optgroup>{% endif %}{% endfor %}{% endfor %}
+                                                {% for pillar in pillars %}{% for sp in pillar.sub_pillars.all %}{% if sp.competencies.exists %}<optgroup label="SP{{ sp.sp_number }}: {{ sp.name }}">{% for comp in sp.competencies.all %}{% if comp.status == 'Active' %}<option value="{{ comp.id }}" {% if comp.id == mapping.competency.id %}selected{% endif %} title="{{ comp.code }} — {{ comp.name }}{% if comp.description %} · {{ comp.description }}{% endif %}">{{ comp.code }} — {{ comp.name }}{% if comp.description %} · {{ comp.description }}{% endif %}</option>{% endif %}{% endfor %}</optgroup>{% endif %}{% endfor %}{% endfor %}
                                             </select>
                                         </td>
                                         <td>
@@ -534,13 +533,12 @@
                 </div>
                 <div class="two-col">
                     <div class="pa-field">
-                        <label>Grade / Stage</label>
+                        <label>Grade</label>
                         <select name="grade" required>
                             <option value="">Select grade</option>
-                            <option value="Foundational">Foundational — Class 1–2</option>
-                            <option value="Preparatory">Preparatory — Class 3–5</option>
-                            <option value="Middle">Middle — Class 6–8</option>
-                            <option value="Secondary">Secondary — Class 9–12</option>
+                            {% for value, label in grade_choices %}
+                            <option value="{{ value }}" {% if value in default_program_grades %}data-default="1"{% endif %}>{{ label }}</option>
+                            {% endfor %}
                         </select>
                     </div>
                     <div class="pa-field">
@@ -637,7 +635,7 @@ function showFileName(input, spanId) {
 /* Competency data for dynamic rows */
 const COMP_OPTIONS = [
     {% for pillar in pillars %}{% for sp in pillar.sub_pillars.all %}{% if sp.competencies.exists %}{% for comp in sp.competencies.all %}{% if comp.status == 'Active' %}
-    { id: {{ comp.id }}, code: "{{ comp.code|escapejs }}", name: "{{ comp.name|escapejs }}", group: "SP{{ sp.sp_number }}: {{ sp.name|escapejs }}" },
+    { id: {{ comp.id }}, code: "{{ comp.code|escapejs }}", name: "{{ comp.name|escapejs }}", desc: "{{ comp.description|escapejs }}", group: "SP{{ sp.sp_number }}: {{ sp.name|escapejs }}" },
     {% endif %}{% endfor %}{% endif %}{% endfor %}{% endfor %}
 ];
 
@@ -651,7 +649,9 @@ function buildCompSelect(selectedId) {
     Object.keys(grouped).forEach(grp => {
         html += `<optgroup label="${grp}">`;
         grouped[grp].forEach(c => {
-            html += `<option value="${c.id}"${selectedId == c.id ? ' selected' : ''}>${c.code} — ${c.name}</option>`;
+            // Full description in the label (and title) so coaches can't pick the wrong competency
+            const label = `${c.code} — ${c.name}${c.desc ? ' · ' + c.desc : ''}`;
+            html += `<option value="${c.id}"${selectedId == c.id ? ' selected' : ''} title="${label}">${label}</option>`;
         });
         html += '</optgroup>';
     });

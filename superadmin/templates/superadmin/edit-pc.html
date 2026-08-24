@@ -428,27 +428,27 @@
 
                 <!-- G. Bank & Payroll Details -->
                 <div class="opc-form-section">
-                    <h2>G. Bank & Payroll Details</h2>
+                    <h2>G. Bank & Payroll Details <span style="font-size:12px; font-weight:500; color:#94a3b8;">(optional)</span></h2>
 
                     <div class="opc-form-row">
                         <div class="opc-form-group">
-                            <label>Bank Name <span class="required">*</span></label>
-                            <input type="text" name="bankName" value="{{ coordinator.bank_name }}" required>
+                            <label>Bank Name</label>
+                            <input type="text" name="bankName" value="{{ coordinator.bank_name|default_if_none:'' }}">
                         </div>
                         <div class="opc-form-group">
-                            <label>Branch Name <span class="required">*</span></label>
-                            <input type="text" name="branchName" value="{{ coordinator.branch_name }}" required>
+                            <label>Branch Name</label>
+                            <input type="text" name="branchName" value="{{ coordinator.branch_name|default_if_none:'' }}">
                         </div>
                     </div>
 
                     <div class="opc-form-row">
                         <div class="opc-form-group">
-                            <label>Account Number <span class="required">*</span></label>
-                            <input type="text" name="accountNumber" value="{{ coordinator.account_number }}" required>
+                            <label>Account Number</label>
+                            <input type="text" name="accountNumber" value="{{ coordinator.account_number|default_if_none:'' }}">
                         </div>
                         <div class="opc-form-group">
-                            <label>IFSC Code <span class="required">*</span></label>
-                            <input type="text" name="ifscCode" value="{{ coordinator.ifsc_code }}" maxlength="11" style="text-transform: uppercase;" required>
+                            <label>IFSC Code</label>
+                            <input type="text" name="ifscCode" value="{{ coordinator.ifsc_code|default_if_none:'' }}" maxlength="11" style="text-transform: uppercase;">
                         </div>
                     </div>
                 </div>

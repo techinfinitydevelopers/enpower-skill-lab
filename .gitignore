@@ -2,6 +2,9 @@ venv/
 __pycache__/
 *.pyc
 db.sqlite3
+# Manual DB snapshots (db_backup_before_*.sqlite3) carry real student data —
+# never commit them. `db.sqlite3` above is kept for clarity.
+*.sqlite3
 .env
 *.log
 media/

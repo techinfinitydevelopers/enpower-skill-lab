@@ -1975,11 +1975,11 @@ def onboard_coordinator(request):
                 contract_start_date=parse_date(data.get('contractStartDate')),
                 contract_end_date=parse_date(data.get('contractEndDate')),
                 
-                # Bank & Payroll Details
-                bank_name=data.get('bankName', ''),
-                branch_name=data.get('branchName', ''),
-                account_number=data.get('accountNumber', ''),
-                ifsc_code=data.get('ifscCode', '').upper(),
+                # Bank & Payroll Details (all optional)
+                bank_name=data.get('bankName', '') or None,
+                branch_name=data.get('branchName', '') or None,
+                account_number=data.get('accountNumber', '') or None,
+                ifsc_code=(data.get('ifscCode', '') or '').upper() or None,
                 
                 # Additional Optional Data
                 strength_areas=data.get('strengthAreas', '') or None,
@@ -3217,6 +3217,8 @@ def project_assessment(request):
 
     main_projects = Project.objects.exclude(project_type='Plug In').order_by('sequence_number', 'title')
 
+    from competencies.models import GRADE_CHOICES, DEFAULT_PROGRAM_GRADES
+
     context = {
         'projects':        projects,
         'active_project':  active_project,
@@ -3226,6 +3228,8 @@ def project_assessment(request):
         'pillars':         pillars,
         'all_comps':       all_comps,
         'main_projects':   main_projects,
+        'grade_choices':          GRADE_CHOICES,
+        'default_program_grades': DEFAULT_PROGRAM_GRADES,
     }
     return render(request, 'superadmin/project-assessment.html', context)
 

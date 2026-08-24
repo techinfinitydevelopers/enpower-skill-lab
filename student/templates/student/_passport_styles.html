@@ -148,8 +148,11 @@
     .sp2 .comp-row:hover .cr-icon { background:var(--purple); transform:scale(1.18) rotate(-6deg); }
     .sp2 .comp-row:hover .cr-icon .material-symbols-outlined { color:#fff; }
     .sp2 .cr-icon .material-symbols-outlined { font-size:22px; color:var(--purple); transition:color 0.3s; font-variation-settings:'FILL' 1; }
-    .sp2 .cr-name { font-weight:900; font-size:14px; color:var(--text); min-width:136px; flex-shrink:0; transition:color 0.2s; }
+    .sp2 .cr-name { font-weight:900; font-size:14px; color:var(--text); min-width:136px; max-width:250px; flex-shrink:0; transition:color 0.2s; }
     .sp2 .comp-row:hover .cr-name { color:var(--purple); }
+    /* Full competency description under the name — keeps codes from being the only label */
+    .sp2 .cr-desc { font-weight:500; font-size:11px; line-height:1.4; color:var(--text-muted); margin-top:3px; white-space:normal; }
+    .sp2 .comp-row:hover .cr-desc { color:var(--text-muted); }
     .sp2 .cr-bar-wrap { flex:1; height:16px; background:var(--border); border-radius:var(--radius-pill); overflow:hidden; position:relative; transition:box-shadow 0.3s; }
     .sp2 .comp-row:hover .cr-bar-wrap { box-shadow:0 0 0 3px rgba(90,45,130,0.15); }
     .sp2 .cr-bar { height:100%; border-radius:var(--radius-pill); background:linear-gradient(90deg,var(--purple),var(--purple-light),var(--gold)); width:0%; transition:width 1.5s cubic-bezier(0.34,1.56,0.64,1); position:relative; overflow:hidden; }
@@ -188,6 +191,31 @@
     .sp2 .workon-badge .material-symbols-outlined { font-size:20px; color:#E05D00; font-variation-settings:'FILL' 1; }
     .sp2 .workon-name { font-size:14px; font-weight:800; color:var(--text); }
     .sp2 .workon-meta { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; }
+    .sp2 .workon-desc { font-size:11px; font-weight:500; line-height:1.45; color:var(--text-muted); margin-top:3px; }
+
+    /* Kaushal Bodh — separate from the passport score */
+    .sp2 .kb-note { font-size:11.5px; font-weight:600; color:var(--text-muted); background:rgba(247,127,0,0.07); border-left:3px solid var(--gold); border-radius:6px; padding:8px 12px; margin-bottom:12px; }
+
+    /* Assessment-by-assessment breakdown */
+    .sp2 .asmt-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:16px; }
+    .sp2 .asmt-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; transition:box-shadow 0.25s, transform 0.25s; }
+    .sp2 .asmt-card:hover { box-shadow:0 8px 24px rgba(90,45,130,0.10); transform:translateY(-2px); }
+    .sp2 .asmt-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:14px 16px; background:linear-gradient(135deg,rgba(90,45,130,0.06),rgba(90,45,130,0.02)); border-bottom:1px solid var(--border); }
+    .sp2 .asmt-name { font-size:14px; font-weight:800; color:var(--text); line-height:1.35; }
+    .sp2 .asmt-type { font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em; margin-top:3px; }
+    .sp2 .asmt-avg-wrap { text-align:right; flex-shrink:0; }
+    .sp2 .asmt-avg { font-size:22px; font-weight:900; color:var(--purple); line-height:1; }
+    .sp2 .asmt-avg span { font-size:11px; font-weight:700; color:var(--text-muted); }
+    .sp2 .asmt-avg.asmt-pending { color:var(--border); }
+    .sp2 .asmt-sub { font-size:10px; font-weight:600; color:var(--text-muted); margin-top:4px; white-space:nowrap; }
+    .sp2 .asmt-comps { padding:6px 16px 12px; }
+    .sp2 .asmt-comp-row { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:9px 0; border-bottom:1px dashed var(--border); }
+    .sp2 .asmt-comp-row:last-child { border-bottom:none; }
+    .sp2 .asmt-comp-name { font-size:12.5px; font-weight:700; color:var(--text); line-height:1.35; }
+    .sp2 .asmt-comp-desc { font-size:10.5px; font-weight:500; color:var(--text-muted); line-height:1.4; margin-top:2px; }
+    .sp2 .asmt-comp-score { font-size:14px; font-weight:900; color:var(--purple); flex-shrink:0; white-space:nowrap; }
+    .sp2 .asmt-comp-score span { font-size:10px; font-weight:700; color:var(--text-muted); }
+    .sp2 .asmt-comp-score.asmt-pending { color:var(--border); }
     .sp2 .workon-score { font-size:12px; color:var(--gold); font-weight:800; margin-top:2px; }
 
     /* FEEDBACK ITEMS */

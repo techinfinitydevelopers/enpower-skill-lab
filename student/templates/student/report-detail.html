@@ -99,12 +99,62 @@
             {% for c in report.all_competency_scores %}
             <div class="comp-row" data-pct="{{ c.score }}0" data-score="{{ c.score }}" onmouseenter="spRenderStars(this)">
                 <div class="cr-icon"><span class="material-symbols-outlined">{% cycle 'extension' 'psychology' 'forum' 'group' 'lightbulb' 'insights' %}</span></div>
-                <div class="cr-name">{{ c.competency_name }}</div>
+                <div class="cr-name">
+                    {{ c.competency_name }}
+                    {% if c.competency_desc %}<div class="cr-desc">{{ c.competency_desc }}</div>{% endif %}
+                </div>
                 <div class="cr-bar-wrap"><div class="cr-bar"></div></div>
                 <div class="cr-right">
                     <div class="cr-score">{{ c.score }} / 10</div>
                     <div class="comp-row-level"></div>
                     <div class="cr-stars"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Assessment-by-assessment breakdown — shows progress across the project -->
+    {% if assessment_breakdown %}
+    <div class="section-block">
+        <div class="section-title">
+            <div class="section-icon"><span class="material-symbols-outlined">timeline</span></div>
+            Assessment by Assessment
+            <span class="section-badge">🗓 {{ assessment_breakdown|length }} Assessment{{ assessment_breakdown|length|pluralize }}</span>
+        </div>
+        <div class="asmt-grid">
+            {% for a in assessment_breakdown %}
+            <div class="asmt-card">
+                <div class="asmt-head">
+                    <div>
+                        <div class="asmt-name">{{ forloop.counter }}. {{ a.assessment_name }}</div>
+                        <div class="asmt-type">{{ a.assessment_type }}</div>
+                    </div>
+                    <div class="asmt-avg-wrap">
+                        {% if a.average is not None %}
+                        <div class="asmt-avg">{{ a.average }}<span>/10</span></div>
+                        <div class="asmt-sub">{{ a.scored_count }} of {{ a.total_count }} scored</div>
+                        {% else %}
+                        <div class="asmt-avg asmt-pending">—</div>
+                        <div class="asmt-sub">Not scored yet</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="asmt-comps">
+                    {% for c in a.competencies %}
+                    <div class="asmt-comp-row">
+                        <div class="asmt-comp-text">
+                            <div class="asmt-comp-name">{{ c.competency_name }}</div>
+                            {% if c.competency_desc %}<div class="asmt-comp-desc">{{ c.competency_desc }}</div>{% endif %}
+                        </div>
+                        {% if c.score is not None %}
+                        <div class="asmt-comp-score">{{ c.score }}<span>/10</span></div>
+                        {% else %}
+                        <div class="asmt-comp-score asmt-pending">—</div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
                 </div>
             </div>
             {% endfor %}
@@ -129,6 +179,7 @@
                     <div>
                         <div class="workon-meta">{{ c.competency_code }}</div>
                         <div class="workon-name">{{ c.competency_name }}</div>
+                        {% if c.competency_desc %}<div class="workon-desc">{{ c.competency_desc }}</div>{% endif %}
                         <div class="workon-score">Score: {{ c.score }} / 10</div>
                     </div>
                 </div>

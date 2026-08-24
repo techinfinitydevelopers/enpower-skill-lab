@@ -17,6 +17,30 @@ TOP_PROFILES_COUNT          = 3
 TOP_COMPETENCIES_COUNT      = 5
 
 
+def attach_competency_descriptions(*score_lists):
+    """Fill in `competency_desc` on competency-score dicts, in place.
+
+    Reports generated before descriptions were stored have no `competency_desc`
+    key, so student-facing pages would silently show codes only. Looking the
+    descriptions up at render time means old reports display correctly without
+    having to be regenerated. One query covers every list passed in.
+    """
+    from .models import Competency
+
+    rows = [row for lst in score_lists if lst for row in lst]
+    missing = {row.get('competency_id') for row in rows if not row.get('competency_desc')}
+    missing.discard(None)
+    if not missing:
+        return
+
+    descriptions = dict(
+        Competency.objects.filter(id__in=missing).values_list('id', 'description')
+    )
+    for row in rows:
+        if not row.get('competency_desc'):
+            row['competency_desc'] = descriptions.get(row.get('competency_id'), '')
+
+
 # ─────────────────────────────────────────────
 # STEP 1: Collect final competency scores
 # ─────────────────────────────────────────────
@@ -48,6 +72,90 @@ def get_competency_scores_for_project(student, project, include_kb=False):
         merged = _exclude_kb_scores(merged)
 
     return merged
+
+
+def get_per_assessment_breakdown(student, project, include_kb=False):
+    """Per-assessment score breakdown for one student on one project.
+
+    The project report otherwise only shows the aggregated final score per
+    competency, which hides whether the student improved across the project's
+    assessments. This returns one entry per assessment, in assessment order,
+    so the report can show progress over time.
+
+    Returns a list of dicts:
+        [{'assessment_id', 'assessment_name', 'assessment_type', 'order',
+          'average', 'scored_count', 'total_count',
+          'competencies': [{'competency_id', 'competency_code',
+                            'competency_name', 'competency_desc', 'score'}]}]
+
+    Assessments with no scores yet are included with average=None, so the
+    student sees which assessments are still pending rather than a gap.
+    """
+    from .models import Assessment, AssessmentCompetency, ScoreEntry, Competency
+
+    # Plug-in assessments belong to the plug-in project but merge into the parent
+    project_ids = [project.id]
+    plugin = project.plugins.filter(status='Active').first()
+    if plugin:
+        project_ids.append(plugin.id)
+
+    assessments = list(
+        Assessment.objects.filter(project_id__in=project_ids).order_by('order', 'id')
+    )
+    if not assessments:
+        return []
+
+    mappings = list(
+        AssessmentCompetency.objects
+        .filter(assessment_id__in=[a.id for a in assessments])
+        .select_related('competency', 'competency__sub_pillar__pillar')
+        .order_by('order', 'id')
+    )
+    if not include_kb:
+        mappings = [m for m in mappings if not m.competency.sub_pillar.pillar.is_kb]
+    if not mappings:
+        return []
+
+    scores = {
+        se.assessment_competency_id: se.score
+        for se in ScoreEntry.objects.filter(
+            student=student, assessment_competency_id__in=[m.id for m in mappings]
+        )
+    }
+
+    by_assessment = defaultdict(list)
+    for m in mappings:
+        by_assessment[m.assessment_id].append(m)
+
+    breakdown = []
+    for a in assessments:
+        rows = []
+        vals = []
+        for m in by_assessment.get(a.id, []):
+            score = scores.get(m.id)
+            if score is not None:
+                vals.append(score)
+            rows.append({
+                'competency_id':   m.competency_id,
+                'competency_code': m.competency.code,
+                'competency_name': m.competency.name,
+                'competency_desc': m.competency.description,
+                'score':           score,
+            })
+        if not rows:
+            continue
+        breakdown.append({
+            'assessment_id':   a.id,
+            'assessment_name': a.name,
+            'assessment_type': a.assessment_type,
+            'order':           a.order,
+            'average':         round(sum(vals) / len(vals), 1) if vals else None,
+            'scored_count':    len(vals),
+            'total_count':     len(rows),
+            'competencies':    rows,
+        })
+
+    return breakdown
 
 
 def _exclude_kb_scores(scores):
@@ -233,6 +341,7 @@ def build_report_data(student, project):
             'competency_id':   comp_id,
             'competency_code': comp_objs[comp_id].code if comp_id in comp_objs else '',
             'competency_name': comp_objs[comp_id].name if comp_id in comp_objs else '',
+            'competency_desc': comp_objs[comp_id].description if comp_id in comp_objs else '',
             'score':           round(score, 2),
         }
         for comp_id, score in competency_scores.items()
@@ -313,6 +422,54 @@ def get_annual_passport_scores(student):
     return annual_scores
 
 
+def get_annual_kb_scores(student):
+    """Annual Kaushal Bodh scores, reported separately from the Skill Passport.
+
+    KB competencies are deliberately kept out of the passport calculation and
+    profiling (see `_exclude_kb_scores`), so they need their own read path or
+    they never surface anywhere. Same latest-project-wins rule as the passport.
+
+    Returns a list of dicts sorted by score (desc):
+        [{'competency_id', 'competency_code', 'competency_name',
+          'competency_desc', 'score'}]
+    """
+    from .models import Competency
+
+    kb_comp_ids = set(
+        Competency.objects.filter(sub_pillar__pillar__is_kb=True).values_list('id', flat=True)
+    )
+    if not kb_comp_ids:
+        return []
+
+    projects = Project.objects.filter(
+        sequence_number__isnull=False, status='Active'
+    ).order_by('-sequence_number')
+
+    kb_scores = {}
+    for project in projects:
+        scores = get_competency_scores_for_project(student, project, include_kb=True)
+        for comp_id, score in scores.items():
+            if comp_id in kb_comp_ids and comp_id not in kb_scores:
+                kb_scores[comp_id] = score
+
+    if not kb_scores:
+        return []
+
+    comp_objs = {c.id: c for c in Competency.objects.filter(id__in=kb_scores.keys())}
+    rows = [
+        {
+            'competency_id':   comp_id,
+            'competency_code': comp_objs[comp_id].code if comp_id in comp_objs else '',
+            'competency_name': comp_objs[comp_id].name if comp_id in comp_objs else '',
+            'competency_desc': comp_objs[comp_id].description if comp_id in comp_objs else '',
+            'score':           round(score, 2),
+        }
+        for comp_id, score in kb_scores.items()
+    ]
+    rows.sort(key=lambda x: x['score'], reverse=True)
+    return rows
+
+
 def generate_annual_passport(student):
     """
     Runs the profiling engine on annual scores.
@@ -336,6 +493,7 @@ def generate_annual_passport(student):
             'competency_id':   comp_id,
             'competency_code': comp_objs[comp_id].code if comp_id in comp_objs else '',
             'competency_name': comp_objs[comp_id].name if comp_id in comp_objs else '',
+            'competency_desc': comp_objs[comp_id].description if comp_id in comp_objs else '',
             'score':           round(score, 2),
         }
         for comp_id, score in competency_scores.items()

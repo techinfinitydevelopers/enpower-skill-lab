@@ -290,19 +290,19 @@
                 <div class="card-body">
                     <div class="info-row">
                         <span class="label">Bank Name</span>
-                        <span class="value">{{ coordinator.bank_name }}</span>
+                        <span class="value">{{ coordinator.bank_name|default:"—" }}</span>
                     </div>
                     <div class="info-row">
                         <span class="label">Branch Name</span>
-                        <span class="value">{{ coordinator.branch_name }}</span>
+                        <span class="value">{{ coordinator.branch_name|default:"—" }}</span>
                     </div>
                     <div class="info-row">
                         <span class="label">Account Number</span>
-                        <span class="value">{{ coordinator.account_number }}</span>
+                        <span class="value">{{ coordinator.account_number|default:"—" }}</span>
                     </div>
                     <div class="info-row">
                         <span class="label">IFSC Code</span>
-                        <span class="value">{{ coordinator.ifsc_code }}</span>
+                        <span class="value">{{ coordinator.ifsc_code|default:"—" }}</span>
                     </div>
                 </div>
             </div>

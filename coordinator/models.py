@@ -121,11 +121,11 @@ class ProgramCoordinator(models.Model):
     contract_start_date = models.DateField(blank=True, null=True)
     contract_end_date = models.DateField(blank=True, null=True)
     
-    # Bank & Payroll Details
-    bank_name = models.CharField(max_length=100)
-    branch_name = models.CharField(max_length=100)
-    account_number = models.CharField(max_length=50)
-    ifsc_code = models.CharField(max_length=11)
+    # Bank & Payroll Details (optional — org uses its own payroll system)
+    bank_name = models.CharField(max_length=100, blank=True, null=True)
+    branch_name = models.CharField(max_length=100, blank=True, null=True)
+    account_number = models.CharField(max_length=50, blank=True, null=True)
+    ifsc_code = models.CharField(max_length=11, blank=True, null=True)
     bank_proof = models.FileField(upload_to='coordinator/bank_proofs/', blank=True, null=True)
     
     # Additional Optional Data

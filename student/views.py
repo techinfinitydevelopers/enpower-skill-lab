@@ -176,6 +176,11 @@ def student_report_detail(request, project_id):
     # Categorize competencies by score label
     all_scores = report.all_competency_scores or []
 
+    from competencies.engine import attach_competency_descriptions
+    attach_competency_descriptions(
+        all_scores, report.skills_to_work_on, report.top_5_competencies
+    )
+
     def get_label(score):
         if score >= 8:   return 'very_strong'
         if score >= 6:   return 'strong'
@@ -208,6 +213,11 @@ def student_report_detail(request, project_id):
         assessment__project_id=project_id
     ).select_related('entered_by').order_by('-updated_at')
 
+    # Per-assessment breakdown so the report shows progress across the project,
+    # not just the aggregated final score per competency.
+    from competencies.engine import get_per_assessment_breakdown
+    assessment_breakdown = get_per_assessment_breakdown(student, report.project)
+
     return render(request, 'student/report-detail.html', {
         'student':     student,
         'report':      report,
@@ -217,6 +227,7 @@ def student_report_detail(request, project_id):
         'feedbacks':   feedbacks,
         'overall_score': overall,
         'best_match':  best_match,
+        'assessment_breakdown': assessment_breakdown,
     })
 
 
@@ -246,6 +257,7 @@ def student_annual_passport(request):
         'strong': [],
         'emerging': [],
         'work_on': [],
+        'kb_scores': [],
         'overall_score': 0,
         'attendance_percent': 0,
         'summary_paragraphs': [],
@@ -268,6 +280,14 @@ def student_annual_passport(request):
         except Exception:
             context['attendance_percent'] = 0
 
+        # Kaushal Bodh is reported separately — it is excluded from the passport
+        # calculation, so it needs its own section rather than being folded in.
+        try:
+            from competencies.engine import get_annual_kb_scores
+            context['kb_scores'] = get_annual_kb_scores(student)
+        except Exception:
+            context['kb_scores'] = []
+
     data = None
     if student:
         try:
@@ -279,6 +299,13 @@ def student_annual_passport(request):
 
     if data:
         all_scores = data.get('all_competency_scores') or []
+
+        from competencies.engine import attach_competency_descriptions
+        attach_competency_descriptions(
+            all_scores,
+            data.get('top_5_competencies'),
+            data.get('skills_to_work_on'),
+        )
 
         def get_label(score):
             if score >= 8:
