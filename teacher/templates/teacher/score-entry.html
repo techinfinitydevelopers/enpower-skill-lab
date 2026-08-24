@@ -630,7 +630,7 @@ function saveStudentFeedback(studentId, btn) {
     if (text === feedbackFor(studentId)) {
         // Nothing changed — say so rather than firing a pointless write and
         // claiming a save the teacher didn't make.
-        if (window.showToast) showToast('No changes to save', 'info');
+        notify('No changes to save', 'info');
         return;
     }
 
@@ -659,20 +659,53 @@ function saveStudentFeedback(studentId, btn) {
             if (!currentData.feedback) currentData.feedback = {};
             currentData.feedback[String(studentId)] = text;
             showSaved();
-            if (window.showToast) showToast(`Feedback saved for ${name}`, 'success');
+            notify(`Feedback saved for ${name}`, 'success');
         } else {
-            if (window.showToast) showToast(data.error || 'Could not save feedback', 'error');
+            notify(data.error || 'Could not save feedback', 'error');
         }
     })
     .catch(() => {
         restore();
-        if (window.showToast) showToast('Could not save feedback', 'error');
+        notify('Could not save feedback', 'error');
     });
 }
 
 function studentNameFor(studentId) {
     const s = (currentData && currentData.students || []).find(x => x.id === studentId);
     return s ? `${s.first_name} ${s.last_name}`.trim() : 'student';
+}
+
+// Always surface a toast. The old `if (window.showToast)` guards failed
+// silently, so a save looked like nothing had happened at all. toast.js is
+// now loaded before this script, but keep a minimal fallback that reuses the
+// same markup/classes so the notification can never go missing.
+function notify(message, type) {
+    if (window.showToast) return window.showToast(message, type || 'success');
+
+    console.warn('showToast unavailable — using fallback toast');
+    const ICONS  = { success: 'check_circle', error: 'cancel', warning: 'warning', info: 'info' };
+    const TITLES = { success: 'Success', error: 'Error', warning: 'Warning', info: 'Info' };
+    const t = type || 'success';
+
+    let box = document.querySelector('.toast-container');
+    if (!box) {
+        box = document.createElement('div');
+        box.className = 'toast-container';
+        document.body.appendChild(box);
+    }
+    const el = document.createElement('div');
+    el.className = `toast toast-${t}`;
+    el.innerHTML =
+        `<div class="toast-icon"><span class="material-symbols-outlined">${ICONS[t] || ICONS.info}</span></div>` +
+        `<div class="toast-content"><div class="toast-title">${TITLES[t] || 'Info'}</div>` +
+        `<div class="toast-message"></div></div>` +
+        `<button class="toast-close" onclick="this.closest('.toast').remove()">` +
+        `<span class="material-symbols-outlined">close</span></button>` +
+        `<div class="toast-progress"><div class="toast-progress-bar"></div></div>`;
+    el.querySelector('.toast-message').textContent = message;
+    box.appendChild(el);
+    setTimeout(() => el.remove(), 3000);
+    return el;
 }
 
 function refreshStats() {
@@ -782,13 +815,13 @@ async function bulkGenerateReports() {
         result.style.border     = '1px solid #bbf7d0';
         result.style.color      = '#15803d';
         result.innerHTML = `<span class="material-symbols-outlined" style="font-size:16px; vertical-align:middle; margin-right:6px;">check_circle</span>Reports generated for all ${success} students successfully.`;
-        if (window.showToast) showToast(`Reports generated for all ${success} students`, 'success');
+        notify(`Reports generated for all ${success} students`, 'success');
     } else {
         result.style.background = '#fffbeb';
         result.style.border     = '1px solid #fde68a';
         result.style.color      = '#92400e';
         result.innerHTML = `<span class="material-symbols-outlined" style="font-size:16px; vertical-align:middle; margin-right:6px;">warning</span>${success} succeeded, ${failed} failed. Failed students may not have any scores yet.`;
-        if (window.showToast) showToast(`${success} report(s) generated, ${failed} failed`, 'warning');
+        notify(`${success} report(s) generated, ${failed} failed`, 'warning');
     }
 }
 

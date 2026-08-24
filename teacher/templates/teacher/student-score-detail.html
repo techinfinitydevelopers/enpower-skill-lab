@@ -354,12 +354,12 @@ function saveScore(input, acId) {
             renderCell(wrapper, acId, data.score);
             showSaved();
             updateSummary();
-            if (window.showToast) showToast(scoreVal === null ? 'Score cleared' : 'Score saved', 'success');
-        } else if (window.showToast) {
+            notify(scoreVal === null ? 'Score cleared' : 'Score saved', 'success');
+        } else {
             showToast(data.error || 'Could not save score', 'error');
         }
     })
-    .catch(() => { if (window.showToast) showToast('Could not save score', 'error'); });
+    .catch(() => { notify('Could not save score', 'error'); });
 }
 
 function renderCell(wrapper, acId, score) {
@@ -381,12 +381,12 @@ function saveFeedback() {
     .then(data => {
         if (data.ok) {
             showSaved();
-            if (window.showToast) showToast('Assessment feedback saved', 'success');
-        } else if (window.showToast) {
+            notify('Assessment feedback saved', 'success');
+        } else {
             showToast(data.error || 'Could not save feedback', 'error');
         }
     })
-    .catch(() => { if (window.showToast) showToast('Could not save feedback', 'error'); });
+    .catch(() => { notify('Could not save feedback', 'error'); });
 }
 
 
@@ -419,14 +419,14 @@ function saveProjectFeedback(btn) {
         restore();
         if (data.ok) {
             showSaved();
-            if (window.showToast) showToast('Project feedback saved', 'success');
-        } else if (window.showToast) {
+            notify('Project feedback saved', 'success');
+        } else {
             showToast(data.error || 'Could not save project feedback', 'error');
         }
     })
     .catch(() => {
         restore();
-        if (window.showToast) showToast('Could not save project feedback', 'error');
+        notify('Could not save project feedback', 'error');
     });
 }
 
@@ -440,5 +440,40 @@ function showSaved() {
 }
 
 document.addEventListener('DOMContentLoaded', updateSummary);
+
+
+// Always surface a toast. The old `if (window.showToast)` guards failed
+// silently, so a save looked like nothing had happened. toast.js now loads
+// before this script; the fallback reuses the same markup/classes so the
+// notification can never go missing.
+function notify(message, type) {
+    if (window.showToast) return window.showToast(message, type || 'success');
+
+    console.warn('showToast unavailable - using fallback toast');
+    const ICONS  = { success: 'check_circle', error: 'cancel', warning: 'warning', info: 'info' };
+    const TITLES = { success: 'Success', error: 'Error', warning: 'Warning', info: 'Info' };
+    const t = type || 'success';
+
+    let box = document.querySelector('.toast-container');
+    if (!box) {
+        box = document.createElement('div');
+        box.className = 'toast-container';
+        document.body.appendChild(box);
+    }
+    const el = document.createElement('div');
+    el.className = `toast toast-${t}`;
+    el.innerHTML =
+        `<div class="toast-icon"><span class="material-symbols-outlined">${ICONS[t] || ICONS.info}</span></div>` +
+        `<div class="toast-content"><div class="toast-title">${TITLES[t] || 'Info'}</div>` +
+        `<div class="toast-message"></div></div>` +
+        `<button class="toast-close" onclick="this.closest('.toast').remove()">` +
+        `<span class="material-symbols-outlined">close</span></button>` +
+        `<div class="toast-progress"><div class="toast-progress-bar"></div></div>`;
+    el.querySelector('.toast-message').textContent = message;
+    box.appendChild(el);
+    setTimeout(() => el.remove(), 3000);
+    return el;
+}
+
 </script>
 {% endblock %}

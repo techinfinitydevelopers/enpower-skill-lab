@@ -559,7 +559,8 @@
             }
         });
     </script>
-    {% block extra_js %}{% endblock %}
+    <!-- Loaded before extra_js so page scripts can rely on showToast() -->
     <script src="{% static 'js/common/toast.js' %}"></script>
+    {% block extra_js %}{% endblock %}
 </body>
 </html>
