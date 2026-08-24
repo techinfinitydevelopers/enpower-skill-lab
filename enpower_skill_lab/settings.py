@@ -72,6 +72,9 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # Keep signed-in HTML out of the browser cache — needs request.user, so it
+    # must sit after AuthenticationMiddleware.
+    'enpower_skill_lab.middleware.NoStoreHTMLMiddleware',
 ]
 
 ROOT_URLCONF = 'enpower_skill_lab.urls'
