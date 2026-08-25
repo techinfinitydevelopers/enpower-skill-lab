@@ -259,7 +259,6 @@ def student_annual_passport(request):
         'strong': [],
         'emerging': [],
         'work_on': [],
-        'kb_scores': [],
         'top_project': None,
         'sub_pillar_groups': [],
         'overall_score': 0,
@@ -284,13 +283,6 @@ def student_annual_passport(request):
         except Exception:
             context['attendance_percent'] = 0
 
-        # Kaushal Bodh is reported separately — it is excluded from the passport
-        # calculation, so it needs its own section rather than being folded in.
-        try:
-            from competencies.engine import get_annual_kb_scores
-            context['kb_scores'] = get_annual_kb_scores(student)
-        except Exception:
-            context['kb_scores'] = []
 
         # Strongest project of the year + its work-firm category.
         try:

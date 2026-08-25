@@ -425,8 +425,7 @@ def parent_child_report_detail(request, student_id, project_id):
 @user_passes_test(is_parent)
 def parent_child_passport(request, student_id):
     """The child's Annual Skill Passport, as the student sees it."""
-    from competencies.engine import (generate_annual_passport, get_annual_kb_scores,
-                                     get_top_project, attach_competency_descriptions,
+    from competencies.engine import (generate_annual_passport,                                      get_top_project, attach_competency_descriptions,
                                      group_by_sub_pillar)
     from competencies.models import Profile
     from student.views import _build_passport_summary
@@ -438,7 +437,7 @@ def parent_child_passport(request, student_id):
         'child': child, 'student': child, 'has_data': False,
         'top_3_profiles': [], 'top_5_competencies': [], 'skills_to_work_on': [],
         'all_competency_scores': [], 'very_strong': [], 'strong': [], 'emerging': [],
-        'work_on': [], 'kb_scores': [], 'top_project': None, 'overall_score': 0,
+        'work_on': [], 'top_project': None, 'overall_score': 0,
         'sub_pillar_groups': [],
         'attendance_percent': 0, 'summary_paragraphs': [],
         'academic_year': getattr(child, 'academic_year', '') or '',
@@ -448,10 +447,6 @@ def parent_child_passport(request, student_id):
 
     try:
         context['attendance_percent'] = student_attendance_stats(child).get('percent') or 0
-    except Exception:
-        pass
-    try:
-        context['kb_scores'] = get_annual_kb_scores(child)
     except Exception:
         pass
     try:

@@ -192,34 +192,10 @@ parent's view of their child's passport, so both stay identical.
 
     {% endif %}
 
-    <!-- Kaushal Bodh — reported separately, NOT part of the Skill Passport score -->
-    {% if kb_scores %}
-    <div class="section-block">
-        <div class="section-title">
-            <div class="section-icon" style="background:linear-gradient(135deg,var(--gold),#F77F00);"><span class="material-symbols-outlined">handyman</span></div>
-            Kaushal Bodh
-            <span class="section-badge">🛠 {{ kb_scores|length }} Skill{{ kb_scores|length|pluralize }}</span>
-        </div>
-        <div class="kb-note">Reported separately — these scores are not included in your Skill Passport calculation.</div>
-        <div class="comp-card">
-            {% for c in kb_scores %}
-            <div class="comp-row" data-pct="{{ c.score }}0" data-score="{{ c.score }}" onmouseenter="spRenderStars(this)">
-                <div class="cr-icon"><span class="material-symbols-outlined">build</span></div>
-                <div class="cr-name">
-                    {{ c.competency_name }}
-                    {% if c.competency_desc %}<div class="cr-desc">{{ c.competency_desc }}</div>{% endif %}
-                </div>
-                <div class="cr-bar-wrap"><div class="cr-bar"></div></div>
-                <div class="cr-right">
-                    <div class="cr-score">{{ c.score }} / 10</div>
-                    <div class="comp-row-level"></div>
-                    <div class="cr-stars"></div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-    {% endif %}
+    {% comment %}
+    Kaushal Bodh lives in its own report now (spec slide 32, "Customised report
+    (KB)"), so it is not repeated here.
+    {% endcomment %}
 
     <!-- Year in Review -->
     {% if summary_paragraphs %}
