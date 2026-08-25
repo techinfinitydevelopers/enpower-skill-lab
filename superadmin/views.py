@@ -13,7 +13,7 @@ from django.utils import timezone
 from schools.models import School
 from school_admin.models import SchoolAdmin
 from .models import SuperAdmin
-from competencies.models import Pillar, SubPillar, Competency, Profile, Project, Assessment, AssessmentCompetency, ESLProduct, Announcement, RubricCriterion
+from competencies.models import Pillar, SubPillar, Competency, Profile, Project, Assessment, AssessmentCompetency, ESLProduct, Announcement, RubricCriterion, ScoreEntry
 import json
 import secrets
 import string
@@ -2905,9 +2905,7 @@ def learning_pillars(request):
             sp_id = request.POST.get('sp_id')
             sp_name = request.POST.get('sp_name', '').strip()
             sp_obj = get_object_or_404(SubPillar, id=sp_id)
-            if not sp_obj.pillar.is_kb and sp_obj.pillar.framework_ref and sp_obj.pillar.framework_ref.is_fixed:
-                messages.error(request, 'This sub-pillar cannot be edited.')
-            elif not sp_name:
+            if not sp_name:
                 messages.error(request, 'Sub-pillar name is required.')
             else:
                 sp_obj.name = sp_name
@@ -2917,8 +2915,16 @@ def learning_pillars(request):
         elif action == 'delete_subpillar':
             sp_id = request.POST.get('sp_id')
             sp_obj = get_object_or_404(SubPillar, id=sp_id)
-            if not sp_obj.pillar.is_kb and sp_obj.pillar.framework_ref and sp_obj.pillar.framework_ref.is_fixed:
-                messages.error(request, 'This sub-pillar cannot be deleted.')
+            # Deleting cascades Competency -> AssessmentCompetency -> ScoreEntry,
+            # so refuse while any student score would go with it.
+            scored = ScoreEntry.objects.filter(
+                assessment_competency__competency__sub_pillar=sp_obj).count()
+            if scored:
+                messages.error(
+                    request,
+                    f'"{sp_obj.name}" cannot be deleted — {scored} student score'
+                    f'{"s" if scored != 1 else ""} recorded against its competencies '
+                    f'would be lost. Remove those scores first.')
             else:
                 sp_obj.delete()
                 messages.success(request, 'Sub-pillar deleted.')
@@ -2927,20 +2933,17 @@ def learning_pillars(request):
         elif action == 'rename_pillar':
             p_id = request.POST.get('pillar_id')
             pillar_obj = get_object_or_404(Pillar, id=p_id)
-            if not pillar_obj.is_kb and pillar_obj.framework_ref and pillar_obj.framework_ref.is_fixed:
-                messages.error(request, 'This pillar cannot be renamed.')
-            else:
-                new_name = request.POST.get('pillar_name', '').strip()
-                if new_name:
-                    pillar_obj.name = new_name
-                    color = request.POST.get('pillar_color')
-                    if color:
-                        pillar_obj.color = color
-                    pillar_obj.save()
-                    messages.success(request, f'Pillar renamed to "{new_name}".')
+            new_name = request.POST.get('pillar_name', '').strip()
+            if new_name:
+                pillar_obj.name = new_name
+                color = request.POST.get('pillar_color')
+                if color:
+                    pillar_obj.color = color
+                pillar_obj.save()
+                messages.success(request, f'Pillar renamed to "{new_name}".')
 
-        # CSL+ only: add/delete pillar
-        elif action == 'add_pillar' and is_csl:
+        # Add / delete pillar — available on every framework (spec slide 21)
+        elif action == 'add_pillar':
             name = request.POST.get('pillar_name', '').strip()
             color = request.POST.get('pillar_color', 'teal')
             if not name:
@@ -2955,12 +2958,20 @@ def learning_pillars(request):
                 )
                 messages.success(request, f'Pillar "{name}" added!')
 
-        elif action == 'delete_pillar' and is_csl:
+        elif action == 'delete_pillar':
             p_id = request.POST.get('pillar_id')
             p_obj = get_object_or_404(Pillar, id=p_id, framework_ref=active_fw_obj)
-            p_obj.delete()
-            messages.success(request, 'Pillar deleted.')
-            return redirect(f"{request.path}?fw=CSL")
+            scored = ScoreEntry.objects.filter(
+                assessment_competency__competency__sub_pillar__pillar=p_obj).count()
+            if scored:
+                messages.error(
+                    request,
+                    f'"{p_obj.name}" cannot be deleted — {scored} student score'
+                    f'{"s" if scored != 1 else ""} recorded against its competencies would be lost.')
+            else:
+                p_obj.delete()
+                messages.success(request, 'Pillar deleted.')
+                return redirect(f"{request.path}?fw={active_fw_obj.id}")
 
         # Framework CRUD
         elif action == 'create_framework':

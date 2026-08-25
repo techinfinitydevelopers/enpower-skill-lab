@@ -733,8 +733,9 @@
             </button>
         </div>
 
-        {% if is_csl %}
-        <!-- CSL+: Add Pillar Button -->
+        {# Add / edit / delete are available on every framework (spec slide 21 shows
+           the controls on the FSL board, not just CSL+). #}
+        <!-- Add Pillar Button -->
         <div style="padding:0 12px 8px;">
             <button type="button" class="lp-csl-add-pillar-btn" onclick="toggleEl('cslAddPillarForm')">
                 <span class="material-symbols-outlined" style="font-size:16px;">add</span> Add Pillar
@@ -759,7 +760,6 @@
                 </div>
             </form>
         </div>
-        {% endif %}
 
         <nav class="lp-sidebar-nav">
             {% for pillar in pillars %}
@@ -795,7 +795,6 @@
                     <span class="lp-pillar-name">{{ pillar.name }}</span>
                     <span class="material-symbols-outlined lp-chev">expand_more</span>
                 </button>
-                {% if is_csl %}
                 <span class="lp-csl-pillar-actions">
                     <button type="button" class="lp-csl-act" title="Edit" onclick="event.stopPropagation();openLpEditPillar({{ pillar.id }},'{{ pillar.name|escapejs }}','{{ pillar.color }}')">
                         <span class="material-symbols-outlined" style="font-size:14px;">edit</span>
@@ -809,7 +808,6 @@
                         </button>
                     </form>
                 </span>
-                {% endif %}
                 </div><!-- end flex row -->
 
                 <div id="sp-list-{{ pillar.id }}"
@@ -841,7 +839,6 @@
                        ">
                         <span class="lp-sp-code">{{ sp.code }}</span>
                         {{ sp.name }}
-                        {% if pillar.is_kb or is_csl %}
                         <span class="lp-kb-sp-actions">
                             <button type="button" class="lp-kb-sp-act" title="Rename" onclick="event.preventDefault();event.stopPropagation();openKbSpEdit({{ sp.id }},'{{ sp.name|escapejs }}')">
                                 <span class="material-symbols-outlined" style="font-size:14px;">edit</span>
@@ -855,7 +852,6 @@
                                 </button>
                             </form>
                         </span>
-                        {% endif %}
                     </a>
                     {% endfor %}
                     {# Add Sub-Pillar available for all pillars (non-destructive) #}
