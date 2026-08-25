@@ -289,6 +289,7 @@
         document.getElementById('studentGrade').textContent = data.grade_section;
         document.getElementById('studentSchool').textContent = data.school;
         document.getElementById('studentCoach').textContent = data.coach;
+        setText('studentProgram', data.program || '—');
 
         // KPI cards (slide 47)
         setText('kpiAttendanceValue', (data.monthly_attendance || 0) + '%');
