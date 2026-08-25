@@ -2414,7 +2414,7 @@ body.dark .sidebar {
 }
 
 .sidebar-header {
-    height: 80px;
+    height: 196px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -2422,7 +2422,7 @@ body.dark .sidebar {
 }
 
 .sidebar-logo {
-    height: 96px;
+    height: 168px;
     width: auto;
     max-width: 220px;
     object-fit: contain;
