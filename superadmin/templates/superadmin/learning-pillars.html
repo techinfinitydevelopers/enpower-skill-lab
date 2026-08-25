@@ -733,8 +733,10 @@
             </button>
         </div>
 
-        {# Add / edit / delete are available on every framework (spec slide 21 shows
-           the controls on the FSL board, not just CSL+). #}
+        {% comment %}
+        Add / edit / delete are available on every framework — spec slide 21
+        shows the controls on the FSL board, not just CSL+.
+        {% endcomment %}
         <!-- Add Pillar Button -->
         <div style="padding:0 12px 8px;">
             <button type="button" class="lp-csl-add-pillar-btn" onclick="toggleEl('cslAddPillarForm')">
