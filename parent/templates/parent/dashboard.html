@@ -180,9 +180,12 @@
                 </div>
                 <div>
                     {% for e in events %}
-                    <a href="{% if e.event_link %}{{ e.event_link }}{% else %}#{% endif %}"
-                       class="action-item" {% if e.event_link %}target="_blank" rel="noopener"{% endif %}
+                    {% if e.event_link %}
+                    <a href="{{ e.event_link }}" class="action-item" target="_blank" rel="noopener"
                        style="text-decoration:none;color:inherit;align-items:flex-start;">
+                    {% else %}
+                    <div class="action-item" style="color:inherit;align-items:flex-start;">
+                    {% endif %}
                         <div class="action-item-left" style="align-items:flex-start;">
                             <span class="material-symbols-outlined">event</span>
                             <span class="action-item-title">
@@ -196,7 +199,7 @@
                             <span class="material-symbols-outlined">chevron_right</span>
                         </div>
                         {% endif %}
-                    </a>
+                    {% if e.event_link %}</a>{% else %}</div>{% endif %}
                     {% empty %}
                     <p style="color:#7c6882;font-size:0.875rem;">No events or announcements yet.</p>
                     {% endfor %}
@@ -210,8 +213,12 @@
                 </div>
                 <div>
                     {% for n in newsletters %}
-                    <a href="{% if n.newsletter_file %}{{ n.newsletter_file.url }}{% elif n.newsletter_weblink %}{{ n.newsletter_weblink }}{% else %}#{% endif %}"
+                    {% if n.newsletter_file or n.newsletter_weblink %}
+                    <a href="{% if n.newsletter_file %}{{ n.newsletter_file.url }}{% else %}{{ n.newsletter_weblink }}{% endif %}"
                        class="action-item" target="_blank" rel="noopener" style="text-decoration:none;color:inherit;">
+                    {% else %}
+                    <div class="action-item" style="color:inherit;">
+                    {% endif %}
                         <div class="action-item-left">
                             <span class="material-symbols-outlined">newspaper</span>
                             <span class="action-item-title">{{ n.newsletter_month|default:n.created_at|date:"M Y" }}</span>
@@ -219,7 +226,7 @@
                         <div class="action-item-right">
                             <span class="material-symbols-outlined">chevron_right</span>
                         </div>
-                    </a>
+                    {% if n.newsletter_file or n.newsletter_weblink %}</a>{% else %}</div>{% endif %}
                     {% empty %}
                     <p style="color:#7c6882;font-size:0.875rem;">No newsletters yet.</p>
                     {% endfor %}
