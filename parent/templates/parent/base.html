@@ -1049,7 +1049,8 @@
                     Dashboard
                 </a>
 
-                <!-- Student Profiles -->
+                <!-- Student Profiles — only meaningful with more than one child -->
+                {% if sidebar_child_count > 1 %}
                 <div class="sidebar-dropdown">
                     <a href="#" class="sidebar-dropdown-toggle" id="student-profiles-dropdown">
                         <span class="material-symbols-outlined">child_care</span>
@@ -1057,18 +1058,13 @@
                         <span class="material-symbols-outlined dropdown-icon">expand_more</span>
                     </a>
                     <div class="sidebar-dropdown-menu">
-                        {% if sidebar_child_count > 1 %}
                         <a href="{% url 'parent_dashboard' %}#studentSelector" id="nav-switch-child">
                             <span class="material-symbols-outlined">swap_horiz</span>
                             Switch Student
                         </a>
-                        {% endif %}
-                        <a href="{% if sidebar_child_id %}{% url 'parent_child_reports' sidebar_child_id %}{% else %}{% url 'parent_dashboard' %}{% endif %}" id="nav-child-performance">
-                            <span class="material-symbols-outlined">analytics</span>
-                            Student Performance Summary
-                        </a>
                     </div>
                 </div>
+                {% endif %}
 
                 <!-- Events (kept per PPT slide 48) -->
                 <a href="{% url 'parent_events' %}" id="nav-events" class="sidebar-nav-link">
@@ -1108,6 +1104,10 @@
                         <span class="material-symbols-outlined dropdown-icon">expand_more</span>
                     </a>
                     <div class="sidebar-dropdown-menu">
+                        <a href="{% if sidebar_child_id %}{% url 'parent_child_reports' sidebar_child_id %}{% else %}{% url 'parent_dashboard' %}{% endif %}" id="nav-child-performance">
+                            <span class="material-symbols-outlined">analytics</span>
+                            Project Reports
+                        </a>
                         <a href="{% if sidebar_child_id %}{% url 'parent_child_passport' sidebar_child_id %}{% else %}{% url 'parent_dashboard' %}{% endif %}" id="nav-annual-skill-report">
                             <span class="material-symbols-outlined">workspace_premium</span>
                             Annual Skill Report
