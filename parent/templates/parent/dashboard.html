@@ -20,7 +20,7 @@
             </div>
             <!-- Child Switcher Tabs -->
             <div class="col-12 col-md-6 d-flex justify-content-md-end">
-                <div class="child-switcher">
+                <div class="child-switcher" id="studentSelector">
                     {% for child in children %}
                     <button class="child-tab {% if forloop.first %}active{% endif %}" data-child="{{ child.id }}">
                         <span class="material-symbols-outlined">{% if child.gender == 'female' %}face_3{% else %}face{% endif %}</span>
@@ -90,7 +90,20 @@
         <div class="card-header-custom">
             <h3 class="card-title-custom">Projects This Year</h3>
         </div>
-        <div id="projectsList"></div>
+        <div id="projectsList">
+                    {% if children and children.0.projects %}
+                        {% for pr in children.0.projects %}
+                        <div class="performance-item">
+                            <div class="performance-header">
+                                <span class="performance-subject">{{ pr.name }}</span>
+                                {% if pr.completed %}<span class="performance-badge good">Completed</span>{% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div style="text-align:center;padding:1.5rem;color:#7c6882;">No projects yet this year.</div>
+                    {% endif %}
+                </div>
     </div>
 
     <!-- Main Content Grid -->
@@ -107,7 +120,23 @@
                     <a href="#" class="card-action-link">View All</a>
                     {% endif %}
                 </div>
-                <div id="performanceContainer"></div>
+                <div id="performanceContainer">
+                    {% if children and children.0.performance %}
+                        {% for row in children.0.performance %}
+                        <div class="performance-item">
+                            <div class="performance-header">
+                                <span class="performance-subject">{{ row.name }}</span>
+                                <span class="performance-badge {{ row.badge_class }}">{{ row.badge }} · {{ row.score }}/10</span>
+                            </div>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar-fill {{ row.bar_class }}" style="width:{{ row.percent }}%;"></div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p style="color:#7c6882;font-size:.85rem;margin:0;">No scores recorded yet. This fills in once the Thinking Coach generates a report.</p>
+                    {% endif %}
+                </div>
             </div>
 
             <!-- Learning Progress -->
@@ -286,9 +315,17 @@
         const ring = document.getElementById('learningProgressPath');
         if (ring) ring.setAttribute('stroke-dasharray', pct + ', 100');
 
-        // Reports link follows whichever child is selected
-        const reportsLink = document.getElementById('viewReportsLink');
-        if (reportsLink) reportsLink.href = '/parent/child/' + data.id + '/reports/';
+        // Report links follow whichever child is selected
+        const base = '/parent/child/' + data.id + '/';
+        [['viewReportsLink', base + 'reports/'],
+         ['nav-child-performance', base + 'reports/'],
+         ['nav-annual-skill-report', base + 'passport/']].forEach(([id, href]) => {
+            const el = document.getElementById(id);
+            if (el) el.href = href;
+        });
+
+        // Academic Performance rows for the selected child
+        renderPerformance(data.performance || []);
         const detailsEl = document.getElementById('learningModuleDetails');
         if (detailsEl) {
             detailsEl.textContent = data.current_module_desc || 'No learning details available yet.';
@@ -302,6 +339,33 @@
     function setText(id, value) {
         const el = document.getElementById(id);
         if (el) el.textContent = value;
+    }
+
+    // Academic Performance card — this container used to be left empty.
+    function renderPerformance(rows) {
+        const box = document.getElementById('performanceContainer');
+        if (!box) return;
+        if (!rows.length) {
+            box.innerHTML = '<p style="color:#7c6882;font-size:.85rem;margin:0;">' +
+                'No scores recorded yet. This fills in once the Thinking Coach generates a report.</p>';
+            return;
+        }
+        box.innerHTML = rows.map(r => `
+            <div class="performance-item">
+                <div class="performance-header">
+                    <span class="performance-subject">${escapeHtml(r.name)}</span>
+                    <span class="performance-badge ${r.badge_class}">${escapeHtml(r.badge)} · ${r.score}/10</span>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar-fill ${r.bar_class}" style="width:${r.percent}%;"></div>
+                </div>
+            </div>`).join('');
+    }
+
+    function escapeHtml(s) {
+        const d = document.createElement('div');
+        d.textContent = s == null ? '' : String(s);
+        return d.innerHTML;
     }
 
     // Render projects list

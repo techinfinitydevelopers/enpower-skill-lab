@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
-from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth import update_session_auth_hash, logout
 from django.contrib.auth.forms import PasswordChangeForm
 from django.http import JsonResponse
 from django.utils.timesince import timesince
@@ -80,6 +80,42 @@ def _academic_performance(child):
 
     mean = sum(values) / len(values)
     return int(round(mean * 10)), round(mean, 1)
+
+
+def _performance_rows(child, limit=6):
+    """Per-competency rows for the Academic Performance card.
+
+    The card rendered an empty <div id="performanceContainer"> — no template
+    content and no JS ever filled it, so parents saw a heading with nothing
+    under it. Uses the latest score per competency across the child's reports.
+    """
+    from competencies.models import ProjectReport
+
+    latest = {}
+    for report in ProjectReport.objects.filter(student=child).select_related('project').order_by(
+            'project__sequence_number', 'project_id'):
+        for row in (report.all_competency_scores or []):
+            if row.get('score') is not None:
+                latest[row.get('competency_id')] = row     # later project wins
+
+    rows = []
+    for row in sorted(latest.values(), key=lambda r: -r['score'])[:limit]:
+        score = row['score']
+        if score >= 8:
+            badge, css = 'Excellent', 'excellent'
+        elif score >= 6:
+            badge, css = 'Good', 'good'
+        else:
+            badge, css = 'Needs attention', 'needs-attention'
+        rows.append({
+            'name': row.get('competency_name') or row.get('competency_code') or 'Competency',
+            'score': score,
+            'percent': int(round(score * 10)),
+            'badge': badge,
+            'badge_class': css,
+            'bar_class': '' if score >= 6 else 'orange',
+        })
+    return rows
 
 
 def _projects_progress(child):
@@ -230,6 +266,7 @@ def parent_dashboard(request):
             sessions_done = _sessions_attended(child)
             projects_list = _child_projects(child)
             academic_percent, academic_score = _academic_performance(child)
+            performance_rows = _performance_rows(child)
 
             # Current module = latest active project name for the child's class.
             current_module = projects_list[0]['name'] if projects_list else '—'
@@ -256,6 +293,7 @@ def parent_dashboard(request):
                 # Real academic performance, replacing a hardcoded 75% in the template
                 'academic_percent': academic_percent,
                 'academic_score': academic_score,
+                'performance': performance_rows,
                 # Module / sessions (slide 49)
                 'current_module': current_module,
                 'current_module_desc': current_module_desc,
@@ -455,3 +493,101 @@ def parent_child_report_detail(request, student_id, project_id):
         'best_match': profiles[0]['match_percent'] if profiles else 0,
         'assessment_breakdown': get_per_assessment_breakdown(child, report.project),
     })
+
+
+@login_required
+@user_passes_test(is_parent)
+def parent_child_passport(request, student_id):
+    """The child's Annual Skill Passport, as the student sees it."""
+    from competencies.engine import (generate_annual_passport, get_annual_kb_scores,
+                                     get_top_project, attach_competency_descriptions)
+    from competencies.models import Profile
+    from student.views import _build_passport_summary
+    from django.utils import timezone
+
+    child = _child_or_404(request, student_id)
+
+    context = {
+        'child': child, 'student': child, 'has_data': False,
+        'top_3_profiles': [], 'top_5_competencies': [], 'skills_to_work_on': [],
+        'all_competency_scores': [], 'very_strong': [], 'strong': [], 'emerging': [],
+        'work_on': [], 'kb_scores': [], 'top_project': None, 'overall_score': 0,
+        'attendance_percent': 0, 'summary_paragraphs': [],
+        'academic_year': getattr(child, 'academic_year', '') or '',
+        'issued_by': (child.school.school_name if child.school else 'ENpower Skill Lab'),
+        'issue_date': timezone.now(),
+    }
+
+    try:
+        context['attendance_percent'] = student_attendance_stats(child).get('percent') or 0
+    except Exception:
+        pass
+    try:
+        context['kb_scores'] = get_annual_kb_scores(child)
+    except Exception:
+        pass
+    try:
+        context['top_project'] = get_top_project(child)
+    except Exception:
+        pass
+
+    try:
+        data = generate_annual_passport(child)
+    except Exception:
+        data = None
+
+    if data:
+        all_scores = data.get('all_competency_scores') or []
+        attach_competency_descriptions(all_scores, data.get('top_5_competencies'),
+                                       data.get('skills_to_work_on'))
+
+        def label(score):
+            if score >= 8: return 'very_strong'
+            if score >= 6: return 'strong'
+            if score >= 4: return 'emerging'
+            return 'work_on'
+
+        values = [c['score'] for c in all_scores if c.get('score') is not None]
+        overall = round(sum(values) / len(values), 1) if values else 0
+
+        profiles = data.get('top_3_profiles') or []
+        prof_tags = {}
+        prof_ids = [p['profile_id'] for p in profiles if p.get('profile_id')]
+        if prof_ids:
+            for pr in Profile.objects.filter(id__in=prof_ids).prefetch_related('primary_competencies'):
+                prof_tags[pr.id] = [c.name for c in pr.primary_competencies.all()[:3]]
+        for p in profiles:
+            p['match_percent'] = int(round((p.get('score') or 0) * 10))
+            p['tags'] = prof_tags.get(p.get('profile_id'), [])
+
+        very_strong = [c for c in all_scores if label(c['score']) == 'very_strong']
+        strong      = [c for c in all_scores if label(c['score']) == 'strong']
+
+        context.update({
+            'has_data': True,
+            'top_3_profiles': profiles,
+            'top_5_competencies': data.get('top_5_competencies') or [],
+            'skills_to_work_on': data.get('skills_to_work_on') or [],
+            'all_competency_scores': all_scores,
+            'very_strong': very_strong,
+            'strong': strong,
+            'emerging': [c for c in all_scores if label(c['score']) == 'emerging'],
+            'work_on': [c for c in all_scores if label(c['score']) == 'work_on'],
+            'overall_score': overall,
+            'summary_paragraphs': _build_passport_summary(child, all_scores,
+                                                          very_strong + strong, overall),
+        })
+
+    return render(request, 'parent/child-passport.html', context)
+
+
+@login_required
+def parent_logout(request):
+    """Log the parent out.
+
+    The header logout only did `window.location.href = '/login'`, which left the
+    session intact — the user appeared to log out but was still signed in.
+    """
+    logout(request)
+    messages.success(request, 'You have been successfully logged out.')
+    return redirect('login')

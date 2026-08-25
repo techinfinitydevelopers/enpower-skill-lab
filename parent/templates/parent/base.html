@@ -1057,11 +1057,13 @@
                         <span class="material-symbols-outlined dropdown-icon">expand_more</span>
                     </a>
                     <div class="sidebar-dropdown-menu">
-                        <a href="#" id="nav-switch-child">
+                        {% if sidebar_child_count > 1 %}
+                        <a href="{% url 'parent_dashboard' %}#studentSelector" id="nav-switch-child">
                             <span class="material-symbols-outlined">swap_horiz</span>
                             Switch Student
                         </a>
-                        <a href="#" id="nav-child-performance">
+                        {% endif %}
+                        <a href="{% if sidebar_child_id %}{% url 'parent_child_reports' sidebar_child_id %}{% else %}{% url 'parent_dashboard' %}{% endif %}" id="nav-child-performance">
                             <span class="material-symbols-outlined">analytics</span>
                             Student Performance Summary
                         </a>
@@ -1106,7 +1108,7 @@
                         <span class="material-symbols-outlined dropdown-icon">expand_more</span>
                     </a>
                     <div class="sidebar-dropdown-menu">
-                        <a href="#" id="nav-annual-skill-report">
+                        <a href="{% if sidebar_child_id %}{% url 'parent_child_passport' sidebar_child_id %}{% else %}{% url 'parent_dashboard' %}{% endif %}" id="nav-annual-skill-report">
                             <span class="material-symbols-outlined">workspace_premium</span>
                             Annual Skill Report
                         </a>
@@ -1129,7 +1131,7 @@
                             <span class="material-symbols-outlined">lock</span>
                             Change Password
                         </a>
-                        <a href="#" id="nav-logout">
+                        <a href="{% url 'parent_logout' %}" id="nav-logout">
                             <span class="material-symbols-outlined">logout</span>
                             Logout
                         </a>
@@ -1204,20 +1206,20 @@
                                 </div>
                             </div>
                             <div class="dropdown-divider"></div>
-                            <a href="#" class="dropdown-item" id="profileBtn">
+                            <a href="{% url 'parent_profile' %}" class="dropdown-item" id="profileBtn">
                                 <span class="material-symbols-outlined">account_circle</span>
                                 <span>My Profile</span>
                             </a>
-                            <a href="#" class="dropdown-item" id="accountSettingsBtn">
+                            <a href="{% url 'parent_change_password' %}" class="dropdown-item" id="accountSettingsBtn">
                                 <span class="material-symbols-outlined">settings</span>
                                 <span>Account Settings</span>
                             </a>
-                            <a href="#" class="dropdown-item">
+                            <a href="{% url 'parent_dashboard' %}" class="dropdown-item">
                                 <span class="material-symbols-outlined">dashboard</span>
                                 <span>Dashboard</span>
                             </a>
                             <div class="dropdown-divider"></div>
-                            <a href="#" class="dropdown-item logout-item" id="logoutBtn">
+                            <a href="{% url 'parent_logout' %}" class="dropdown-item logout-item" id="logoutBtn">
                                 <span class="material-symbols-outlined">logout</span>
                                 <span>Logout</span>
                             </a>
@@ -1300,7 +1302,7 @@
                 logoutBtn.addEventListener('click', (e) => {
                     e.preventDefault();
                     if (confirm('Are you sure you want to logout?')) {
-                        window.location.href = '/login';
+                        window.location.href = logoutBtn.getAttribute('href');
                     }
                 });
             }

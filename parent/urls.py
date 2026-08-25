@@ -8,4 +8,6 @@ urlpatterns = [
     path('change-password/', views.parent_change_password, name='parent_change_password'),
     path('child/<int:student_id>/reports/', views.parent_child_reports, name='parent_child_reports'),
     path('child/<int:student_id>/reports/<int:project_id>/', views.parent_child_report_detail, name='parent_child_report_detail'),
+    path('child/<int:student_id>/passport/', views.parent_child_passport, name='parent_child_passport'),
+    path('logout/', views.parent_logout, name='parent_logout'),
 ]

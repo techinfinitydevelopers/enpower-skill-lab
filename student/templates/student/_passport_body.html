@@ -1,0 +1,215 @@
+{# Annual-passport body. Shared by the student's own passport page and the
+   parent's view of their child's passport, so both stay identical. #}
+<div class="sp2">
+
+    <!-- decorative background icons -->
+    <div class="bg-icons" aria-hidden="true">
+        <span class="material-symbols-outlined bg-icon-item">menu_book</span>
+        <span class="material-symbols-outlined bg-icon-item">school</span>
+        <span class="material-symbols-outlined bg-icon-item gold">workspace_premium</span>
+        <span class="material-symbols-outlined bg-icon-item">science</span>
+        <span class="material-symbols-outlined bg-icon-item">lightbulb</span>
+        <span class="material-symbols-outlined bg-icon-item gold">emoji_events</span>
+        <span class="material-symbols-outlined bg-icon-item">psychology</span>
+        <span class="material-symbols-outlined bg-icon-item">groups</span>
+        <span class="material-symbols-outlined bg-icon-item gold">military_tech</span>
+        <span class="material-symbols-outlined bg-icon-item">hub</span>
+        <span class="material-symbols-outlined bg-icon-item gold">grade</span>
+        <span class="material-symbols-outlined bg-icon-item">rocket_launch</span>
+    </div>
+
+    <div class="sp-confetti-container" id="spConfetti"></div>
+
+    <!-- Student Header -->
+    <div class="student-header">
+        <div class="avatar" onclick="spBurst(this,'⭐')">{{ student.first_name|slice:":1" }}{{ student.last_name|slice:":1" }}</div>
+        <div class="student-info">
+            {% if academic_year %}<div class="academic-year">Academic Year {{ academic_year }}</div>{% endif %}
+            <div class="student-name-wrap">
+                <span class="student-name" id="spName">{{ student.full_name|default:user.get_full_name|default:user.username }}</span>
+            </div>
+            <div class="student-meta">
+                {% if student.student_class %}<span class="meta-chip"><span class="material-symbols-outlined">school</span> Grade {{ student.student_class }}{% if student.division %} – {{ student.division }}{% endif %}</span>{% endif %}
+                {% if student.skill_lab_reg_id %}<span class="meta-chip"><span class="material-symbols-outlined">badge</span> {{ student.skill_lab_reg_id }}</span>{% endif %}
+                {% if academic_year %}<span class="meta-chip"><span class="material-symbols-outlined">calendar_today</span> {{ academic_year }}</span>{% else %}<span class="meta-chip"><span class="material-symbols-outlined">verified</span> Skill Passport</span>{% endif %}
+            </div>
+        </div>
+        <div class="stats-group">
+            <div class="stat-card">
+                <div class="stat-emoji">⚡</div>
+                <div class="stat-label">Overall Level</div>
+                <div class="stat-value" id="spLevel" data-target="{{ overall_score }}" data-decimals="1">0.0</div>
+                <div class="stat-sub">out of 10.0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-emoji">🏆</div>
+                <div class="stat-label">Attendance</div>
+                <div class="stat-value" id="spAtt" data-target="{{ attendance_percent }}" data-decimals="0" data-suffix="%">0%</div>
+                <div class="stat-sub">this year</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Strongest project of the year + its work-firm category.
+         Deliberately outside the has_data block: the annual passport only
+         counts projects that have a sequence_number, so a student can have a
+         scored project report and still have no annual data. Their best
+         project is still worth showing. -->
+    {% if top_project %}
+    <div class="section-block">
+        <div class="section-title">
+            <div class="section-icon" style="background:linear-gradient(135deg,var(--gold),#F77F00);"><span class="material-symbols-outlined">trophy</span></div>
+            Your Strongest Area
+            <span class="section-badge">🏆 Best Project</span>
+        </div>
+        <div class="topproj-card">
+            <div class="topproj-main">
+                <div class="topproj-label">Top-scoring project</div>
+                <div class="topproj-title">{{ top_project.title }}</div>
+                <div class="topproj-cat">
+                    <span class="material-symbols-outlined" style="font-size:15px;">category</span>
+                    {{ top_project.category }}
+                </div>
+            </div>
+            <div class="topproj-score">
+                <div class="topproj-num">{{ top_project.average }}<span>/10</span></div>
+                <div class="topproj-sub">across {{ top_project.competency_count }} skill{{ top_project.competency_count|pluralize }}</div>
+            </div>
+        </div>
+        <div class="topproj-note">This is where you performed best this year — a good hint at the kind of work that suits you.</div>
+    </div>
+    {% endif %}
+
+    {% if has_data %}
+
+    <!-- Top Career Matches -->
+    {% if top_3_profiles %}
+    <div class="section-block">
+        <div class="section-title">
+            <div class="section-icon"><span class="material-symbols-outlined">psychology</span></div>
+            Your Top Career Matches
+            <span class="section-badge">🎯 Personalised</span>
+        </div>
+        <div class="profiles-row">
+            {% for p in top_3_profiles %}
+            <div class="profile-card{% if forloop.first %} active{% endif %}" onclick="spBurst(this,'🚀')">
+                {% if forloop.first %}<div class="stamp">🥇</div>{% endif %}
+                <div class="pc-top">
+                    <div class="pc-icon-wrap"><span class="material-symbols-outlined">{% cycle 'groups' 'biotech' 'military_tech' %}</span></div>
+                    <div class="pc-match-badge">{{ p.match_percent }}% Match {% if forloop.first %}🔥{% elif forloop.counter == 2 %}⚡{% else %}✨{% endif %}</div>
+                </div>
+                <div class="pc-role">{{ p.profile_name }}</div>
+                <div class="pc-tags">
+                    {% for tag in p.tags %}<span class="pc-tag">{{ tag }}</span>{% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Skills Report Card -->
+    <div class="section-block">
+        <div class="section-title">
+            <div class="section-icon"><span class="material-symbols-outlined">dashboard_customize</span></div>
+            Your Skills Report Card
+            <span class="section-badge">📈 {{ all_competency_scores|length }} Skill{{ all_competency_scores|length|pluralize }}</span>
+        </div>
+        <div class="comp-card" id="spCompCard">
+            {% for c in all_competency_scores %}
+            <div class="comp-row" data-pct="{{ c.score }}0" data-score="{{ c.score }}" onmouseenter="spRenderStars(this)">
+                <div class="cr-icon"><span class="material-symbols-outlined">{% cycle 'extension' 'psychology' 'forum' 'group' 'lightbulb' 'insights' %}</span></div>
+                <div class="cr-name">
+                    {{ c.competency_name }}
+                    {% if c.competency_desc %}<div class="cr-desc">{{ c.competency_desc }}</div>{% endif %}
+                </div>
+                <div class="cr-bar-wrap"><div class="cr-bar"></div></div>
+                <div class="cr-right">
+                    <div class="cr-score">{{ c.score }} / 10</div>
+                    <div class="comp-row-level"></div>
+                    <div class="cr-stars"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Kaushal Bodh — reported separately, NOT part of the Skill Passport score -->
+    {% if kb_scores %}
+    <div class="section-block">
+        <div class="section-title">
+            <div class="section-icon" style="background:linear-gradient(135deg,var(--gold),#F77F00);"><span class="material-symbols-outlined">handyman</span></div>
+            Kaushal Bodh
+            <span class="section-badge">🛠 {{ kb_scores|length }} Skill{{ kb_scores|length|pluralize }}</span>
+        </div>
+        <div class="kb-note">Reported separately — these scores are not included in your Skill Passport calculation.</div>
+        <div class="comp-card">
+            {% for c in kb_scores %}
+            <div class="comp-row" data-pct="{{ c.score }}0" data-score="{{ c.score }}" onmouseenter="spRenderStars(this)">
+                <div class="cr-icon"><span class="material-symbols-outlined">build</span></div>
+                <div class="cr-name">
+                    {{ c.competency_name }}
+                    {% if c.competency_desc %}<div class="cr-desc">{{ c.competency_desc }}</div>{% endif %}
+                </div>
+                <div class="cr-bar-wrap"><div class="cr-bar"></div></div>
+                <div class="cr-right">
+                    <div class="cr-score">{{ c.score }} / 10</div>
+                    <div class="comp-row-level"></div>
+                    <div class="cr-stars"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Year in Review -->
+    {% if summary_paragraphs %}
+    <div class="section-block">
+        <div class="section-title">
+            <div class="section-icon"><span class="material-symbols-outlined">description</span></div>
+            Your Year in Review 📝
+        </div>
+        <div class="summary-card">
+            <div class="summary-text">
+                {% for para in summary_paragraphs %}<p>{{ para }}</p>{% endfor %}
+            </div>
+            <div class="summary-divider"></div>
+            <div class="summary-footer">
+                <div>
+                    <div class="sf-label">Issued By 👩‍🏫</div>
+                    <div class="sf-value">{{ issued_by }}</div>
+                </div>
+                <div class="sf-right">
+                    <div class="sf-label">Issue Date 📅</div>
+                    <div class="sf-value">{{ issue_date|date:"F j, Y" }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Footer Nav -->
+    <div class="footer-nav">
+        <a class="sp-btn sp-btn-outline" href="{% url 'student:student_reports' %}">
+            <span class="material-symbols-outlined">arrow_back</span> Back to Projects
+        </a>
+        <a class="sp-btn sp-btn-primary" href="{% url 'student:student_dashboard' %}" onclick="spConfettiFire()">
+            <span class="material-symbols-outlined">home</span> Dashboard 🏠
+        </a>
+    </div>
+
+    {% else %}
+
+    <!-- Empty State -->
+    <div class="sp-empty">
+        <div style="width:72px; height:72px; border-radius:50%; background:var(--purple-pale); display:flex; align-items:center; justify-content:center; margin:0 auto 16px;">
+            <span class="material-symbols-outlined" style="font-size:32px; color:var(--purple);">verified</span>
+        </div>
+        <h3 style="font-size:18px; font-weight:900; color:var(--purple); margin:0 0 6px; font-family:'Fredoka One',sans-serif;">No Passport Yet</h3>
+        <p style="font-size:14px; color:var(--text-muted); margin:0; font-weight:700;">Your Skill Passport will appear here once your thinking coach has assessed your competencies.</p>
+    </div>
+
+    {% endif %}
+
+</div>
