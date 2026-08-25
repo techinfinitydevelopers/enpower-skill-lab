@@ -1,0 +1,49 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+
+{% block title %}{{ child.first_name }}'s Reports - Parent{% endblock %}
+
+{% block content %}
+<div style="max-width:1000px;margin:0 auto;">
+
+    <div style="margin-bottom:1.5rem;">
+        <a href="{% url 'parent_dashboard' %}" style="display:inline-flex;align-items:center;gap:.3rem;font-size:.78rem;font-weight:500;color:#6b7280;text-decoration:none;margin-bottom:.6rem;">
+            <span class="material-symbols-outlined" style="font-size:16px;">arrow_back</span> Back to Dashboard
+        </a>
+        <h1 style="font-size:1.5rem;font-weight:700;color:#1f2937;margin:0;">{{ child.first_name }}'s Reports</h1>
+        <p style="color:#6b7280;margin:.25rem 0 0;">Grade {{ child.student_class }}{% if child.division %} - Section {{ child.division }}{% endif %}</p>
+    </div>
+
+    {% if reports %}
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem;">
+        {% for r in reports %}
+        <a href="{% url 'parent_child_report_detail' child.id r.project_id %}"
+           style="display:block;text-decoration:none;background:#fff;border:1px solid #e5e7eb;border-left:4px solid #5b1f6f;border-radius:.75rem;padding:1.25rem;transition:box-shadow .2s;"
+           onmouseover="this.style.boxShadow='0 8px 24px rgba(91,31,111,.12)'"
+           onmouseout="this.style.boxShadow='none'">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;">
+                <div>
+                    <div style="font-size:1.05rem;font-weight:700;color:#1f2937;line-height:1.3;">{{ r.title }}</div>
+                    <div style="display:inline-block;margin-top:.4rem;background:#f3e8ff;color:#5b1f6f;border-radius:999px;padding:3px 10px;font-size:.7rem;font-weight:700;">{{ r.category }}</div>
+                </div>
+                <div style="text-align:right;flex-shrink:0;">
+                    {% if r.average %}
+                    <div style="font-size:1.6rem;font-weight:800;color:#5b1f6f;line-height:1;">{{ r.average }}<span style="font-size:.75rem;color:#9ca3af;">/10</span></div>
+                    <div style="font-size:.65rem;color:#9ca3af;margin-top:.25rem;">{{ r.competency_count }} skill{{ r.competency_count|pluralize }}</div>
+                    {% else %}
+                    <div style="font-size:1.6rem;font-weight:800;color:#e5e7eb;line-height:1;">—</div>
+                    {% endif %}
+                </div>
+            </div>
+            <div style="margin-top:.9rem;font-size:.72rem;color:#9ca3af;">Updated {{ r.generated_at|date:"j M Y" }}</div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:.75rem;padding:3rem 1.5rem;text-align:center;color:#6b7280;">
+        <span class="material-symbols-outlined" style="font-size:44px;color:#d1d5db;">description</span>
+        <p style="margin:.75rem 0 0;">No reports yet. They appear once the Thinking Coach generates them.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

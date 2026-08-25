@@ -1,0 +1,218 @@
+{# Project-report body. Shared by the student's own report page and the
+   parent's view of their child's report, so both stay identical. #}
+<div class="sp2">
+
+    <!-- decorative background icons -->
+    <div class="bg-icons" aria-hidden="true">
+        <span class="material-symbols-outlined bg-icon-item">menu_book</span>
+        <span class="material-symbols-outlined bg-icon-item">science</span>
+        <span class="material-symbols-outlined bg-icon-item gold">workspace_premium</span>
+        <span class="material-symbols-outlined bg-icon-item">lightbulb</span>
+        <span class="material-symbols-outlined bg-icon-item">psychology</span>
+        <span class="material-symbols-outlined bg-icon-item gold">emoji_events</span>
+        <span class="material-symbols-outlined bg-icon-item">groups</span>
+        <span class="material-symbols-outlined bg-icon-item">hub</span>
+        <span class="material-symbols-outlined bg-icon-item gold">military_tech</span>
+        <span class="material-symbols-outlined bg-icon-item">biotech</span>
+        <span class="material-symbols-outlined bg-icon-item gold">grade</span>
+        <span class="material-symbols-outlined bg-icon-item">rocket_launch</span>
+    </div>
+
+    <div class="sp-confetti-container" id="spConfetti"></div>
+
+    <!-- Project Header -->
+    <div class="student-header">
+        <div class="avatar" onclick="spBurst(this,'⭐')">{{ student.first_name|slice:":1" }}{{ student.last_name|slice:":1" }}</div>
+        <div class="student-info">
+            <div class="academic-year">{{ report.project.project_type }} · Project Report</div>
+            <div class="student-name-wrap">
+                <span class="student-name" id="spName">{{ report.project.title }}</span>
+            </div>
+            <div class="student-meta">
+                {% if report.project.grade %}<span class="meta-chip"><span class="material-symbols-outlined">school</span> {{ report.project.grade }}</span>{% endif %}
+                {% if report.project.sequence_number %}<span class="meta-chip"><span class="material-symbols-outlined">tag</span> Project {{ report.project.sequence_number }}</span>{% endif %}
+                <span class="meta-chip"><span class="material-symbols-outlined">event</span> {{ report.generated_at|date:"d M Y" }}</span>
+            </div>
+            {% if report.is_outdated %}
+            <div class="outdated-note">
+                <span class="material-symbols-outlined">warning</span>
+                Scores changed after this report — ask your coach to regenerate.
+            </div>
+            {% endif %}
+        </div>
+        <div class="stats-group">
+            <div class="stat-card">
+                <div class="stat-emoji">⚡</div>
+                <div class="stat-label">Overall Level</div>
+                <div class="stat-value" id="spLevel" data-target="{{ overall_score }}" data-decimals="1">0.0</div>
+                <div class="stat-sub">out of 10.0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-emoji">🎯</div>
+                <div class="stat-label">Top Match</div>
+                <div class="stat-value" id="spAtt" data-target="{{ best_match }}" data-decimals="0" data-suffix="%">0%</div>
+                <div class="stat-sub">best profile</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Career Matches (profiles) -->
+    {% if report.top_3_profiles %}
+    <div class="section-block">
+        <div class="section-title">
+            <div class="section-icon"><span class="material-symbols-outlined">psychology</span></div>
+            Your Top Career Matches
+            <span class="section-badge">🎯 This Project</span>
+        </div>
+        <div class="profiles-row">
+            {% for p in report.top_3_profiles %}
+            <div class="profile-card{% if forloop.first %} active{% endif %}" onclick="spBurst(this,'🚀')">
+                {% if forloop.first %}<div class="stamp">🥇</div>{% endif %}
+                <div class="pc-top">
+                    <div class="pc-icon-wrap"><span class="material-symbols-outlined">{% cycle 'groups' 'biotech' 'military_tech' %}</span></div>
+                    <div class="pc-match-badge">{{ p.match_percent }}% Match {% if forloop.first %}🔥{% elif forloop.counter == 2 %}⚡{% else %}✨{% endif %}</div>
+                </div>
+                <div class="pc-role">{{ p.profile_name }}</div>
+                <div class="pc-tags">
+                    {% for tag in p.tags %}<span class="pc-tag">{{ tag }}</span>{% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Skills Report Card (all competencies) -->
+    {% if report.all_competency_scores %}
+    <div class="section-block">
+        <div class="section-title">
+            <div class="section-icon"><span class="material-symbols-outlined">dashboard_customize</span></div>
+            Your Skills Report Card
+            <span class="section-badge">📈 {{ report.all_competency_scores|length }} Skill{{ report.all_competency_scores|length|pluralize }}</span>
+        </div>
+        <div class="comp-card" id="spCompCard">
+            {% for c in report.all_competency_scores %}
+            <div class="comp-row" data-pct="{{ c.score }}0" data-score="{{ c.score }}" onmouseenter="spRenderStars(this)">
+                <div class="cr-icon"><span class="material-symbols-outlined">{% cycle 'extension' 'psychology' 'forum' 'group' 'lightbulb' 'insights' %}</span></div>
+                <div class="cr-name">
+                    {{ c.competency_name }}
+                    {% if c.competency_desc %}<div class="cr-desc">{{ c.competency_desc }}</div>{% endif %}
+                </div>
+                <div class="cr-bar-wrap"><div class="cr-bar"></div></div>
+                <div class="cr-right">
+                    <div class="cr-score">{{ c.score }} / 10</div>
+                    <div class="comp-row-level"></div>
+                    <div class="cr-stars"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Assessment-by-assessment breakdown — shows progress across the project -->
+    {% if assessment_breakdown %}
+    <div class="section-block">
+        <div class="section-title">
+            <div class="section-icon"><span class="material-symbols-outlined">timeline</span></div>
+            Assessment by Assessment
+            <span class="section-badge">🗓 {{ assessment_breakdown|length }} Assessment{{ assessment_breakdown|length|pluralize }}</span>
+        </div>
+        <div class="asmt-grid">
+            {% for a in assessment_breakdown %}
+            <div class="asmt-card">
+                <div class="asmt-head">
+                    <div>
+                        <div class="asmt-name">{{ forloop.counter }}. {{ a.assessment_name }}</div>
+                        <div class="asmt-type">{{ a.assessment_type }}</div>
+                    </div>
+                    <div class="asmt-avg-wrap">
+                        {% if a.average is not None %}
+                        <div class="asmt-avg">{{ a.average }}<span>/10</span></div>
+                        <div class="asmt-sub">{{ a.scored_count }} of {{ a.total_count }} scored</div>
+                        {% else %}
+                        <div class="asmt-avg asmt-pending">—</div>
+                        <div class="asmt-sub">Not scored yet</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="asmt-comps">
+                    {% for c in a.competencies %}
+                    <div class="asmt-comp-row">
+                        <div class="asmt-comp-text">
+                            <div class="asmt-comp-name">{{ c.competency_name }}</div>
+                            {% if c.competency_desc %}<div class="asmt-comp-desc">{{ c.competency_desc }}</div>{% endif %}
+                        </div>
+                        {% if c.score is not None %}
+                        <div class="asmt-comp-score">{{ c.score }}<span>/10</span></div>
+                        {% else %}
+                        <div class="asmt-comp-score asmt-pending">—</div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Skills to Work On + Teacher Feedback -->
+    <div class="section-block">
+        <div class="sp-grid2">
+
+            <!-- Skills to Work On -->
+            {% if report.skills_to_work_on %}
+            <div class="workon-card">
+                <div class="section-title" style="font-size:18px; margin-bottom:16px;">
+                    <div class="section-icon" style="background:linear-gradient(135deg,var(--gold),#F77F00);"><span class="material-symbols-outlined">construction</span></div>
+                    Skills to Work On
+                </div>
+                {% for c in report.skills_to_work_on %}
+                <div class="workon-item">
+                    <div class="workon-badge"><span class="material-symbols-outlined">build</span></div>
+                    <div>
+                        <div class="workon-meta">{{ c.competency_code }}</div>
+                        <div class="workon-name">{{ c.competency_name }}</div>
+                        {% if c.competency_desc %}<div class="workon-desc">{{ c.competency_desc }}</div>{% endif %}
+                        <div class="workon-score">Score: {{ c.score }} / 10</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Teacher's Feedback -->
+            <div class="summary-card">
+                <div class="section-title" style="font-size:18px; margin-bottom:16px;">
+                    <div class="section-icon"><span class="material-symbols-outlined">rate_review</span></div>
+                    Coach's Feedback
+                </div>
+                {% if feedbacks %}
+                    {% for fb in feedbacks %}
+                    {% if fb.feedback %}
+                    <div class="fb-item">
+                        <div class="fb-meta">{{ fb.assessment.name }}{% if fb.entered_by %} · {{ fb.entered_by.get_full_name|default:fb.entered_by.username }}{% endif %}</div>
+                        <div class="fb-text">“{{ fb.feedback }}”</div>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                {% else %}
+                <p class="fb-empty">No feedback provided yet.</p>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Footer Nav -->
+    <div class="footer-nav">
+        <a class="sp-btn sp-btn-outline" href="{% url 'student:student_reports' %}">
+            <span class="material-symbols-outlined">arrow_back</span> Back to Skill Passport
+        </a>
+        <a class="sp-btn sp-btn-primary" href="{% url 'student:student_annual_passport' %}" onclick="spConfettiFire()">
+            <span class="material-symbols-outlined">verified</span> Annual Passport 🏅
+        </a>
+    </div>
+
+</div>

@@ -101,7 +101,11 @@
             <div class="card-custom">
                 <div class="card-header-custom">
                     <h3 class="card-title-custom">Academic Performance</h3>
+                    {% if children %}
+                    <a href="{% url 'parent_child_reports' children.0.id %}" class="card-action-link" id="viewReportsLink">View Reports</a>
+                    {% else %}
                     <a href="#" class="card-action-link">View All</a>
+                    {% endif %}
                 </div>
                 <div id="performanceContainer"></div>
             </div>
@@ -114,10 +118,10 @@
                             <!-- Background Circle -->
                             <path class="text-gray-100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#e5e7eb" stroke-width="4"></path>
                             <!-- Progress Circle -->
-                            <path id="learningProgressPath" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#5b1f6f" stroke-dasharray="75, 100" stroke-linecap="round" stroke-width="4"></path>
+                            <path id="learningProgressPath" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#5b1f6f" stroke-dasharray="{% if children %}{{ children.0.academic_percent }}{% else %}0{% endif %}, 100" stroke-linecap="round" stroke-width="4"></path>
                         </svg>
                         <div class="circular-progress-text">
-                            <span class="circular-progress-value" id="learningProgressValue">75%</span>
+                            <span class="circular-progress-value" id="learningProgressValue">{% if children and children.0.academic_score %}{{ children.0.academic_percent }}%{% else %}—{% endif %}</span>
                         </div>
                     </div>
                     <div class="learning-details">
@@ -275,6 +279,16 @@
         setText('learningModuleDesc', 'You have completed ' + (data.sessions_completed || 0) + ' sessions.');
         setText('learningSessions', data.sessions_completed || 0);
         setText('learningProjects', data.projects_label || '0 of 3');
+
+        // Academic performance ring — real score, not the old fixed 75%
+        const pct = data.academic_percent || 0;
+        setText('learningProgressValue', data.academic_score ? pct + '%' : '—');
+        const ring = document.getElementById('learningProgressPath');
+        if (ring) ring.setAttribute('stroke-dasharray', pct + ', 100');
+
+        // Reports link follows whichever child is selected
+        const reportsLink = document.getElementById('viewReportsLink');
+        if (reportsLink) reportsLink.href = '/parent/child/' + data.id + '/reports/';
         const detailsEl = document.getElementById('learningModuleDetails');
         if (detailsEl) {
             detailsEl.textContent = data.current_module_desc || 'No learning details available yet.';

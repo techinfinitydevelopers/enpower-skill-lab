@@ -18,6 +18,104 @@ from attendance.services import (
 import json
 
 
+def _coach_for(child):
+    """Name of the child's Thinking Coach, or '—'.
+
+    The dashboard only looked this up through a Class row matching the child's
+    school + grade + division. Schools that have not had their classes created
+    have no such row — on production the child's school has zero Class records
+    — so every parent saw "Thinking Coach: —" even though the school has a
+    coach assigned. Falls back to the school's coaching staff.
+    """
+    def _name(user):
+        teacher = Teacher.objects.filter(user=user).first()
+        if teacher:
+            return teacher.full_name
+        return user.get_full_name() or user.username
+
+    child_class = Class.objects.filter(
+        school=child.school, grade=child.student_class,
+        division=child.division, is_active=True,
+    ).select_related('thinking_coach').first()
+    if child_class and child_class.thinking_coach:
+        return _name(child_class.thinking_coach)
+
+    if not child.school:
+        return '—'
+
+    # No class row — fall back to a coach at the school. Prefer one who lists
+    # this grade; otherwise use the only coach if there is exactly one.
+    school_teachers = list(Teacher.objects.filter(school=child.school))
+    grade = str(child.student_class)
+    for t in school_teachers:
+        taught = (t.grades_taught or '')
+        if grade and grade in [g.strip() for g in taught.replace(';', ',').split(',')]:
+            return t.full_name
+    if len(school_teachers) == 1:
+        return school_teachers[0].full_name
+
+    return '—'
+
+
+def _academic_performance(child):
+    """(percent, score/10) from the child's generated project reports.
+
+    The dashboard used to show a hardcoded 75% to every parent regardless of
+    how their child was actually doing. This averages every competency score
+    across all of the child's ProjectReports.
+
+    Returns (0, None) when nothing has been scored yet, so the UI can say so
+    instead of inventing a number.
+    """
+    from competencies.models import ProjectReport
+
+    values = []
+    for report in ProjectReport.objects.filter(student=child):
+        values += [
+            row['score'] for row in (report.all_competency_scores or [])
+            if row.get('score') is not None
+        ]
+    if not values:
+        return 0, None
+
+    mean = sum(values) / len(values)
+    return int(round(mean * 10)), round(mean, 1)
+
+
+def _projects_progress(child):
+    """(completed, total) projects for this child.
+
+    Replaces attendance.services.projects_completed, which counted
+    DailySessionFeedback rows flagged is_project_completed and compared them
+    against a fixed DEFAULT_PROJECTS_PER_YEAR constant. A child could finish a
+    project, have a full report generated, and still see "0 of 12".
+
+    Completed = projects with a generated report. Total = projects actually
+    available to the child's class, falling back to completed so the label can
+    never read "3 of 0".
+    """
+    from competencies.models import ProjectReport
+
+    completed = ProjectReport.objects.filter(student=child).values('project').distinct().count()
+    total = len(_child_projects(child))
+    return completed, max(total, completed)
+
+
+def _sessions_attended(child):
+    """How many class sessions the child actually attended.
+
+    Replaces attendance.services.sessions_completed, which counted the coach's
+    DailySessionFeedback forms — so real attendance could be marked all month
+    and the parent would still be told "0 sessions".
+    """
+    from attendance.services import ATTENDED
+
+    try:
+        return child.attendance_records.filter(status__in=ATTENDED).count()
+    except Exception:
+        return 0
+
+
 def _child_projects(child):
     """List of projects for the child's class in the current academic year.
 
@@ -65,21 +163,7 @@ def parent_dashboard(request):
         children = parent.students.filter(is_active=True)
 
         for child in children:
-            # Find thinking coach via Class model
-            coach_name = '—'
-            child_class = Class.objects.filter(
-                school=child.school,
-                grade=child.student_class,
-                division=child.division,
-                is_active=True,
-            ).select_related('thinking_coach').first()
-
-            if child_class and child_class.thinking_coach:
-                try:
-                    teacher = Teacher.objects.get(user=child_class.thinking_coach)
-                    coach_name = teacher.full_name
-                except Teacher.DoesNotExist:
-                    coach_name = child_class.thinking_coach.get_full_name() or child_class.thinking_coach.username
+            coach_name = _coach_for(child)
 
             # Build initials for avatar
             names = child.first_name.split()
@@ -142,9 +226,10 @@ def parent_dashboard(request):
 
             # --- Real KPI / module data (PPT slides 47, 49) ---
             attendance = student_attendance_stats(child)          # safe defaults built-in
-            completed_projects, total_projects = projects_completed(child)
-            sessions_done = sessions_completed(child)
+            completed_projects, total_projects = _projects_progress(child)
+            sessions_done = _sessions_attended(child)
             projects_list = _child_projects(child)
+            academic_percent, academic_score = _academic_performance(child)
 
             # Current module = latest active project name for the child's class.
             current_module = projects_list[0]['name'] if projects_list else '—'
@@ -168,6 +253,9 @@ def parent_dashboard(request):
                 'projects_total': total_projects,
                 'projects_label': f'{completed_projects} of {total_projects}',
                 'projects': projects_list,
+                # Real academic performance, replacing a hardcoded 75% in the template
+                'academic_percent': academic_percent,
+                'academic_score': academic_score,
                 # Module / sessions (slide 49)
                 'current_module': current_module,
                 'current_module_desc': current_module_desc,
@@ -281,3 +369,89 @@ def parent_change_password(request):
         form = PasswordChangeForm(request.user)
 
     return render(request, 'parent/change_password.html', {'form': form})
+
+
+# ---------- Child reports (parents could not open these at all) ----------
+
+def _child_or_404(request, student_id):
+    """Fetch one of the requesting parent's own children, or 404.
+
+    Scoping the lookup to `parent.students` is what stops a parent reading
+    another family's report by changing the id in the URL.
+    """
+    parent = get_object_or_404(Parent, user=request.user)
+    return get_object_or_404(parent.students, id=student_id)
+
+
+@login_required
+@user_passes_test(is_parent)
+def parent_child_reports(request, student_id):
+    """List a child's generated project reports, plus a link to the passport."""
+    from competencies.models import ProjectReport
+
+    child = _child_or_404(request, student_id)
+    reports = (
+        ProjectReport.objects.filter(student=child)
+        .select_related('project')
+        .order_by('project__sequence_number', 'project__title')
+    )
+
+    rows = []
+    for r in reports:
+        values = [c['score'] for c in (r.all_competency_scores or []) if c.get('score') is not None]
+        rows.append({
+            'project_id': r.project_id,
+            'title': r.project.title,
+            'category': r.project.project_type,
+            'average': round(sum(values) / len(values), 1) if values else None,
+            'competency_count': len(values),
+            'generated_at': r.generated_at,
+        })
+
+    return render(request, 'parent/child-reports.html', {'child': child, 'reports': rows})
+
+
+@login_required
+@user_passes_test(is_parent)
+def parent_child_report_detail(request, student_id, project_id):
+    """One project report for the parent's child — same content the student sees."""
+    from competencies.models import ProjectReport, Profile, StudentAssessmentFeedback
+    from competencies.engine import attach_competency_descriptions, get_per_assessment_breakdown
+
+    child = _child_or_404(request, student_id)
+    report = get_object_or_404(ProjectReport, student=child, project_id=project_id)
+
+    all_scores = report.all_competency_scores or []
+    attach_competency_descriptions(all_scores, report.skills_to_work_on, report.top_5_competencies)
+
+    def label(score):
+        if score >= 8: return 'very_strong'
+        if score >= 6: return 'strong'
+        if score >= 4: return 'emerging'
+        return 'skill_to_work_on'
+
+    values = [c['score'] for c in all_scores if c.get('score') is not None]
+    profiles = report.top_3_profiles or []
+    prof_tags = {}
+    prof_ids = [p['profile_id'] for p in profiles if p.get('profile_id')]
+    if prof_ids:
+        for pr in Profile.objects.filter(id__in=prof_ids).prefetch_related('primary_competencies'):
+            prof_tags[pr.id] = [c.name for c in pr.primary_competencies.all()[:3]]
+    for p in profiles:
+        p['match_percent'] = int(round((p.get('score') or 0) * 10))
+        p['tags'] = prof_tags.get(p.get('profile_id'), [])
+
+    return render(request, 'parent/child-report-detail.html', {
+        'child': child,
+        'student': child,                     # shared passport partials read `student`
+        'report': report,
+        'very_strong': [c for c in all_scores if label(c['score']) == 'very_strong'],
+        'strong':      [c for c in all_scores if label(c['score']) == 'strong'],
+        'emerging':    [c for c in all_scores if label(c['score']) == 'emerging'],
+        'feedbacks': StudentAssessmentFeedback.objects.filter(
+            student=child, assessment__project_id=project_id
+        ).select_related('entered_by').order_by('-updated_at'),
+        'overall_score': round(sum(values) / len(values), 1) if values else 0,
+        'best_match': profiles[0]['match_percent'] if profiles else 0,
+        'assessment_breakdown': get_per_assessment_breakdown(child, report.project),
+    })
