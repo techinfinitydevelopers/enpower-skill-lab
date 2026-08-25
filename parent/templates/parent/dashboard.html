@@ -51,6 +51,10 @@
                         <span id="studentSchool">{% if children %}{{ children.0.school }}{% else %}—{% endif %}</span>
                     </div>
                     <div class="student-meta-item">
+                        <span class="material-symbols-outlined">workspace_premium</span>
+                        <span>Program: <strong style="color: var(--text-dark);" id="studentProgram">{% if children %}{{ children.0.program }}{% else %}—{% endif %}</strong></span>
+                    </div>
+                    <div class="student-meta-item">
                         <span class="material-symbols-outlined">psychology</span>
                         <span>Thinking Coach: <strong style="color: var(--text-dark);" id="studentCoach">{% if children %}{{ children.0.coach }}{% else %}—{% endif %}</strong></span>
                     </div>
@@ -85,60 +89,40 @@
         </div>
     </div>
 
-    <!-- Projects this year (slide 47) -->
+    <!-- Projects this year (spec slide 47/49) -->
     <div class="card-custom" id="projectsSection">
         <div class="card-header-custom">
             <h3 class="card-title-custom">Projects This Year</h3>
+            {% if children %}
+            <a href="{% url 'parent_child_reports' children.0.id %}" class="card-action-link" id="viewReportsLink">View Reports</a>
+            {% endif %}
         </div>
         <div id="projectsList">
-                    {% if children and children.0.projects %}
-                        {% for pr in children.0.projects %}
-                        <div class="performance-item">
-                            <div class="performance-header">
-                                <span class="performance-subject">{{ pr.name }}</span>
-                                {% if pr.completed %}<span class="performance-badge good">Completed</span>{% endif %}
-                            </div>
-                        </div>
-                        {% endfor %}
-                    {% else %}
-                        <div style="text-align:center;padding:1.5rem;color:#7c6882;">No projects yet this year.</div>
+            {% if children and children.0.projects %}
+                {% for pr in children.0.projects %}
+                <div class="performance-item">
+                    <div class="performance-header">
+                        <span class="performance-subject">{{ forloop.counter }}. {{ pr.name }}</span>
+                        {% if pr.completed %}<span class="performance-badge good">Completed</span>{% endif %}
+                    </div>
+                    {% if pr.description %}
+                    <p style="font-size:.8rem;color:#6b7280;margin:.15rem 0 .35rem;">{{ pr.description }}</p>
+                    {% endif %}
+                    {% if pr.sessions %}
+                    <p style="font-size:.72rem;color:#9ca3af;margin:0;">{{ pr.sessions }} session{{ pr.sessions|pluralize }}</p>
                     {% endif %}
                 </div>
+                {% endfor %}
+            {% else %}
+                <div style="text-align:center;padding:1.5rem;color:#7c6882;">No projects listed for this grade yet.</div>
+            {% endif %}
+        </div>
     </div>
 
     <!-- Main Content Grid -->
     <div class="content-grid">
         <!-- Left Column (Data & Charts) -->
         <div>
-            <!-- Academic Performance -->
-            <div class="card-custom">
-                <div class="card-header-custom">
-                    <h3 class="card-title-custom">Academic Performance</h3>
-                    {% if children %}
-                    <a href="{% url 'parent_child_reports' children.0.id %}" class="card-action-link" id="viewReportsLink">View Reports</a>
-                    {% else %}
-                    <a href="#" class="card-action-link">View All</a>
-                    {% endif %}
-                </div>
-                <div id="performanceContainer">
-                    {% if children and children.0.performance %}
-                        {% for row in children.0.performance %}
-                        <div class="performance-item">
-                            <div class="performance-header">
-                                <span class="performance-subject">{{ row.name }}</span>
-                                <span class="performance-badge {{ row.badge_class }}">{{ row.badge }} · {{ row.score }}/10</span>
-                            </div>
-                            <div class="progress-bar-container">
-                                <div class="progress-bar-fill {{ row.bar_class }}" style="width:{{ row.percent }}%;"></div>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    {% else %}
-                        <p style="color:#7c6882;font-size:.85rem;margin:0;">No scores recorded yet. This fills in once the Thinking Coach generates a report.</p>
-                    {% endif %}
-                </div>
-            </div>
-
             <!-- Learning Progress -->
             <div class="card-custom">
                 <div class="learning-progress">
@@ -147,10 +131,10 @@
                             <!-- Background Circle -->
                             <path class="text-gray-100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#e5e7eb" stroke-width="4"></path>
                             <!-- Progress Circle -->
-                            <path id="learningProgressPath" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#5b1f6f" stroke-dasharray="{% if children %}{{ children.0.academic_percent }}{% else %}0{% endif %}, 100" stroke-linecap="round" stroke-width="4"></path>
+                            <path id="learningProgressPath" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#5b1f6f" stroke-dasharray="{% if children %}{{ children.0.project_percent }}{% else %}0{% endif %}, 100" stroke-linecap="round" stroke-width="4"></path>
                         </svg>
                         <div class="circular-progress-text">
-                            <span class="circular-progress-value" id="learningProgressValue">{% if children and children.0.academic_score %}{{ children.0.academic_percent }}%{% else %}—{% endif %}</span>
+                            <span class="circular-progress-value" id="learningProgressValue">{% if children %}{{ children.0.project_percent }}%{% else %}0%{% endif %}</span>
                         </div>
                     </div>
                     <div class="learning-details">
@@ -316,9 +300,9 @@
         setText('learningSessions', data.sessions_completed || 0);
         setText('learningProjects', data.projects_label || '0 of 3');
 
-        // Academic performance ring — real score, not the old fixed 75%
-        const pct = data.academic_percent || 0;
-        setText('learningProgressValue', data.academic_score ? pct + '%' : '—');
+        // Ring = how far through this year's projects the child is
+        const pct = data.project_percent || 0;
+        setText('learningProgressValue', pct + '%');
         const ring = document.getElementById('learningProgressPath');
         if (ring) ring.setAttribute('stroke-dasharray', pct + ', 100');
 
@@ -331,8 +315,6 @@
             if (el) el.href = href;
         });
 
-        // Academic Performance rows for the selected child
-        renderPerformance(data.performance || []);
         const detailsEl = document.getElementById('learningModuleDetails');
         if (detailsEl) {
             detailsEl.textContent = data.current_module_desc || 'No learning details available yet.';
@@ -348,52 +330,30 @@
         if (el) el.textContent = value;
     }
 
-    // Academic Performance card — this container used to be left empty.
-    function renderPerformance(rows) {
-        const box = document.getElementById('performanceContainer');
-        if (!box) return;
-        if (!rows.length) {
-            box.innerHTML = '<p style="color:#7c6882;font-size:.85rem;margin:0;">' +
-                'No scores recorded yet. This fills in once the Thinking Coach generates a report.</p>';
-            return;
-        }
-        box.innerHTML = rows.map(r => `
-            <div class="performance-item">
-                <div class="performance-header">
-                    <span class="performance-subject">${escapeHtml(r.name)}</span>
-                    <span class="performance-badge ${r.badge_class}">${escapeHtml(r.badge)} · ${r.score}/10</span>
-                </div>
-                <div class="progress-bar-container">
-                    <div class="progress-bar-fill ${r.bar_class}" style="width:${r.percent}%;"></div>
-                </div>
-            </div>`).join('');
-    }
-
     function escapeHtml(s) {
         const d = document.createElement('div');
         d.textContent = s == null ? '' : String(s);
         return d.innerHTML;
     }
 
-    // Render projects list
+    // Render projects list — mirrors the server-rendered markup above
     function updateProjects(projects) {
         const container = document.getElementById('projectsList');
         if (!container) return;
-        if (projects.length === 0) {
-            container.innerHTML = '<div style="text-align:center;padding:1.5rem;color:#7c6882;">No projects yet this year.</div>';
+        if (!projects.length) {
+            container.innerHTML = '<div style="text-align:center;padding:1.5rem;color:#7c6882;">' +
+                'No projects listed for this grade yet.</div>';
             return;
         }
-        container.innerHTML = projects.map(p => `
-            <div class="action-item" style="text-decoration:none;color:inherit;">
-                <div class="action-item-left">
-                    <span class="material-symbols-outlined">${p.completed ? 'task_alt' : 'radio_button_unchecked'}</span>
-                    <span class="action-item-title">${escapeHtml(p.name)}</span>
+        container.innerHTML = projects.map((p, i) => `
+            <div class="performance-item">
+                <div class="performance-header">
+                    <span class="performance-subject">${i + 1}. ${escapeHtml(p.name)}</span>
+                    ${p.completed ? '<span class="performance-badge good">Completed</span>' : ''}
                 </div>
-                <div class="action-item-right">
-                    <span class="material-symbols-outlined" style="color:${p.completed ? '#10B981' : '#9ca3af'};">${p.completed ? 'check_circle' : 'pending'}</span>
-                </div>
-            </div>
-        `).join('');
+                ${p.description ? `<p style="font-size:.8rem;color:#6b7280;margin:.15rem 0 .35rem;">${escapeHtml(p.description)}</p>` : ''}
+                ${p.sessions ? `<p style="font-size:.72rem;color:#9ca3af;margin:0;">${p.sessions} session${p.sessions === 1 ? '' : 's'}</p>` : ''}
+            </div>`).join('');
     }
 
     function escapeHtml(s) {

@@ -57,67 +57,6 @@ def _coach_for(child):
     return '—'
 
 
-def _academic_performance(child):
-    """(percent, score/10) from the child's generated project reports.
-
-    The dashboard used to show a hardcoded 75% to every parent regardless of
-    how their child was actually doing. This averages every competency score
-    across all of the child's ProjectReports.
-
-    Returns (0, None) when nothing has been scored yet, so the UI can say so
-    instead of inventing a number.
-    """
-    from competencies.models import ProjectReport
-
-    values = []
-    for report in ProjectReport.objects.filter(student=child):
-        values += [
-            row['score'] for row in (report.all_competency_scores or [])
-            if row.get('score') is not None
-        ]
-    if not values:
-        return 0, None
-
-    mean = sum(values) / len(values)
-    return int(round(mean * 10)), round(mean, 1)
-
-
-def _performance_rows(child, limit=6):
-    """Per-competency rows for the Academic Performance card.
-
-    The card rendered an empty <div id="performanceContainer"> — no template
-    content and no JS ever filled it, so parents saw a heading with nothing
-    under it. Uses the latest score per competency across the child's reports.
-    """
-    from competencies.models import ProjectReport
-
-    latest = {}
-    for report in ProjectReport.objects.filter(student=child).select_related('project').order_by(
-            'project__sequence_number', 'project_id'):
-        for row in (report.all_competency_scores or []):
-            if row.get('score') is not None:
-                latest[row.get('competency_id')] = row     # later project wins
-
-    rows = []
-    for row in sorted(latest.values(), key=lambda r: -r['score'])[:limit]:
-        score = row['score']
-        if score >= 8:
-            badge, css = 'Excellent', 'excellent'
-        elif score >= 6:
-            badge, css = 'Good', 'good'
-        else:
-            badge, css = 'Needs attention', 'needs-attention'
-        rows.append({
-            'name': row.get('competency_name') or row.get('competency_code') or 'Competency',
-            'score': score,
-            'percent': int(round(score * 10)),
-            'badge': badge,
-            'badge_class': css,
-            'bar_class': '' if score >= 6 else 'orange',
-        })
-    return rows
-
-
 def _projects_progress(child):
     """(completed, total) projects for this child.
 
@@ -152,34 +91,67 @@ def _sessions_attended(child):
         return 0
 
 
-def _child_projects(child):
-    """List of projects for the child's class in the current academic year.
+def _program_for(child):
+    """Program the child is enrolled in — FSL / CSL Plus etc (PPT slide 47).
 
-    Source of truth is DailySessionFeedback (links a Project to a specific
-    class). Returns latest-first list of dicts: name, description, completed.
-    Safe defaults (empty list) when no data.
+    Comes from the school's linked framework, which is what school onboarding
+    sets. Falls back to the legacy framework_type CharField.
     """
+    school = getattr(child, 'school', None)
+    if not school:
+        return '—'
+    fw = getattr(school, 'framework_ref', None)
+    if fw and getattr(fw, 'name', ''):
+        return fw.name
+    return getattr(school, 'framework_type', '') or '—'
+
+
+def _child_projects(child):
+    """Projects for the child's grade in the current year (PPT slide 49).
+
+    Primary source is the ESL Product catalogue (slide 7): the program's
+    grade-wise ProductProjects, with their descriptions and session counts.
+    This replaces the old DailySessionFeedback lookup, which meant a parent saw
+    nothing at all until the coach happened to submit a daily feedback form.
+
+    Falls back to the assessment projects actually running for the child's
+    grade + framework, so the card still says something while the product
+    catalogue is being filled in.
+    """
+    grade = str(child.student_class)
+    program = _program_for(child)
     projects = []
+
     try:
-        from attendance.models import DailySessionFeedback
-        rows = (DailySessionFeedback.objects
-                .filter(school=child.school,
-                        grade=str(child.student_class),
-                        division=child.division)
-                .select_related('project')
-                .order_by('-date'))
-        seen = set()
-        for r in rows:
-            if not r.project or r.project_id in seen:
-                continue
-            seen.add(r.project_id)
-            projects.append({
-                'name': r.project.title,
-                'description': (r.session_description or '').strip(),
-                'completed': bool(r.is_project_completed),
-            })
+        from competencies.models import ESLProduct, ProjectReport
+        product = ESLProduct.objects.filter(name__iexact=program).first()
+        if product:
+            for pp in product.projects.filter(grade=grade).order_by('project_number', 'order'):
+                projects.append({
+                    'name': pp.name,
+                    'description': (pp.description or '').strip(),
+                    'sessions': pp.sessions.count(),
+                    'completed': False,
+                })
+
+        if not projects:
+            from competencies.models import Project
+            done = set(ProjectReport.objects.filter(student=child).values_list('project_id', flat=True))
+            qs = Project.objects.filter(grade=grade, status='Active').exclude(project_type='Plug In')
+            fw = getattr(getattr(child, 'school', None), 'framework_ref', None)
+            if fw:
+                from django.db.models import Q
+                qs = qs.filter(Q(framework_ref=fw) | Q(framework_ref__isnull=True, framework=fw.name))
+            for pr in qs.order_by('sequence_number', 'title'):
+                projects.append({
+                    'name': pr.title,
+                    'description': pr.project_type,
+                    'sessions': pr.assessments.count(),
+                    'completed': pr.id in done,
+                })
     except Exception:
         projects = []
+
     return projects
 
 
@@ -205,68 +177,15 @@ def parent_dashboard(request):
             names = child.first_name.split()
             initials = (child.first_name[0] + child.last_name[0]).upper() if child.last_name else child.first_name[:2].upper()
 
-            # Build recent activities for this child
-            activities = []
-
-            # Score entries
-            scores = ScoreEntry.objects.filter(student=child).select_related(
-                'assessment_competency__competency',
-                'assessment_competency__assessment',
-            ).order_by('-updated_at')[:5]
-            for s in scores:
-                comp_name = s.assessment_competency.competency.name if s.assessment_competency.competency else 'Unknown'
-                assess_name = s.assessment_competency.assessment.name if s.assessment_competency.assessment else ''
-                activities.append({
-                    'type': 'score',
-                    'icon': 'assignment_turned_in',
-                    'color': 'blue',
-                    'title': f'Score Recorded — {comp_name}',
-                    'description': f'{assess_name} · Score: {s.score}/10',
-                    'time': timesince(s.updated_at) + ' ago',
-                    'timestamp': s.updated_at.isoformat(),
-                })
-
-            # Assessment feedback
-            feedbacks = StudentAssessmentFeedback.objects.filter(student=child).select_related(
-                'assessment',
-            ).order_by('-updated_at')[:3]
-            for f in feedbacks:
-                activities.append({
-                    'type': 'feedback',
-                    'icon': 'comment',
-                    'color': 'purple',
-                    'title': f'Assessment Feedback',
-                    'description': f'{f.assessment.name} — {f.feedback[:80]}' if f.feedback else f.assessment.name,
-                    'time': timesince(f.updated_at) + ' ago',
-                    'timestamp': f.updated_at.isoformat(),
-                })
-
-            # Project feedback
-            proj_feedbacks = StudentProjectFeedback.objects.filter(student=child).select_related(
-                'project',
-            ).order_by('-updated_at')[:3]
-            for pf in proj_feedbacks:
-                activities.append({
-                    'type': 'project_feedback',
-                    'icon': 'rate_review',
-                    'color': 'orange',
-                    'title': f'Project Feedback — {pf.project.title}',
-                    'description': pf.feedback[:80] if pf.feedback else 'Feedback received',
-                    'time': timesince(pf.updated_at) + ' ago',
-                    'timestamp': pf.updated_at.isoformat(),
-                })
-
-            # Sort by timestamp desc, limit to 5
-            activities.sort(key=lambda x: x['timestamp'], reverse=True)
-            activities = activities[:5]
+            # 'Recent activity' was removed per the dashboard spec (slide 49).
+            # It was also never rendered — the rows were computed and shipped
+            # to the browser inside childrenList, then dropped.
 
             # --- Real KPI / module data (PPT slides 47, 49) ---
             attendance = student_attendance_stats(child)          # safe defaults built-in
             completed_projects, total_projects = _projects_progress(child)
             sessions_done = _sessions_attended(child)
             projects_list = _child_projects(child)
-            academic_percent, academic_score = _academic_performance(child)
-            performance_rows = _performance_rows(child)
 
             # Current module = latest active project name for the child's class.
             current_module = projects_list[0]['name'] if projects_list else '—'
@@ -280,9 +199,9 @@ def parent_dashboard(request):
                 'grade_section': f'Grade {child.student_class} - Section {child.division}',
                 'school': child.school.school_name if child.school else '—',
                 'coach': coach_name,
+                'program': _program_for(child),
                 'initials': initials,
                 'gender': getattr(child, 'gender', 'male'),
-                'activities': activities,
                 # KPIs (slide 47)
                 'monthly_attendance': attendance.get('monthly_percent', 0),
                 'attendance_percent': attendance.get('percent', 0),
@@ -291,9 +210,8 @@ def parent_dashboard(request):
                 'projects_label': f'{completed_projects} of {total_projects}',
                 'projects': projects_list,
                 # Real academic performance, replacing a hardcoded 75% in the template
-                'academic_percent': academic_percent,
-                'academic_score': academic_score,
-                'performance': performance_rows,
+                # Ring shows how far through the year's projects the child is
+                'project_percent': int(round(completed_projects * 100 / total_projects)) if total_projects else 0,
                 # Module / sessions (slide 49)
                 'current_module': current_module,
                 'current_module_desc': current_module_desc,
