@@ -205,7 +205,7 @@
                     {% endif %}
                         <div class="action-item-left">
                             <span class="material-symbols-outlined">newspaper</span>
-                            <span class="action-item-title">{{ n.newsletter_month|default:n.created_at|date:"M Y" }}</span>
+                            <span class="action-item-title">{% if n.newsletter_month %}{{ n.newsletter_month }}{% else %}{{ n.created_at|date:"M Y" }}{% endif %}</span>
                         </div>
                         <div class="action-item-right">
                             <span class="material-symbols-outlined">chevron_right</span>

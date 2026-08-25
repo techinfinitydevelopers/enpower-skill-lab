@@ -1,7 +1,7 @@
 {% extends 'parent/base.html' %}
 {% block title %}Projects - Parent{% endblock %}
 {% block content %}
-<div style="max-width:1000px;margin:0 auto;">
+<div style="width:100%;max-width:1000px;margin:0 auto;padding:2rem 1.5rem;">
     {% include 'parent/_page_head.html' with page_heading="Projects" page_sub="Projects your child works through this year." %}
     {% for row in children %}
     <div style="background:#fff;border:1px solid #e5e7eb;border-radius:.75rem;padding:1.25rem;margin-bottom:1.25rem;">

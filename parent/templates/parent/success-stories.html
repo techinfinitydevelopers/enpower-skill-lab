@@ -1,7 +1,7 @@
 {% extends 'parent/base.html' %}
 {% block title %}Success Stories - Parent{% endblock %}
 {% block content %}
-<div style="max-width:1000px;margin:0 auto;">
+<div style="width:100%;max-width:1000px;margin:0 auto;padding:2rem 1.5rem;">
     {% include 'parent/_page_head.html' with page_heading="Student Success Stories" page_sub="Students being celebrated across the programme." %}
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1rem;">
         {% for s in stories %}
