@@ -10,6 +10,7 @@ urlpatterns = [
     path('profile/avatar/', views.update_avatar, name='update_avatar'),
     path('reports/', views.student_reports, name='student_reports'),
     path('reports/annual/', views.student_annual_passport, name='student_annual_passport'),
+    path('reports/kaushal-bodh/', views.student_kb_report, name='student_kb_report'),
     path('reports/<int:project_id>/', views.student_report_detail, name='student_report_detail'),
     path('badges/', views.student_badges, name='student_badges'),
     path('events/', views.student_event_calendar, name='student_event_calendar'),

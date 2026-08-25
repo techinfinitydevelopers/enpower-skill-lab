@@ -462,6 +462,7 @@ def get_annual_kb_scores(student):
             'competency_code': comp_objs[comp_id].code if comp_id in comp_objs else '',
             'competency_name': comp_objs[comp_id].name if comp_id in comp_objs else '',
             'competency_desc': comp_objs[comp_id].description if comp_id in comp_objs else '',
+            'sub_pillar':      _sub_pillar_label(comp_objs.get(comp_id)),
             'score':           round(score, 2),
         }
         for comp_id, score in kb_scores.items()
@@ -512,6 +513,56 @@ def get_top_project(student):
             })
 
     return best[1] if best else None
+
+
+def _sub_pillar_label(competency):
+    """Sub-pillar heading for a competency, e.g. "KB1: Practical Skills".
+
+    Uses the sub-pillar's own code + name rather than deriving a number, so
+    the report matches however the framework is actually set up.
+    """
+    sp = getattr(competency, 'sub_pillar', None) if competency else None
+    if not sp:
+        return 'Other'
+    return str(sp) or 'Other'
+
+
+def build_kb_report(student):
+    """Standalone Kaushal Bodh report (spec slide 32: "Customised report (KB)").
+
+    KB is excluded from the Skill Passport calculation, so it gets its own
+    report rather than a line in the passport. Grouped by sub-pillar, matching
+    the KB1/KB2/KB3 structure on slide 22.
+
+    Returns {'groups': [{'name', 'rows', 'average'}], 'rows', 'overall', 'count'}
+    or None when the student has no KB scores.
+    """
+    from collections import OrderedDict
+
+    rows = get_annual_kb_scores(student)
+    if not rows:
+        return None
+
+    grouped = OrderedDict()
+    for row in sorted(rows, key=lambda r: (r['sub_pillar'], -r['score'])):
+        grouped.setdefault(row['sub_pillar'], []).append(row)
+
+    groups = []
+    for name, items in grouped.items():
+        vals = [i['score'] for i in items]
+        groups.append({
+            'name': name,
+            'rows': items,
+            'average': round(sum(vals) / len(vals), 1) if vals else None,
+        })
+
+    all_vals = [r['score'] for r in rows]
+    return {
+        'groups':  groups,
+        'rows':    rows,
+        'overall': round(sum(all_vals) / len(all_vals), 1) if all_vals else None,
+        'count':   len(rows),
+    }
 
 
 def generate_annual_passport(student):

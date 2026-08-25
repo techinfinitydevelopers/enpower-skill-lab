@@ -1,0 +1,73 @@
+{% comment %}
+Kaushal Bodh report body. Shared by the student's own page and the parent's
+view of their child's, so both stay identical.
+{% endcomment %}
+<div class="sp2">
+    {% if kb %}
+    <div class="student-header">
+        <div class="avatar">{{ student.first_name|slice:":1"|upper }}{{ student.last_name|slice:":1"|upper }}</div>
+        <div class="student-info">
+            <div class="sh-meta">🛠 KAUSHAL BODH REPORT</div>
+            <h1 class="sh-name">{{ student.first_name }} {{ student.last_name }}</h1>
+            <div class="sh-chips">
+                <span class="sh-chip">Grade {{ student.student_class }}{% if student.division %} – {{ student.division }}{% endif %}</span>
+                {% if student.skill_lab_reg_id %}<span class="sh-chip">{{ student.skill_lab_reg_id }}</span>{% endif %}
+                <span class="sh-chip">{{ kb.count }} skill{{ kb.count|pluralize }}</span>
+            </div>
+        </div>
+        <div class="sh-stats">
+            <div class="sh-stat">
+                <div class="sh-stat-icon">🛠</div>
+                <div class="sh-stat-label">Overall Level</div>
+                <div class="sh-stat-value">{{ kb.overall }}</div>
+                <div class="sh-stat-sub">out of 10.0</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="kb-note">Kaushal Bodh is reported on its own — these scores are not part of the Skill Passport calculation or the career profiles.</div>
+
+    {% for g in kb.groups %}
+    <div class="section-block">
+        <div class="section-title">
+            <div class="section-icon" style="background:linear-gradient(135deg,var(--gold),#F77F00);"><span class="material-symbols-outlined">handyman</span></div>
+            {{ g.name }}
+            {% if g.average %}<span class="section-badge">avg {{ g.average }}/10</span>{% endif %}
+        </div>
+        <div class="comp-card">
+            {% for c in g.rows %}
+            <div class="comp-row" data-pct="{{ c.score }}0" data-score="{{ c.score }}" onmouseenter="spRenderStars(this)">
+                <div class="cr-icon"><span class="material-symbols-outlined">build</span></div>
+                <div class="cr-name">
+                    {{ c.competency_name }}
+                    {% if c.competency_desc %}<div class="cr-desc">{{ c.competency_desc }}</div>{% endif %}
+                </div>
+                <div class="cr-bar-wrap"><div class="cr-bar"></div></div>
+                <div class="cr-right">
+                    <div class="cr-score">{{ c.score }} / 10</div>
+                    {% if c.score >= 8 %}<span class="cr-band band-very-strong">Very Strong</span>
+                    {% elif c.score >= 6 %}<span class="cr-band band-strong">Strong</span>
+                    {% elif c.score >= 4 %}<span class="cr-band band-emerging">Emerging</span>
+                    {% else %}<span class="cr-band band-work-on">Skill to work on</span>{% endif %}
+                    <div class="comp-row-level"></div>
+                    <div class="cr-stars"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+
+    <div class="issued-row">
+        <div><div class="issued-label">Issued By 🏫</div><div class="issued-value">{{ issued_by }}</div></div>
+        <div style="text-align:right;"><div class="issued-label">Issue Date 📅</div><div class="issued-value">{{ issue_date|date:"F j, Y" }}</div></div>
+    </div>
+
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">🛠</div>
+        <h2 class="empty-title">No Kaushal Bodh scores yet</h2>
+        <p class="empty-text">This report fills in once Kaushal Bodh competencies are assessed.</p>
+    </div>
+    {% endif %}
+</div>

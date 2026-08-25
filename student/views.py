@@ -608,3 +608,26 @@ def student_change_password(request):
         form = PasswordChangeForm(request.user)
 
     return render(request, 'student/change_password.html', {'form': form})
+
+
+@login_required
+@user_passes_test(is_student)
+def student_kb_report(request):
+    """Kaushal Bodh report — spec slide 32, "Customised report (KB)".
+
+    KB sits outside the Skill Passport calculation, so it gets its own report
+    rather than a line inside the passport. Grouped by sub-pillar (KB1/KB2/KB3).
+    """
+    from competencies.engine import build_kb_report
+    from django.utils import timezone
+
+    student = _student(request)
+    data = build_kb_report(student) if student else None
+
+    return render(request, 'student/kb-report.html', {
+        'student':     student,
+        'kb':          data,
+        'issued_by':   (student.school.school_name if student and student.school else 'ENpower Skill Lab'),
+        'issue_date':  timezone.now(),
+        'nav_back_url': None,
+    })

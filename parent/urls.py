@@ -9,6 +9,7 @@ urlpatterns = [
     path('child/<int:student_id>/reports/', views.parent_child_reports, name='parent_child_reports'),
     path('child/<int:student_id>/reports/<int:project_id>/', views.parent_child_report_detail, name='parent_child_report_detail'),
     path('child/<int:student_id>/passport/', views.parent_child_passport, name='parent_child_passport'),
+    path('child/<int:student_id>/kaushal-bodh/', views.parent_child_kb_report, name='parent_child_kb_report'),
     path('announcements/', views.parent_announcements, name='parent_announcements'),
     path('events/', views.parent_events, name='parent_events'),
     path('newsletter/', views.parent_newsletter, name='parent_newsletter'),

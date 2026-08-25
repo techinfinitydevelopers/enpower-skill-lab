@@ -587,3 +587,20 @@ def parent_projects(request):
             'total': total,
         })
     return render(request, 'parent/projects.html', {'children': children})
+
+
+@login_required
+@user_passes_test(is_parent)
+def parent_child_kb_report(request, student_id):
+    """The child's Kaushal Bodh report, as the student sees it."""
+    from competencies.engine import build_kb_report
+    from django.utils import timezone
+
+    child = _child_or_404(request, student_id)
+    return render(request, 'parent/child-kb-report.html', {
+        'child':      child,
+        'student':    child,
+        'kb':         build_kb_report(child),
+        'issued_by':  (child.school.school_name if child.school else 'ENpower Skill Lab'),
+        'issue_date': timezone.now(),
+    })

@@ -1,0 +1,10 @@
+{% extends 'parent/base.html' %}
+{% load static %}
+{% block title %}{{ child.first_name }}'s Kaushal Bodh Report{% endblock %}
+{% block extra_css %}{% include 'student/_passport_styles.html' %}{% endblock %}
+{% block content %}
+<div style="width:100%;max-width:1536px;margin:0 auto;padding:2rem 1.5rem;">
+{% include 'student/_kb_body.html' %}
+</div>
+{% endblock %}
+{% block extra_js %}{% include 'student/_passport_scripts.html' %}{% endblock %}

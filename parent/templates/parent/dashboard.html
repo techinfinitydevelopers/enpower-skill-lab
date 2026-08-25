@@ -310,7 +310,8 @@
         const base = '/parent/child/' + data.id + '/';
         [['viewReportsLink', base + 'reports/'],
          ['nav-child-performance', base + 'reports/'],
-         ['nav-annual-skill-report', base + 'passport/']].forEach(([id, href]) => {
+         ['nav-annual-skill-report', base + 'passport/'],
+         ['nav-kb-report', base + 'kaushal-bodh/']].forEach(([id, href]) => {
             const el = document.getElementById(id);
             if (el) el.href = href;
         });

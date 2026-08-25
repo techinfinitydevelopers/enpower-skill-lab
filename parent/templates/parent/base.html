@@ -1112,6 +1112,10 @@
                             <span class="material-symbols-outlined">workspace_premium</span>
                             Annual Skill Report
                         </a>
+                        <a href="{% if sidebar_child_id %}{% url 'parent_child_kb_report' sidebar_child_id %}{% else %}{% url 'parent_dashboard' %}{% endif %}" id="nav-kb-report">
+                            <span class="material-symbols-outlined">handyman</span>
+                            Kaushal Bodh Report
+                        </a>
                     </div>
                 </div>
 
