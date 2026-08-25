@@ -124,7 +124,7 @@ body.dark .sidebar {
 }
 
 .sidebar-header {
-    height: 196px;
+    height: 110px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -132,9 +132,9 @@ body.dark .sidebar {
 }
 
 .sidebar-logo {
-    height: 168px;
+    height: 70px;
     width: auto;
-    max-width: 220px;
+    max-width: 240px;
     object-fit: contain;
 }
 

@@ -94,8 +94,8 @@
             transition: width 0.3s ease-in-out;
         }
         .coord-sidebar.collapsed { width: 0; min-width: 0; border-right: none; overflow: hidden; }
-        .coord-sidebar-header { height: 196px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; }
-        .coord-sidebar-logo { height: 168px; width: auto; max-width: 200px; object-fit: contain; }
+        .coord-sidebar-header { height: 110px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; }
+        .coord-sidebar-logo { height: 70px; width: auto; max-width: 240px; object-fit: contain; }
         .coord-sidebar-close { display: none; background: none; border: none; color: #1f2937; cursor: pointer; padding: 8px; }
 
         /* Sidebar Navigation */
@@ -244,7 +244,7 @@
         <div class="coord-sidebar-overlay" id="coordSidebarOverlay"></div>
         <aside id="coordSidebar" class="coord-sidebar">
             <div class="coord-sidebar-header">
-                <img src="{% static 'assets/images/enpower-logo (1).png' %}" alt="Enpower Logo" class="coord-sidebar-logo" />
+                <img src="{% static 'assets/images/enpower-logo-trimmed.png' %}" alt="Enpower Logo" class="coord-sidebar-logo" />
                 <button id="coordCloseSidebar" class="coord-sidebar-close">
                     <span class="material-symbols-outlined">close</span>
                 </button>

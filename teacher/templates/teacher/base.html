@@ -93,8 +93,8 @@
             transition: width 0.3s ease-in-out;
         }
         .sidebar.collapsed { width: 0; min-width: 0; border-right: none; overflow: hidden; }
-        .sidebar-header { height: 196px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; }
-        .sidebar-logo { height: 168px; width: auto; max-width: 200px; object-fit: contain; }
+        .sidebar-header { height: 110px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; }
+        .sidebar-logo { height: 70px; width: auto; max-width: 240px; object-fit: contain; }
         .sidebar-close { display: none; background: none; border: none; color: #1f2937; cursor: pointer; padding: 8px; }
 
         /* Sidebar Navigation */
@@ -239,7 +239,7 @@
         <div class="sidebar-overlay" id="sidebarOverlay"></div>
         <aside id="sidebar" class="sidebar">
             <div class="sidebar-header">
-                <img src="{% static 'assets/images/enpower-logo (1).png' %}" alt="Enpower Logo" class="sidebar-logo" />
+                <img src="{% static 'assets/images/enpower-logo-trimmed.png' %}" alt="Enpower Logo" class="sidebar-logo" />
                 <button id="closeSidebar" class="sidebar-close">
                     <span class="material-symbols-outlined">close</span>
                 </button>
