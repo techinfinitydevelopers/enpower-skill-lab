@@ -110,15 +110,16 @@ parent's view of their child's passport, so both stay identical.
     </div>
     {% endif %}
 
-    <!-- Skills Report Card -->
+    <!-- Top 5 competencies with band labels (spec slides 39/40) -->
+    {% if top_5_competencies %}
     <div class="section-block">
         <div class="section-title">
             <div class="section-icon"><span class="material-symbols-outlined">dashboard_customize</span></div>
-            Your Skills Report Card
-            <span class="section-badge">📈 {{ all_competency_scores|length }} Skill{{ all_competency_scores|length|pluralize }}</span>
+            Your Top Skills
+            <span class="section-badge">📈 Top {{ top_5_competencies|length }}</span>
         </div>
         <div class="comp-card" id="spCompCard">
-            {% for c in all_competency_scores %}
+            {% for c in top_5_competencies %}
             <div class="comp-row" data-pct="{{ c.score }}0" data-score="{{ c.score }}" onmouseenter="spRenderStars(this)">
                 <div class="cr-icon"><span class="material-symbols-outlined">{% cycle 'extension' 'psychology' 'forum' 'group' 'lightbulb' 'insights' %}</span></div>
                 <div class="cr-name">
@@ -128,6 +129,7 @@ parent's view of their child's passport, so both stay identical.
                 <div class="cr-bar-wrap"><div class="cr-bar"></div></div>
                 <div class="cr-right">
                     <div class="cr-score">{{ c.score }} / 10</div>
+                    {% if c.score >= 8 %}<span class="cr-band band-very-strong">Very Strong</span>{% elif c.score >= 6 %}<span class="cr-band band-strong">Strong</span>{% elif c.score >= 4 %}<span class="cr-band band-emerging">Emerging</span>{% else %}<span class="cr-band band-work-on">Skill to work on</span>{% endif %}
                     <div class="comp-row-level"></div>
                     <div class="cr-stars"></div>
                 </div>
@@ -135,6 +137,37 @@ parent's view of their child's passport, so both stay identical.
             {% endfor %}
         </div>
     </div>
+    {% endif %}
+
+    <!-- Full list, kept below so nothing is hidden -->
+    {% if all_competency_scores|length > top_5_competencies|length %}
+    <div class="section-block">
+        <details class="all-skills">
+            <summary>
+                <span class="material-symbols-outlined">expand_more</span>
+                See all {{ all_competency_scores|length }} skills
+            </summary>
+            <div class="comp-card" style="margin-top:14px;">
+                {% for c in all_competency_scores %}
+            <div class="comp-row" data-pct="{{ c.score }}0" data-score="{{ c.score }}" onmouseenter="spRenderStars(this)">
+                <div class="cr-icon"><span class="material-symbols-outlined">{% cycle 'extension' 'psychology' 'forum' 'group' 'lightbulb' 'insights' %}</span></div>
+                <div class="cr-name">
+                    {{ c.competency_name }}
+                    {% if c.competency_desc %}<div class="cr-desc">{{ c.competency_desc }}</div>{% endif %}
+                </div>
+                <div class="cr-bar-wrap"><div class="cr-bar"></div></div>
+                <div class="cr-right">
+                    <div class="cr-score">{{ c.score }} / 10</div>
+                    {% if c.score >= 8 %}<span class="cr-band band-very-strong">Very Strong</span>{% elif c.score >= 6 %}<span class="cr-band band-strong">Strong</span>{% elif c.score >= 4 %}<span class="cr-band band-emerging">Emerging</span>{% else %}<span class="cr-band band-work-on">Skill to work on</span>{% endif %}
+                    <div class="comp-row-level"></div>
+                    <div class="cr-stars"></div>
+                </div>
+            </div>
+                {% endfor %}
+            </div>
+        </details>
+    </div>
+    {% endif %}
 
     <!-- Kaushal Bodh — reported separately, NOT part of the Skill Passport score -->
     {% if kb_scores %}
