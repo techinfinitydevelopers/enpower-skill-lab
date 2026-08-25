@@ -114,7 +114,8 @@
 
     /* REVEAL competency rows on scroll */
     (function () {
-        var cc = document.getElementById('spCompCard'); if (!cc) return;
+        var cards = document.querySelectorAll('.comp-card');
+        if (!cards.length) return;
         var obs = new IntersectionObserver(function (entries) {
             entries.forEach(function (entry) {
                 if (entry.isIntersecting) {
@@ -125,7 +126,7 @@
                 }
             });
         }, { threshold: 0.15 });
-        obs.observe(cc);
+        cards.forEach(function (c) { obs.observe(c); });
     })();
 
     window.addEventListener('load', function () {
