@@ -193,11 +193,11 @@ parent's view of their child's passport, so both stay identical.
 
     <!-- Footer Nav -->
     <div class="footer-nav">
-        <a class="sp-btn sp-btn-outline" href="{% url 'student:student_reports' %}">
-            <span class="material-symbols-outlined">arrow_back</span> Back to Projects
+        <a class="sp-btn sp-btn-outline" href="{% if nav_back_url %}{{ nav_back_url }}{% else %}{% url 'student:student_reports' %}{% endif %}">
+            <span class="material-symbols-outlined">arrow_back</span> {{ nav_back_label|default:"Back to Projects" }}
         </a>
-        <a class="sp-btn sp-btn-primary" href="{% url 'student:student_dashboard' %}" onclick="spConfettiFire()">
-            <span class="material-symbols-outlined">home</span> Dashboard 🏠
+        <a class="sp-btn sp-btn-primary" href="{% if nav_next_url %}{{ nav_next_url }}{% else %}{% url 'student:student_dashboard' %}{% endif %}" onclick="spConfettiFire()">
+            <span class="material-symbols-outlined">home</span> {{ nav_next_label|default:"Dashboard 🏠" }}
         </a>
     </div>
 

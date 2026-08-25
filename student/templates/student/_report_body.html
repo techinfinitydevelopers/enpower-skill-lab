@@ -209,10 +209,10 @@ parent's view of their child's report, so both stay identical.
 
     <!-- Footer Nav -->
     <div class="footer-nav">
-        <a class="sp-btn sp-btn-outline" href="{% url 'student:student_reports' %}">
-            <span class="material-symbols-outlined">arrow_back</span> Back to Skill Passport
+        <a class="sp-btn sp-btn-outline" href="{% if nav_back_url %}{{ nav_back_url }}{% else %}{% url 'student:student_reports' %}{% endif %}">
+            <span class="material-symbols-outlined">arrow_back</span> {{ nav_back_label|default:"Back to Skill Passport" }}
         </a>
-        <a class="sp-btn sp-btn-primary" href="{% url 'student:student_annual_passport' %}" onclick="spConfettiFire()">
+        <a class="sp-btn sp-btn-primary" href="{% if nav_next_url %}{{ nav_next_url }}{% else %}{% url 'student:student_annual_passport' %}{% endif %}" onclick="spConfettiFire()">
             <span class="material-symbols-outlined">verified</span> Annual Passport 🏅
         </a>
     </div>

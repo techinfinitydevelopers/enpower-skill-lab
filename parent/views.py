@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.contrib.auth import update_session_auth_hash, logout
@@ -410,6 +411,11 @@ def parent_child_report_detail(request, student_id, project_id):
         'overall_score': round(sum(values) / len(values), 1) if values else 0,
         'best_match': profiles[0]['match_percent'] if profiles else 0,
         'assessment_breakdown': get_per_assessment_breakdown(child, report.project),
+        # Footer nav — the shared partial defaults to student URLs, which a
+        # parent cannot open (they were bounced to /login).
+        'nav_back_url':   reverse('parent_child_reports', args=[child.id]),
+        'nav_back_label': "Back to %s's Reports" % child.first_name,
+        'nav_next_url':   reverse('parent_child_passport', args=[child.id]),
     })
 
 
@@ -496,6 +502,12 @@ def parent_child_passport(request, student_id):
                                                           very_strong + strong, overall),
         })
 
+    context.update({
+        'nav_back_url':   reverse('parent_child_reports', args=[child.id]),
+        'nav_back_label': "Back to %s's Reports" % child.first_name,
+        'nav_next_url':   reverse('parent_dashboard'),
+        'nav_next_label': 'Dashboard 🏠',
+    })
     return render(request, 'parent/child-passport.html', context)
 
 
