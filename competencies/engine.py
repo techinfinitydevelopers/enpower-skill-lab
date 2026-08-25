@@ -45,6 +45,61 @@ def attach_competency_descriptions(*score_lists):
 # STEP 1: Collect final competency scores
 # ─────────────────────────────────────────────
 
+def group_by_sub_pillar(score_rows):
+    """Group competency-score rows by their sub-pillar.
+
+    Spec slide 32 lists "Sub-pillar wise" as one of the student's skill-passport
+    views, alongside the competency list. Returns
+        [{'name', 'rows', 'average'}]
+    ordered by sub-pillar number, or [] when there is nothing to group.
+    """
+    from collections import OrderedDict
+    from .models import Competency
+
+    rows = [r for r in (score_rows or []) if r.get('score') is not None]
+    if not rows:
+        return []
+
+    ids = {r.get('competency_id') for r in rows}
+    ids.discard(None)
+    comps = {
+        c.id: c for c in Competency.objects
+        .filter(id__in=ids).select_related('sub_pillar__pillar')
+    }
+
+    buckets = OrderedDict()
+    for r in sorted(rows, key=lambda x: -x['score']):
+        comp = comps.get(r.get('competency_id'))
+        sp = getattr(comp, 'sub_pillar', None) if comp else None
+        key = (getattr(sp, 'sp_number', 9999), str(sp) if sp else 'Other')
+        buckets.setdefault(key, []).append(r)
+
+    out = []
+    for (_, label), items in sorted(buckets.items()):
+        vals = [i['score'] for i in items]
+        out.append({
+            'name': label,
+            'rows': items,
+            'average': round(sum(vals) / len(vals), 1) if vals else None,
+        })
+    return out
+
+
+def profiling_enabled(project):
+    """Whether profile/career matching applies to this project.
+
+    Spec slide 20: "Profile mapping disabled in CSL+/ other projects", and
+    slide 33: "Skill passport stage disabled in CSL+". Only the fixed framework
+    (FSL) carries the 15-profile mapping, so profiling runs there and nowhere
+    else. A project with no framework is treated as FSL, matching how legacy
+    projects are handled elsewhere.
+    """
+    fw = getattr(project, 'framework_ref', None) if project else None
+    if fw is None:
+        return True
+    return bool(getattr(fw, 'is_fixed', False))
+
+
 def get_competency_scores_for_project(student, project, include_kb=False):
     """
     Returns a dict: { competency_id: final_score }
@@ -327,10 +382,11 @@ def build_report_data(student, project):
     if not competency_scores:
         return None
 
-    profile_results = run_profiling_engine(competency_scores)
-
-    # Top 3 profiles
-    top_3 = profile_results[:TOP_PROFILES_COUNT]
+    if profiling_enabled(project):
+        profile_results = run_profiling_engine(competency_scores)
+        top_3 = profile_results[:TOP_PROFILES_COUNT]
+    else:
+        top_3 = []
 
     # All competency scores with names
     comp_ids  = list(competency_scores.keys())
@@ -577,8 +633,16 @@ def generate_annual_passport(student):
     if not competency_scores:
         return None
 
-    profile_results = run_profiling_engine(competency_scores)
-    top_3           = profile_results[:TOP_PROFILES_COUNT]
+    fsl_project = Project.objects.filter(
+        sequence_number__isnull=False, status='Active'
+    ).filter(framework_ref__is_fixed=True).exists() or not Project.objects.filter(
+        sequence_number__isnull=False, status='Active', framework_ref__isnull=False
+    ).exists()
+    if fsl_project:
+        profile_results = run_profiling_engine(competency_scores)
+        top_3           = profile_results[:TOP_PROFILES_COUNT]
+    else:
+        top_3 = []
 
     comp_ids  = list(competency_scores.keys())
     comp_objs = {c.id: c for c in Competency.objects.filter(id__in=comp_ids)}

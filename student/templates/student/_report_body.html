@@ -58,31 +58,11 @@ parent's view of their child's report, so both stay identical.
         </div>
     </div>
 
-    <!-- Top Career Matches (profiles) -->
-    {% if report.top_3_profiles %}
-    <div class="section-block">
-        <div class="section-title">
-            <div class="section-icon"><span class="material-symbols-outlined">psychology</span></div>
-            Your Top Career Matches
-            <span class="section-badge">🎯 This Project</span>
-        </div>
-        <div class="profiles-row">
-            {% for p in report.top_3_profiles %}
-            <div class="profile-card{% if forloop.first %} active{% endif %}" onclick="spBurst(this,'🚀')">
-                {% if forloop.first %}<div class="stamp">🥇</div>{% endif %}
-                <div class="pc-top">
-                    <div class="pc-icon-wrap"><span class="material-symbols-outlined">{% cycle 'groups' 'biotech' 'military_tech' %}</span></div>
-                    <div class="pc-match-badge">{{ p.match_percent }}% Match {% if forloop.first %}🔥{% elif forloop.counter == 2 %}⚡{% else %}✨{% endif %}</div>
-                </div>
-                <div class="pc-role">{{ p.profile_name }}</div>
-                <div class="pc-tags">
-                    {% for tag in p.tags %}<span class="pc-tag">{{ tag }}</span>{% endfor %}
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-    {% endif %}
+    {% comment %}
+    Career-match profiles are deliberately not shown here. Spec slide 32:
+    "Students view results in competency level only not student profiles".
+    The profiling engine still runs for the teacher-facing profile report.
+    {% endcomment %}
 
     <!-- Top 5 competencies with band labels (spec slides 39/40) -->
     {% if report.top_5_competencies %}
@@ -141,6 +121,49 @@ parent's view of their child's report, so both stay identical.
             </div>
         </details>
     </div>
+    {% endif %}
+
+    <!-- Sub-pillar view (spec slide 32: "Sub-pillar wise") -->
+    {% if sub_pillar_groups %}
+    <div class="section-block">
+        <details class="all-skills">
+            <summary>
+                <span class="material-symbols-outlined">expand_more</span>
+                View by sub-pillar
+            </summary>
+            {% for g in sub_pillar_groups %}
+            <div style="margin-top:16px;">
+                <div class="section-title" style="font-size:16px; margin-bottom:10px;">
+                    <div class="section-icon" style="width:30px;height:30px;"><span class="material-symbols-outlined" style="font-size:17px;">account_tree</span></div>
+                    {{ g.name }}
+                    {% if g.average %}<span class="section-badge">avg {{ g.average }}/10</span>{% endif %}
+                </div>
+                <div class="comp-card">
+                    {% for c in g.rows %}
+                    <div class="comp-row" data-pct="{{ c.score }}0" data-score="{{ c.score }}" onmouseenter="spRenderStars(this)">
+                        <div class="cr-icon"><span class="material-symbols-outlined">account_tree</span></div>
+                        <div class="cr-name">
+                            {{ c.competency_name }}
+                            {% if c.competency_desc %}<div class="cr-desc">{{ c.competency_desc }}</div>{% endif %}
+                        </div>
+                        <div class="cr-bar-wrap"><div class="cr-bar"></div></div>
+                        <div class="cr-right">
+                            <div class="cr-score">{{ c.score }} / 10</div>
+                            {% if c.score >= 8 %}<span class="cr-band band-very-strong">Very Strong</span>
+                            {% elif c.score >= 6 %}<span class="cr-band band-strong">Strong</span>
+                            {% elif c.score >= 4 %}<span class="cr-band band-emerging">Emerging</span>
+                            {% else %}<span class="cr-band band-work-on">Skill to work on</span>{% endif %}
+                            <div class="comp-row-level"></div>
+                            <div class="cr-stars"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </details>
+    </div>
+
     {% endif %}
 
     <!-- Assessment-by-assessment breakdown — shows progress across the project -->

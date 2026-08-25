@@ -25,11 +25,6 @@
                     Upload CSV
                     <input type="file" accept=".csv" onchange="handleCSVUpload(event)" style="display: none;">
                 </label>
-
-                <a href="{% url 'school_admin_onboard_student' %}" class="btn-gradient btn-add text-decoration-none">
-                    <span class="material-symbols-outlined">add</span>
-                    Add New Student
-                </a>
             </div>
         </header>
 
@@ -97,7 +92,6 @@
                                     <div class="text-muted">
                                         <span class="material-symbols-outlined" style="font-size: 48px; line-height: 1; display: inline-block; width: 48px; height: 48px; opacity: 0.5;">school</span>
                                         <p class="mt-2 mb-0">No students found for your school</p>
-                                        <a href="{% url 'school_admin_onboard_student' %}" class="btn btn-primary mt-3">Add First Student</a>
                                     </div>
                                 </td>
                             </tr>

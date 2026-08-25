@@ -373,7 +373,8 @@ def parent_child_reports(request, student_id):
 def parent_child_report_detail(request, student_id, project_id):
     """One project report for the parent's child — same content the student sees."""
     from competencies.models import ProjectReport, Profile, StudentAssessmentFeedback
-    from competencies.engine import attach_competency_descriptions, get_per_assessment_breakdown
+    from competencies.engine import (attach_competency_descriptions,
+                                     get_per_assessment_breakdown, group_by_sub_pillar)
 
     child = _child_or_404(request, student_id)
     report = get_object_or_404(ProjectReport, student=child, project_id=project_id)
@@ -411,6 +412,7 @@ def parent_child_report_detail(request, student_id, project_id):
         'overall_score': round(sum(values) / len(values), 1) if values else 0,
         'best_match': profiles[0]['match_percent'] if profiles else 0,
         'assessment_breakdown': get_per_assessment_breakdown(child, report.project),
+        'sub_pillar_groups': group_by_sub_pillar(all_scores),
         # Footer nav — the shared partial defaults to student URLs, which a
         # parent cannot open (they were bounced to /login).
         'nav_back_url':   reverse('parent_child_reports', args=[child.id]),
@@ -424,7 +426,8 @@ def parent_child_report_detail(request, student_id, project_id):
 def parent_child_passport(request, student_id):
     """The child's Annual Skill Passport, as the student sees it."""
     from competencies.engine import (generate_annual_passport, get_annual_kb_scores,
-                                     get_top_project, attach_competency_descriptions)
+                                     get_top_project, attach_competency_descriptions,
+                                     group_by_sub_pillar)
     from competencies.models import Profile
     from student.views import _build_passport_summary
     from django.utils import timezone
@@ -436,6 +439,7 @@ def parent_child_passport(request, student_id):
         'top_3_profiles': [], 'top_5_competencies': [], 'skills_to_work_on': [],
         'all_competency_scores': [], 'very_strong': [], 'strong': [], 'emerging': [],
         'work_on': [], 'kb_scores': [], 'top_project': None, 'overall_score': 0,
+        'sub_pillar_groups': [],
         'attendance_percent': 0, 'summary_paragraphs': [],
         'academic_year': getattr(child, 'academic_year', '') or '',
         'issued_by': (child.school.school_name if child.school else 'ENpower Skill Lab'),
@@ -500,6 +504,7 @@ def parent_child_passport(request, student_id):
             'overall_score': overall,
             'summary_paragraphs': _build_passport_summary(child, all_scores,
                                                           very_strong + strong, overall),
+            'sub_pillar_groups': group_by_sub_pillar(all_scores),
         })
 
     context.update({

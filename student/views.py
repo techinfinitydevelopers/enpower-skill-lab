@@ -215,8 +215,9 @@ def student_report_detail(request, project_id):
 
     # Per-assessment breakdown so the report shows progress across the project,
     # not just the aggregated final score per competency.
-    from competencies.engine import get_per_assessment_breakdown
+    from competencies.engine import get_per_assessment_breakdown, group_by_sub_pillar
     assessment_breakdown = get_per_assessment_breakdown(student, report.project)
+    sub_pillar_groups = group_by_sub_pillar(all_scores)
 
     return render(request, 'student/report-detail.html', {
         'student':     student,
@@ -228,6 +229,7 @@ def student_report_detail(request, project_id):
         'overall_score': overall,
         'best_match':  best_match,
         'assessment_breakdown': assessment_breakdown,
+        'sub_pillar_groups': sub_pillar_groups,
     })
 
 
@@ -259,6 +261,7 @@ def student_annual_passport(request):
         'work_on': [],
         'kb_scores': [],
         'top_project': None,
+        'sub_pillar_groups': [],
         'overall_score': 0,
         'attendance_percent': 0,
         'summary_paragraphs': [],
@@ -308,7 +311,7 @@ def student_annual_passport(request):
     if data:
         all_scores = data.get('all_competency_scores') or []
 
-        from competencies.engine import attach_competency_descriptions
+        from competencies.engine import attach_competency_descriptions, group_by_sub_pillar
         attach_competency_descriptions(
             all_scores,
             data.get('top_5_competencies'),
@@ -356,6 +359,7 @@ def student_annual_passport(request):
             'work_on': [c for c in all_scores if get_label(c['score']) == 'work_on'],
             'overall_score': overall,
             'summary_paragraphs': _build_passport_summary(student, all_scores, very_strong + strong, overall),
+            'sub_pillar_groups': group_by_sub_pillar(all_scores),
         })
 
     return render(request, 'student/annual-passport.html', context)
