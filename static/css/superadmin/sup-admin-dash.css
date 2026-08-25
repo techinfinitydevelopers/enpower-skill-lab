@@ -2422,8 +2422,10 @@ body.dark .sidebar {
 }
 
 .sidebar-logo {
-    height: 40px;
+    height: 96px;
     width: auto;
+    max-width: 220px;
+    object-fit: contain;
 }
 
 .sidebar-close {
