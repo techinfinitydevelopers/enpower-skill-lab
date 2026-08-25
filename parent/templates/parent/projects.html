@@ -1,0 +1,42 @@
+{% extends 'parent/base.html' %}
+{% block title %}Projects - Parent{% endblock %}
+{% block content %}
+<div style="max-width:1000px;margin:0 auto;">
+    {% include 'parent/_page_head.html' with page_heading="Projects" page_sub="Projects your child works through this year." %}
+    {% for row in children %}
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:.75rem;padding:1.25rem;margin-bottom:1.25rem;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:.9rem;">
+            <div>
+                <div style="font-size:1.05rem;font-weight:700;color:#1f2937;">{{ row.child.first_name }} {{ row.child.last_name }}</div>
+                <div style="font-size:.75rem;color:#9ca3af;margin-top:.15rem;">
+                    Grade {{ row.child.student_class }}{% if row.child.division %} - {{ row.child.division }}{% endif %} · {{ row.program }}
+                </div>
+            </div>
+            <div style="text-align:right;">
+                <div style="font-size:1.4rem;font-weight:800;color:#5b1f6f;line-height:1;">{{ row.completed }}<span style="font-size:.8rem;color:#9ca3af;"> of {{ row.total }}</span></div>
+                <div style="font-size:.68rem;color:#9ca3af;margin-top:.2rem;">completed</div>
+            </div>
+        </div>
+
+        {% for pr in row.projects %}
+        <div style="border-top:1px solid #f3f4f6;padding:.8rem 0;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;">
+                <span style="font-weight:600;color:#1f2937;font-size:.9rem;">{{ forloop.counter }}. {{ pr.name }}</span>
+                {% if pr.completed %}
+                <span style="background:#d1fae5;color:#166534;border-radius:.25rem;padding:2px 8px;font-size:.7rem;font-weight:700;">Completed</span>
+                {% endif %}
+            </div>
+            {% if pr.description %}<p style="color:#6b7280;font-size:.8rem;margin:.25rem 0 0;">{{ pr.description }}</p>{% endif %}
+            {% if pr.sessions %}<p style="color:#9ca3af;font-size:.72rem;margin:.15rem 0 0;">{{ pr.sessions }} session{{ pr.sessions|pluralize }}</p>{% endif %}
+        </div>
+        {% empty %}
+        <p style="color:#7c6882;font-size:.85rem;margin:0;">No projects listed for this grade yet.</p>
+        {% endfor %}
+    </div>
+    {% empty %}
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:.75rem;padding:3rem 1.5rem;text-align:center;color:#6b7280;">
+        <p style="margin:0;">No children linked to this account.</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

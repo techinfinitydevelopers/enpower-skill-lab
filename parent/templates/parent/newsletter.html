@@ -1,0 +1,31 @@
+{% extends 'parent/base.html' %}
+{% block title %}Newsletter - Parent{% endblock %}
+{% block content %}
+<div style="max-width:1000px;margin:0 auto;">
+    {% include 'parent/_page_head.html' with page_heading="Newsletter" page_sub="Monthly updates from the programme." %}
+    {% for n in newsletters %}
+    {% if n.newsletter_file or n.newsletter_weblink %}
+    <a href="{% if n.newsletter_file %}{{ n.newsletter_file.url }}{% else %}{{ n.newsletter_weblink }}{% endif %}" target="_blank" rel="noopener"
+       style="display:flex;align-items:center;justify-content:space-between;gap:1rem;text-decoration:none;color:inherit;background:#fff;border:1px solid #e5e7eb;border-left:4px solid #5b1f6f;border-radius:.75rem;padding:1.1rem 1.25rem;margin-bottom:.85rem;">
+    {% else %}
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;background:#fff;border:1px solid #e5e7eb;border-left:4px solid #e5e7eb;border-radius:.75rem;padding:1.1rem 1.25rem;margin-bottom:.85rem;">
+    {% endif %}
+        <div style="display:flex;align-items:center;gap:.75rem;">
+            <span class="material-symbols-outlined" style="color:#5b1f6f;">newspaper</span>
+            <div>
+                <div style="font-weight:700;color:#1f2937;">{{ n.newsletter_month|default:n.created_at|date:"F Y" }}</div>
+                {% if not n.newsletter_file and not n.newsletter_weblink %}
+                <div style="font-size:.72rem;color:#9ca3af;">No file attached yet</div>
+                {% endif %}
+            </div>
+        </div>
+        {% if n.newsletter_file or n.newsletter_weblink %}<span class="material-symbols-outlined" style="color:#9ca3af;">chevron_right</span>{% endif %}
+    {% if n.newsletter_file or n.newsletter_weblink %}</a>{% else %}</div>{% endif %}
+    {% empty %}
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:.75rem;padding:3rem 1.5rem;text-align:center;color:#6b7280;">
+        <span class="material-symbols-outlined" style="font-size:44px;color:#d1d5db;">newspaper</span>
+        <p style="margin:.75rem 0 0;">No newsletters published yet.</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

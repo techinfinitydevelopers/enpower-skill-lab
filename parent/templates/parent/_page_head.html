@@ -1,0 +1,8 @@
+{% comment %}Shared heading for the parent's list pages.{% endcomment %}
+<div style="max-width:1000px;margin:0 auto 1.5rem;">
+    <a href="{% url 'parent_dashboard' %}" style="display:inline-flex;align-items:center;gap:.3rem;font-size:.78rem;font-weight:500;color:#6b7280;text-decoration:none;margin-bottom:.6rem;">
+        <span class="material-symbols-outlined" style="font-size:16px;">arrow_back</span> Back to Dashboard
+    </a>
+    <h1 style="font-size:1.5rem;font-weight:700;color:#1f2937;margin:0;">{{ page_heading }}</h1>
+    {% if page_sub %}<p style="color:#6b7280;margin:.25rem 0 0;">{{ page_sub }}</p>{% endif %}
+</div>

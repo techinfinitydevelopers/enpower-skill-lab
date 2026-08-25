@@ -1,0 +1,26 @@
+{% extends 'parent/base.html' %}
+{% block title %}Events - Parent{% endblock %}
+{% block content %}
+<div style="max-width:1000px;margin:0 auto;">
+    {% include 'parent/_page_head.html' with page_heading="Events" page_sub="Workshops and events for your child's school." %}
+    {% for e in events %}
+    <div style="background:#fff;border:1px solid #e5e7eb;border-left:4px solid #5b1f6f;border-radius:.75rem;padding:1.1rem 1.25rem;margin-bottom:.85rem;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;">
+            <div>
+                <div style="font-weight:700;color:#1f2937;">{{ e.event_name|default:"Event" }}</div>
+                {% if e.event_date %}<div style="font-size:.75rem;color:#5b1f6f;font-weight:600;margin-top:.2rem;">{{ e.event_date|date:"l, j F Y" }}</div>{% endif %}
+                {% if e.event_description %}<p style="color:#6b7280;font-size:.85rem;margin:.4rem 0 0;">{{ e.event_description }}</p>{% endif %}
+            </div>
+            {% if e.event_link %}
+            <a href="{{ e.event_link }}" target="_blank" rel="noopener" style="flex-shrink:0;background:#5b1f6f;color:#fff;border-radius:.5rem;padding:.45rem .9rem;font-size:.75rem;font-weight:700;text-decoration:none;">Open</a>
+            {% endif %}
+        </div>
+    </div>
+    {% empty %}
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:.75rem;padding:3rem 1.5rem;text-align:center;color:#6b7280;">
+        <span class="material-symbols-outlined" style="font-size:44px;color:#d1d5db;">event</span>
+        <p style="margin:.75rem 0 0;">No events scheduled yet.</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

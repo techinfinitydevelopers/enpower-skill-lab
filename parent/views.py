@@ -509,3 +509,69 @@ def parent_logout(request):
     logout(request)
     messages.success(request, 'You have been successfully logged out.')
     return redirect('login')
+
+
+# ---------- Announcement pages ----------
+# The sidebar's Events / Announcements / Newsletter / Success Story / View
+# Projects entries all pointed at #anchors on the dashboard, so every one of
+# them just scrolled the same page — and Events and Announcements shared an
+# anchor, making them indistinguishable. These give each its own page, matching
+# what the student side already has.
+
+def _announcements(request, ann_type=None):
+    from competencies.announcements import announcements_for_user
+    try:
+        return announcements_for_user(request.user, ann_type)
+    except Exception:
+        return []
+
+
+@login_required
+@user_passes_test(is_parent)
+def parent_announcements(request):
+    """Everything targeted at this parent — events, newsletters, success stories."""
+    items = _announcements(request)
+    items.sort(key=lambda a: a.created_at, reverse=True)
+    return render(request, 'parent/announcements.html', {'announcements': items})
+
+
+@login_required
+@user_passes_test(is_parent)
+def parent_events(request):
+    items = _announcements(request, 'event')
+    items.sort(key=lambda a: (a.event_date is None, a.event_date))
+    return render(request, 'parent/events.html', {'events': items})
+
+
+@login_required
+@user_passes_test(is_parent)
+def parent_newsletter(request):
+    items = _announcements(request, 'newsletter')
+    items.sort(key=lambda a: (a.newsletter_date or a.created_at.date()), reverse=True)
+    return render(request, 'parent/newsletter.html', {'newsletters': items})
+
+
+@login_required
+@user_passes_test(is_parent)
+def parent_success_stories(request):
+    items = _announcements(request, 'success_story')
+    items.sort(key=lambda a: a.created_at, reverse=True)
+    return render(request, 'parent/success-stories.html', {'stories': items})
+
+
+@login_required
+@user_passes_test(is_parent)
+def parent_projects(request):
+    """View Projects — the year's projects for each of the parent's children."""
+    parent = get_object_or_404(Parent, user=request.user)
+    children = []
+    for child in parent.students.filter(is_active=True):
+        done, total = _projects_progress(child)
+        children.append({
+            'child': child,
+            'program': _program_for(child),
+            'projects': _child_projects(child),
+            'completed': done,
+            'total': total,
+        })
+    return render(request, 'parent/projects.html', {'children': children})
