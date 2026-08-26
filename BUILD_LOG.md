@@ -307,6 +307,12 @@ leak surfaced there and nothing was rendering those pages. Suite is now 42 check
   Level, out of profiles only. Reviewed on a real FSL report and accepted.
 
 ### PARKED — to discuss, do not implement
+0. Slide 8/10 "Checklist for student output" — no such field on Assessment.
+   Small: model field + migration + the Project & Assessment form.
+1. Deck limits unenforced: slide 8 says max 6 assessments per project and max 8
+   competencies per assessment. Nothing validates either, and seed_csl_kb_scores
+   already put 12 KB competencies into an assessment holding 3. Confirm whether
+   these are hard limits before enforcing.
 1. Should "top 3 profiles" always be three? Currently shows however many unlock
    (13 of 18 FSL reports show 3, five show 2). Forcing three needs pool = 12 and
    admits ~40% matches.
