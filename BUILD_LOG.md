@@ -314,6 +314,32 @@ leak surfaced there and nothing was rendering those pages. Suite is now 42 check
    competency level only, profiles teacher-side (slide 14). Current build shows
    them to both. Options: keep / remove from student+parent / annual-only.
 
+### Teacher Score Viewing — spec slide 14
+New page at `/teacher/score-viewing/`, four views over the same scores:
+
+    Student Level                 Class Level
+      - Project Wise                - Percentile Competency
+      - Agg Competency Wise         - Project Level Aggregate Comparative
+
+- Project Wise: one block per project, every mapped competency listed even when
+  unscored so "Pending [Add score]" stays visible and links to score entry.
+- Agg Competency Wise: one row per competency across all projects, repeats
+  averaged into a single figure with the contributing projects named.
+- Percentile Competency: class spread per competency (p25 / median / p75, low,
+  high) drawn as a bar, plus the selected student's own percentile marked on it.
+  Each student contributes ONE aggregated figure per competency so a competency
+  assessed twice can't weight that student twice.
+- Project Level Aggregate Comparative: projects side by side with class average,
+  spread and coverage (how much of the class is actually scored — a flattering
+  average built on three students is labelled as such). Strongest/weakest tagged.
+
+Also: "Repeated competencies to be aggregated" note, Show Grade / Show Project /
+Student filters, and a Generate Profile Report button wired to the existing
+api_generate_report.
+
+Code lives in `teacher/score_views.py` rather than `teacher/views.py`, which was
+already ~1700 lines. 15 assertions added to verify_pages.py — suite now 57.
+
 ### Still open (unchanged by this pass)
 - Slide 14 teacher views: Class Level, Percentile Competency, Project Level
   Aggregate Comparative, Generate Profile Report — none exist.

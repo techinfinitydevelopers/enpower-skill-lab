@@ -202,6 +202,43 @@ def run():
             code, body, _ = fetch(client, f'/parent/child/{child.id}/kaushal-bodh/')
             check('parent KB report 200', code == 200, f'status {code}')
 
+    # Thinking Coach — Score Viewing, the four views on spec slide 14
+    print('\nRendering teacher Score Viewing (slide 14)')
+    from teacher.models import Teacher
+    from competencies.models import ScoreEntry
+
+    coach = next((t for t in Teacher.objects.select_related('school', 'user')
+                  if t.school and ScoreEntry.objects.filter(student__school=t.school).exists()),
+                 None)
+    if not coach:
+        check('a coach whose school has scores exists', False)
+    else:
+        client = login_as(coach.user)
+        if not client:
+            check('login as coach', False, str(coach.user))
+        else:
+            grade = str(Student.objects
+                        .filter(school=coach.school, score_entries__isnull=False)
+                        .values_list('student_class', flat=True).first())
+            for key, label, columns in [
+                ('project_wise',   'Project Wise',                        ['Assessed in', 'Score']),
+                ('agg_competency', 'Agg Competency Wise',                 ['Aggregate', 'Sub-pillar']),
+                ('percentile',     'Percentile Competency',               ['Class avg', 'Median', 'Spread']),
+                ('comparative',    'Project Level Aggregate Comparative', ['Coverage', 'Class avg']),
+            ]:
+                code, body, _ = fetch(client, f'/teacher/score-viewing/?view={key}&grade={grade}')
+                check(f'{label} 200', code == 200, f'status {code}')
+                check(f'{label} renders its columns', all(c in body for c in columns))
+                check(f'{label} has data (not an empty state)',
+                      not any(m in body for m in ('No scores recorded', 'No projects',
+                                                  'Nothing to aggregate')))
+            code, body, _ = fetch(client, f'/teacher/score-viewing/?view=project_wise&grade={grade}')
+            check('slide 14 "repeated competencies" note',
+                  'Repeated competencies are aggregated' in body)
+            check('slide 14 Generate Profile Report action', 'Generate Profile Report' in body)
+            check('slide 14 Show Grade / Show Project filters',
+                  'Show Grade' in body and 'Show Project' in body)
+
     # Super Admin pages — where the last leak actually showed up
     print('\nRendering super admin pages')
     admin = User.objects.filter(role='SUPER_ADMIN').first()

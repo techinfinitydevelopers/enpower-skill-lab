@@ -1,0 +1,465 @@
+{% extends 'teacher/base.html' %}
+{% load static %}
+
+{% block title %}Score Viewing - Thinking Coach{% endblock %}
+
+{% block extra_css %}
+<style>
+    .sv-wrap { width:100%; padding:1.5rem; }
+    .sv-head { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom:1.25rem; }
+    .sv-title { font-size:1.5rem; font-weight:700; color:#1f2937; margin:0; }
+    .sv-sub { color:#6b7280; font-size:.85rem; margin:.25rem 0 0; }
+
+    /* Two groups of views, matching slide 14's two columns */
+    .sv-views { display:flex; gap:1.25rem; flex-wrap:wrap; margin-bottom:1rem; }
+    .sv-group { background:#fff; border:1px solid #e5e7eb; border-radius:.75rem; padding:.75rem .9rem; flex:1 1 300px; }
+    .sv-group-label { font-size:.68rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:#9ca3af; margin-bottom:.5rem; }
+    .sv-tabs { display:flex; flex-direction:column; gap:.35rem; }
+    .sv-tab { display:flex; align-items:center; gap:.5rem; padding:.5rem .7rem; border-radius:.5rem; text-decoration:none;
+              font-size:.85rem; font-weight:600; color:#4b5563; border:1px solid transparent; transition:all .15s; }
+    .sv-tab:hover { background:#f9fafb; color:#5b1f6f; }
+    .sv-tab.active { background:#f3e8ff; color:#5b1f6f; border-color:#5b1f6f30; }
+    .sv-tab .material-symbols-outlined { font-size:18px; }
+
+    .sv-filters { display:flex; gap:.75rem; flex-wrap:wrap; align-items:flex-end; background:#fff;
+                  border:1px solid #e5e7eb; border-radius:.75rem; padding:.9rem 1rem; margin-bottom:1.25rem; }
+    .sv-field { display:flex; flex-direction:column; gap:.25rem; min-width:150px; }
+    .sv-field label { font-size:.68rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:#9ca3af; }
+    .sv-field select { padding:.45rem .6rem; border:1px solid #d1d5db; border-radius:.45rem; font-size:.85rem; background:#fff; color:#1f2937; }
+    .sv-note { margin-left:auto; font-size:.72rem; color:#9ca3af; max-width:260px; line-height:1.4; }
+
+    .sv-card { background:#fff; border:1px solid #e5e7eb; border-radius:.75rem; margin-bottom:1rem; overflow:hidden; }
+    .sv-card-head { display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;
+                    padding:.9rem 1.1rem; border-bottom:1px solid #f3f4f6; background:#fafafa; }
+    .sv-card-title { font-size:1rem; font-weight:700; color:#1f2937; }
+    .sv-card-meta { font-size:.72rem; color:#9ca3af; margin-top:.15rem; }
+    .sv-card-score { font-size:1.4rem; font-weight:800; color:#5b1f6f; line-height:1; }
+    .sv-card-score span { font-size:.7rem; color:#9ca3af; font-weight:600; }
+
+    .sv-table { width:100%; border-collapse:collapse; font-size:.85rem; }
+    .sv-table th { text-align:left; font-size:.68rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase;
+                   color:#9ca3af; padding:.6rem 1.1rem; border-bottom:1px solid #f3f4f6; white-space:nowrap; }
+    .sv-table td { padding:.7rem 1.1rem; border-bottom:1px solid #f9fafb; color:#374151; vertical-align:top; }
+    .sv-table tr:last-child td { border-bottom:none; }
+    .sv-table tbody tr:hover { background:#fafafa; }
+    .sv-num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+    .sv-code { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:.75rem; color:#6b7280; }
+    .sv-cname { font-weight:600; color:#1f2937; }
+    .sv-cdesc { font-size:.72rem; color:#9ca3af; margin-top:.15rem; line-height:1.4; max-width:420px; }
+
+    .sv-band { display:inline-block; padding:2px 8px; border-radius:999px; font-size:.65rem; font-weight:700; white-space:nowrap; }
+    .band-very-strong { background:#dcfce7; color:#15803d; }
+    .band-strong      { background:#dbeafe; color:#1d4ed8; }
+    .band-emerging    { background:#fef3c7; color:#b45309; }
+    .band-skill-to-work-on { background:#fee2e2; color:#b91c1c; }
+
+    .sv-chip { display:inline-block; padding:2px 7px; border-radius:999px; font-size:.62rem; font-weight:700; margin-left:.35rem; }
+    .chip-kb  { background:#fff7ed; color:#c2410c; }
+    .chip-agg { background:#eef2ff; color:#4338ca; }
+    .chip-best  { background:#dcfce7; color:#15803d; }
+    .chip-worst { background:#fee2e2; color:#b91c1c; }
+
+    .sv-pending { display:inline-flex; align-items:center; gap:.25rem; font-size:.75rem; font-weight:600;
+                  color:#b45309; text-decoration:none; }
+    .sv-pending:hover { text-decoration:underline; }
+    .sv-pending .material-symbols-outlined { font-size:15px; }
+
+    /* Percentile bar — p25..p75 box with the student's mark on it */
+    .sv-spread { position:relative; height:22px; min-width:150px; }
+    .sv-spread-track { position:absolute; top:9px; left:0; right:0; height:4px; background:#f3f4f6; border-radius:2px; }
+    .sv-spread-box { position:absolute; top:6px; height:10px; background:#ddd6fe; border-radius:3px; }
+    .sv-spread-median { position:absolute; top:3px; width:2px; height:16px; background:#5b1f6f; }
+    .sv-spread-focus { position:absolute; top:1px; width:10px; height:20px; border-radius:3px; background:#f97316; border:2px solid #fff; }
+
+    .sv-btn { display:inline-flex; align-items:center; gap:.35rem; padding:.5rem .9rem; border-radius:.5rem;
+              font-size:.8rem; font-weight:600; border:1px solid #5b1f6f; background:#5b1f6f; color:#fff; cursor:pointer; text-decoration:none; }
+    .sv-btn:hover { background:#4a1a5c; }
+    .sv-btn[disabled] { opacity:.5; cursor:not-allowed; }
+    .sv-btn .material-symbols-outlined { font-size:17px; }
+
+    .sv-empty { background:#fff; border:1px solid #e5e7eb; border-radius:.75rem; padding:2.5rem 1.5rem;
+                text-align:center; color:#6b7280; }
+    .sv-empty .material-symbols-outlined { font-size:42px; color:#d1d5db; }
+
+    @media (max-width:768px) {
+        .sv-wrap { padding:1rem; }
+        .sv-note { margin-left:0; max-width:100%; }
+        .sv-scroll { overflow-x:auto; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="sv-wrap">
+
+    <div class="sv-head">
+        <div>
+            <h1 class="sv-title">Score Viewing</h1>
+            <p class="sv-sub">{{ school.school_name }}{% if grade %} &middot; Grade {{ grade }}{% endif %}</p>
+        </div>
+        {% if student %}
+        <button type="button" class="sv-btn" id="svGenerateBtn"
+                data-student="{{ student.id }}"{% if project %} data-project="{{ project.id }}"{% endif %}>
+            <span class="material-symbols-outlined">auto_awesome</span> Generate Profile Report
+        </button>
+        {% endif %}
+    </div>
+
+    {# Slide 14 puts the four views in two labelled groups #}
+    <div class="sv-views">
+        {% for group in view_groups %}
+        <div class="sv-group">
+            <div class="sv-group-label">{{ group.label }}</div>
+            <div class="sv-tabs">
+                {% for v in group.items %}
+                <a class="sv-tab {% if v.key == active_view %}active{% endif %}"
+                   href="?view={{ v.key }}&grade={{ grade }}{% if student %}&student={{ student.id }}{% endif %}{% if project %}&project={{ project.id }}{% endif %}">
+                    <span class="material-symbols-outlined">{% if v.key == 'project_wise' %}folder_open{% elif v.key == 'agg_competency' %}stacked_bar_chart{% elif v.key == 'percentile' %}leaderboard{% else %}compare_arrows{% endif %}</span>
+                    {{ v.label }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <form method="get" class="sv-filters" id="svFilters">
+        <input type="hidden" name="view" value="{{ active_view }}">
+        <div class="sv-field">
+            <label for="svGrade">Show Grade</label>
+            <select name="grade" id="svGrade" onchange="this.form.submit()">
+                {% for g in grades %}<option value="{{ g }}" {% if g == grade %}selected{% endif %}>Grade {{ g }}</option>{% endfor %}
+            </select>
+        </div>
+        {% if is_student_level or active_view == 'percentile' %}
+        <div class="sv-field">
+            <label for="svStudent">Student</label>
+            <select name="student" id="svStudent" onchange="this.form.submit()">
+                {% if active_view == 'percentile' %}<option value="">— class only —</option>{% endif %}
+                {% for s in students %}
+                <option value="{{ s.id }}" {% if student and s.id == student.id %}selected{% endif %}>{{ s.first_name }} {{ s.last_name }}{% if s.division %} ({{ s.division }}){% endif %}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+        {% if active_view != 'comparative' %}
+        <div class="sv-field">
+            <label for="svProject">Show Project</label>
+            <select name="project" id="svProject" onchange="this.form.submit()">
+                <option value="">All projects</option>
+                {% for p in projects %}<option value="{{ p.id }}" {% if project and p.id == project.id %}selected{% endif %}>{{ p.title }}</option>{% endfor %}
+            </select>
+        </div>
+        {% endif %}
+        <div class="sv-note">
+            Repeated competencies are aggregated &mdash; a competency assessed more than once counts once, averaged.
+        </div>
+    </form>
+
+
+    {% if active_view == 'project_wise' %}
+    {# ── Student Level · Project Wise ── #}
+        {% if not student %}
+        <div class="sv-empty"><span class="material-symbols-outlined">person_off</span><p>No students in this grade yet.</p></div>
+        {% elif not project_rows %}
+        <div class="sv-empty"><span class="material-symbols-outlined">folder_off</span>
+            <p>No projects with mapped competencies for Grade {{ grade }}.</p></div>
+        {% else %}
+            {% for row in project_rows %}
+            <div class="sv-card">
+                <div class="sv-card-head">
+                    <div>
+                        <div class="sv-card-title">{{ row.project.title }}</div>
+                        <div class="sv-card-meta">
+                            {{ row.project.project_type }}
+                            {% if row.project.sequence_number %}&middot; Project {{ row.project.sequence_number }}{% endif %}
+                            &middot; {{ row.scored }} of {{ row.total }} competencies scored
+                        </div>
+                    </div>
+                    <div style="text-align:right;">
+                        {% if row.average %}
+                        <div class="sv-card-score">{{ row.average }}<span>/10</span></div>
+                        <span class="sv-band band-{{ row.band|slugify }}">{{ row.band }}</span>
+                        {% else %}
+                        <div class="sv-card-score" style="color:#e5e7eb;">&mdash;</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="sv-scroll">
+                <table class="sv-table">
+                    <thead><tr>
+                        <th>Competency</th><th>Assessed in</th><th class="sv-num">Score</th><th>Band</th>
+                    </tr></thead>
+                    <tbody>
+                    {% for c in row.competencies %}
+                    <tr>
+                        <td>
+                            <div class="sv-cname">{{ c.competency.name }}
+                                {% if c.is_kb %}<span class="sv-chip chip-kb">KB</span>{% endif %}
+                                {% if c.aggregated %}<span class="sv-chip chip-agg">aggregated</span>{% endif %}
+                            </div>
+                            <div class="sv-code">{{ c.competency.code }}</div>
+                            {% if c.competency.description %}<div class="sv-cdesc">{{ c.competency.description }}</div>{% endif %}
+                        </td>
+                        <td style="font-size:.75rem;color:#6b7280;">
+                            {% for a in c.assessments %}{{ a }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                        </td>
+                        <td class="sv-num">
+                            {% if c.pending %}
+                            <a class="sv-pending" href="{% url 'teacher:score_entry' %}">
+                                <span class="material-symbols-outlined">add_circle</span> Add score
+                            </a>
+                            {% else %}<strong>{{ c.score }}</strong> / 10{% endif %}
+                        </td>
+                        <td>{% if c.band %}<span class="sv-band band-{{ c.band|slugify }}">{{ c.band }}</span>{% else %}<span style="color:#d1d5db;">Pending</span>{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                </div>
+            </div>
+            {% endfor %}
+        {% endif %}
+
+
+    {% elif active_view == 'agg_competency' %}
+    {# ── Student Level · Agg Competency Wise ── #}
+        {% if not competency_rows %}
+        <div class="sv-empty"><span class="material-symbols-outlined">query_stats</span>
+            <p>Nothing to aggregate yet for {% if student %}{{ student.first_name }}{% else %}this grade{% endif %}.</p></div>
+        {% else %}
+        <div class="sv-card">
+            <div class="sv-card-head">
+                <div>
+                    <div class="sv-card-title">{{ student.first_name }} {{ student.last_name }}</div>
+                    <div class="sv-card-meta">{{ competency_rows|length }} competencies across all projects &mdash; repeats averaged into one figure</div>
+                </div>
+            </div>
+            <div class="sv-scroll">
+            <table class="sv-table">
+                <thead><tr>
+                    <th>Competency</th><th>Sub-pillar</th><th>From projects</th>
+                    <th class="sv-num">Times</th><th class="sv-num">Aggregate</th><th>Band</th>
+                </tr></thead>
+                <tbody>
+                {% for c in competency_rows %}
+                <tr>
+                    <td>
+                        <div class="sv-cname">{{ c.competency.name }}
+                            {% if c.is_kb %}<span class="sv-chip chip-kb">KB</span>{% endif %}
+                            {% if c.aggregated %}<span class="sv-chip chip-agg">aggregated</span>{% endif %}
+                        </div>
+                        <div class="sv-code">{{ c.competency.code }}</div>
+                    </td>
+                    <td style="font-size:.75rem;color:#6b7280;">{{ c.sub_pillar }}</td>
+                    <td style="font-size:.75rem;color:#6b7280;">
+                        {% for p in c.projects %}{{ p }}{% if not forloop.last %}, {% endif %}{% empty %}&mdash;{% endfor %}
+                    </td>
+                    <td class="sv-num">{{ c.times_assessed }}</td>
+                    <td class="sv-num">
+                        {% if c.pending %}
+                        <a class="sv-pending" href="{% url 'teacher:score_entry' %}">
+                            <span class="material-symbols-outlined">add_circle</span> Add score
+                        </a>
+                        {% else %}<strong>{{ c.score }}</strong> / 10{% endif %}
+                    </td>
+                    <td>{% if c.band %}<span class="sv-band band-{{ c.band|slugify }}">{{ c.band }}</span>{% else %}<span style="color:#d1d5db;">Pending</span>{% endif %}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            </div>
+        </div>
+        {% endif %}
+
+
+    {% elif active_view == 'percentile' %}
+    {# ── Class Level · Percentile Competency ── #}
+        {% if not percentile_rows %}
+        <div class="sv-empty"><span class="material-symbols-outlined">leaderboard</span>
+            <p>No scores recorded for Grade {{ grade }} yet.</p></div>
+        {% else %}
+        <div class="sv-card">
+            <div class="sv-card-head">
+                <div>
+                    <div class="sv-card-title">Class spread by competency</div>
+                    <div class="sv-card-meta">
+                        Grade {{ grade }} &middot; {{ students|length }} student{{ students|length|pluralize }}
+                        {% if student %}&middot; <strong style="color:#f97316;">{{ student.first_name }}</strong> marked on each bar{% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="sv-scroll">
+            <table class="sv-table">
+                <thead><tr>
+                    <th>Competency</th><th style="min-width:170px;">Spread (p25&ndash;p75)</th>
+                    <th class="sv-num">Low</th><th class="sv-num">Median</th><th class="sv-num">High</th>
+                    <th class="sv-num">Class avg</th><th class="sv-num">Scored</th>
+                    {% if student %}<th class="sv-num">{{ student.first_name }}</th><th class="sv-num">Percentile</th>{% endif %}
+                </tr></thead>
+                <tbody>
+                {% for r in percentile_rows %}
+                <tr>
+                    <td>
+                        <div class="sv-cname">{{ r.competency.name }}{% if r.is_kb %}<span class="sv-chip chip-kb">KB</span>{% endif %}</div>
+                        <div class="sv-code">{{ r.competency.code }}</div>
+                    </td>
+                    <td>
+                        <div class="sv-spread">
+                            <div class="sv-spread-track"></div>
+                            <div class="sv-spread-box" style="left:{{ r.box_left }}%;width:{{ r.box_width }}%;"></div>
+                            <div class="sv-spread-median" style="left:{{ r.median_left }}%;"></div>
+                            {% if r.focus_left is not None %}<div class="sv-spread-focus" style="left:calc({{ r.focus_left }}% - 5px);" title="{{ student.first_name }}: {{ r.focus_score }}"></div>{% endif %}
+                        </div>
+                    </td>
+                    <td class="sv-num" style="color:#9ca3af;">{{ r.lowest }}</td>
+                    <td class="sv-num">{{ r.median }}</td>
+                    <td class="sv-num" style="color:#9ca3af;">{{ r.highest }}</td>
+                    <td class="sv-num"><strong>{{ r.class_avg }}</strong></td>
+                    <td class="sv-num" style="color:#9ca3af;">{{ r.students_scored }}</td>
+                    {% if student %}
+                    <td class="sv-num">
+                        {% if r.focus_score %}<strong>{{ r.focus_score }}</strong>{% else %}<span style="color:#d1d5db;">&mdash;</span>{% endif %}
+                    </td>
+                    <td class="sv-num">
+                        {% if r.focus_percentile %}<span class="sv-band band-{{ r.focus_band|slugify }}">{{ r.focus_percentile }}th</span>{% else %}<span style="color:#d1d5db;">&mdash;</span>{% endif %}
+                    </td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            </div>
+        </div>
+        {% endif %}
+
+
+    {% elif active_view == 'comparative' %}
+    {# ── Class Level · Project Level Aggregate Comparative ── #}
+        {% if not comparative_rows %}
+        <div class="sv-empty"><span class="material-symbols-outlined">compare_arrows</span>
+            <p>No projects to compare for Grade {{ grade }} yet.</p></div>
+        {% else %}
+        <div class="sv-card">
+            <div class="sv-card-head">
+                <div>
+                    <div class="sv-card-title">Projects compared at class level</div>
+                    <div class="sv-card-meta">Grade {{ grade }} &middot; every project this grade runs, side by side</div>
+                </div>
+            </div>
+            <div class="sv-scroll">
+            <table class="sv-table">
+                <thead><tr>
+                    <th>Project</th><th>Form</th><th class="sv-num">Competencies</th>
+                    <th class="sv-num">Low</th><th class="sv-num">Median</th><th class="sv-num">High</th>
+                    <th class="sv-num">Class avg</th><th>Band</th><th class="sv-num">Coverage</th>
+                </tr></thead>
+                <tbody>
+                {% for r in comparative_rows %}
+                <tr>
+                    <td>
+                        <div class="sv-cname">{{ r.project.title }}
+                            {% if r.is_best %}<span class="sv-chip chip-best">strongest</span>{% endif %}
+                            {% if r.is_worst %}<span class="sv-chip chip-worst">weakest</span>{% endif %}
+                        </div>
+                        {% if r.project.sequence_number %}<div class="sv-code">Project {{ r.project.sequence_number }}</div>{% endif %}
+                    </td>
+                    <td style="font-size:.75rem;color:#6b7280;">{{ r.project.project_type }}</td>
+                    <td class="sv-num">{{ r.competencies }}</td>
+                    <td class="sv-num" style="color:#9ca3af;">{{ r.lowest|default:"—" }}</td>
+                    <td class="sv-num">{{ r.median|default:"—" }}</td>
+                    <td class="sv-num" style="color:#9ca3af;">{{ r.highest|default:"—" }}</td>
+                    <td class="sv-num">{% if r.class_avg %}<strong>{{ r.class_avg }}</strong>{% else %}<span style="color:#d1d5db;">&mdash;</span>{% endif %}</td>
+                    <td>{% if r.band %}<span class="sv-band band-{{ r.band|slugify }}">{{ r.band }}</span>{% endif %}</td>
+                    <td class="sv-num" style="font-size:.75rem;color:#6b7280;">
+                        {{ r.students_scored }}/{{ r.students_total }}
+                        {% if r.coverage < 100 %}<div style="color:#b45309;font-size:.68rem;">{{ r.coverage }}% scored</div>{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            </div>
+        </div>
+        {% endif %}
+    {% endif %}
+
+
+    {% if student_reports %}
+    <div class="sv-card">
+        <div class="sv-card-head">
+            <div>
+                <div class="sv-card-title">Generated reports &mdash; {{ student.first_name }}</div>
+                <div class="sv-card-meta">What the student and parent currently see</div>
+            </div>
+        </div>
+        <div class="sv-scroll">
+        <table class="sv-table">
+            <thead><tr><th>Project</th><th>Top career match</th><th class="sv-num">Competencies</th><th class="sv-num">Generated</th></tr></thead>
+            <tbody>
+            {% for r in student_reports %}
+            <tr>
+                <td><span class="sv-cname">{{ r.project.title }}</span>{% if r.is_outdated %} <span class="sv-chip chip-worst">outdated</span>{% endif %}</td>
+                <td>{% for p in r.top_3_profiles %}{% if forloop.first %}{{ p.profile_name }}{% endif %}{% empty %}<span style="color:#9ca3af;">&mdash; no profiling for this framework</span>{% endfor %}</td>
+                <td class="sv-num">{{ r.all_competency_scores|length }}</td>
+                <td class="sv-num" style="font-size:.75rem;color:#9ca3af;">{{ r.generated_at|date:"j M Y" }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    var btn = document.getElementById('svGenerateBtn');
+    if (!btn) return;
+
+    function csrf() {
+        var m = document.cookie.match(/csrftoken=([^;]+)/);
+        return m ? m[1] : '';
+    }
+
+    btn.addEventListener('click', function () {
+        var studentId = btn.dataset.student;
+        var projectId = btn.dataset.project;
+        if (!projectId) {
+            // The API generates one project's report; without a project filter
+            // there is nothing unambiguous to generate.
+            alert('Pick a project in "Show Project" first, then generate.');
+            return;
+        }
+        btn.disabled = true;
+        var original = btn.innerHTML;
+        btn.innerHTML = '<span class="material-symbols-outlined">hourglass_top</span> Generating…';
+
+        fetch("{% url 'teacher:api_generate_report' %}", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
+            body: JSON.stringify({ student_id: studentId, project_id: projectId })
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data.ok) {
+                btn.innerHTML = '<span class="material-symbols-outlined">check</span> Report generated';
+                setTimeout(function () { window.location.reload(); }, 900);
+            } else {
+                alert(data.error || 'Could not generate the report.');
+                btn.disabled = false;
+                btn.innerHTML = original;
+            }
+        })
+        .catch(function () {
+            alert('Could not reach the server.');
+            btn.disabled = false;
+            btn.innerHTML = original;
+        });
+    });
+})();
+</script>
+{% endblock %}
