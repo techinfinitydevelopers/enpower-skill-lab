@@ -387,12 +387,15 @@ Program Coordinator
 Thinking Coach
 - Student Profile removed — a dead href="#"; Student List already opens the same
   view via its eye icon
-- Events: REVERTED. The "merge with announcements" row was first read as
-  "replace the dropdown with one Announcements link", which the user did not
-  want. The Events dropdown is back (Event Calendar + Announcements); the only
-  thing kept from the attempt is that Announcements now points at the real
-  teacher_announcements page instead of href="#". What "merge" should mean here
-  is still open.
+- Events: the "merge with announcements" row was first read as "replace the
+  dropdown with one Announcements link". Wrong reading, reverted. The real
+  problem was that Event Calendar had no page at all — a sidebar entry pointing
+  at href="#", no URL, no view, no template — so events the Super Admin
+  published to Thinking Coaches were only reachable buried in the Announcements
+  list. Only Student and Parent had a working event page.
+  Built `teacher_event_calendar` at /teacher/events/ using the same
+  `announcements_for_user(user, 'event')` targeting every other role uses, and
+  pointed both sidebar links at their real pages.
 
 Also cleaned seven now-unreachable entries from the filename -> nav-id map in
 static/js/superadmin/sup-admin-dash.js and re-ran collectstatic.

@@ -242,6 +242,12 @@ def run():
             check('generate button says it covers all assessments',
                   'Generate Project Reports (all assessments)' in raw)
 
+            # Event Calendar had a sidebar entry pointing at href="#" with no
+            # view behind it; events published to coaches were unreachable.
+            code, body, _ = fetch(client, '/teacher/events/')
+            check('coach event calendar 200', code == 200, f'status {code}')
+            check('coach event calendar renders its heading', 'Event Calendar' in body)
+
             code, body, _ = fetch(client, f'/teacher/score-viewing/?view=project_wise&grade={grade}')
             check('slide 14 "repeated competencies" note',
                   'Repeated competencies are aggregated' in body)

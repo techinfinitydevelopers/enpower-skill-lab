@@ -44,5 +44,6 @@ urlpatterns = [
     path('api/class-students/', views.api_class_students, name='api_class_students'),
 
     # Announcements (published by Super Admin, targeted to teachers)
+    path('events/', views.teacher_event_calendar, name='teacher_event_calendar'),
     path('announcements/', views.teacher_announcements, name='teacher_announcements'),
 ]

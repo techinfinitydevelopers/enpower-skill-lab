@@ -1748,6 +1748,23 @@ def api_class_students(request):
 
 @login_required
 @user_passes_test(is_teacher)
+def teacher_event_calendar(request):
+    """Events the Super Admin published to this Thinking Coach.
+
+    The sidebar carried an Event Calendar entry pointing at href="#" — no URL,
+    no view, no template — so events published to coaches were only reachable
+    through the Announcements list. Same targeting helper every other role uses.
+    """
+    from competencies.announcements import announcements_for_user
+
+    events = announcements_for_user(request.user, 'event')
+    # Undated events sort last; the rest run soonest first.
+    events.sort(key=lambda a: (a.event_date is None, a.event_date))
+    return render(request, 'teacher/event-calendar.html', {'events': events})
+
+
+@login_required
+@user_passes_test(is_teacher)
 def teacher_announcements(request):
     """Announcements targeted to this Thinking Coach (Super Admin publishes with
     'teacher' selected; scoped to the coach's school/program)."""

@@ -1,0 +1,64 @@
+{% extends 'teacher/base.html' %}
+{% load static %}
+
+{% block title %}Event Calendar - Thinking Coach{% endblock %}
+
+{% block content %}
+<div style="max-width:960px;margin:0 auto;">
+    <h1 style="font-size:1.5rem;font-weight:700;color:#1f2937;margin-bottom:0.25rem;">Event Calendar</h1>
+    <p style="color:#6b7280;margin-bottom:1.5rem;">Events published for your school and program.</p>
+
+    <div style="display:flex;flex-direction:column;gap:0.75rem;">
+        {% for event in events %}
+        <div style="background:#fff;border:1px solid #e5e7eb;border-radius:0.75rem;padding:1.25rem;display:flex;gap:1.25rem;align-items:flex-start;">
+            <div style="flex-shrink:0;text-align:center;background:#f3e8ff;color:#6b277e;border-radius:0.5rem;padding:0.5rem 0.75rem;min-width:64px;">
+                <div style="font-size:1.5rem;font-weight:700;line-height:1;">{{ event.event_date|date:"d"|default:"--" }}</div>
+                <div style="font-size:0.75rem;font-weight:600;text-transform:uppercase;">{{ event.event_date|date:"M"|default:"TBC" }}</div>
+            </div>
+            <div style="flex:1;min-width:0;">
+                <h3 style="font-size:1.0625rem;font-weight:600;color:#1f2937;margin:0 0 0.25rem;">{{ event.event_name|default:"Event" }}</h3>
+                {% if event.event_date %}
+                <div style="font-size:0.75rem;color:#9ca3af;margin-bottom:0.4rem;">{{ event.event_date|date:"l, j F Y" }}</div>
+                {% else %}
+                <div style="font-size:0.75rem;color:#9ca3af;margin-bottom:0.4rem;">Date to be confirmed</div>
+                {% endif %}
+                {% if event.event_description %}
+                <p style="color:#4b5563;font-size:0.875rem;margin:0 0 0.5rem;">{{ event.event_description }}</p>
+                {% endif %}
+                {% if event.applicable_grades %}
+                <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:0.5rem;">
+                    {% for g in event.applicable_grades %}
+                    <span style="font-size:0.68rem;font-weight:600;background:#f3f4f6;color:#4b5563;border-radius:999px;padding:2px 8px;">Grade {{ g }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% if event.event_link %}
+                <a href="{{ event.event_link }}" target="_blank" rel="noopener" style="color:#6b277e;font-size:0.875rem;font-weight:600;display:inline-flex;align-items:center;gap:4px;">
+                    <span class="material-symbols-outlined" style="font-size:18px;">link</span>View Details
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div style="background:#fff;border:1px solid #e5e7eb;border-radius:0.75rem;padding:2.5rem;text-align:center;color:#6b7280;">
+            <span class="material-symbols-outlined" style="font-size:48px;color:#d1d5db;">event_busy</span>
+            <p style="margin-top:0.5rem;">No events published for your school yet.</p>
+            <p style="margin-top:0.25rem;font-size:0.8rem;color:#9ca3af;">Events appear here once the Super Admin publishes them to Thinking Coaches.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Keep the sidebar entry highlighted while this page is open.
+    document.addEventListener('DOMContentLoaded', function () {
+        var link = document.getElementById('nav-event-calendar');
+        if (!link) return;
+        link.classList.add('active');
+        var parent = link.closest('.sidebar-dropdown');
+        if (parent) parent.classList.add('active');
+    });
+</script>
+{% endblock %}
