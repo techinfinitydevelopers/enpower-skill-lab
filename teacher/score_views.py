@@ -105,10 +105,16 @@ def _student_project_rows(student, projects):
 
     by_project = defaultdict(lambda: defaultdict(list))
     assessments = defaultdict(lambda: defaultdict(list))
+    # First assessment still missing a score — the "Add score" link jumps
+    # straight to it instead of dropping the coach on a blank Score Entry page.
+    pending_assessment = defaultdict(dict)
     comp_of = {}
     for m in mappings:
         by_project[m.assessment.project_id][m.competency_id].append(scores.get(m.id))
         assessments[m.assessment.project_id][m.competency_id].append(m.assessment.name)
+        if scores.get(m.id) is None:
+            pending_assessment[m.assessment.project_id].setdefault(
+                m.competency_id, m.assessment_id)
         comp_of[m.competency_id] = m.competency
 
     rows = []
@@ -130,6 +136,9 @@ def _student_project_rows(student, projects):
                 'aggregated':  len(got) > 1,
                 'assessments': assessments[project.id][cid],
                 'pending':     avg is None,
+                'entry_grade': project.grade,
+                'entry_project': project.id,
+                'entry_assessment': pending_assessment[project.id].get(cid),
             })
         comp_rows.sort(key=lambda r: (r['score'] is None, -(r['score'] or 0)))
         rows.append({
@@ -159,6 +168,7 @@ def _student_competency_rows(student, projects):
 
     per_comp = defaultdict(list)
     projects_of = defaultdict(set)
+    pending_at = {}     # competency -> (grade, project id, assessment id)
     comp_of = {}
     for m in mappings:
         value = scores.get(m.id)
@@ -166,12 +176,17 @@ def _student_competency_rows(student, projects):
         comp_of[m.competency_id] = m.competency
         if value is not None:
             projects_of[m.competency_id].add(m.assessment.project.title)
+        else:
+            pending_at.setdefault(m.competency_id,
+                                  (m.assessment.project.grade,
+                                   m.assessment.project_id, m.assessment_id))
 
     rows = []
     for cid, vals in per_comp.items():
         got = [v for v in vals if v is not None]
         avg = round(sum(got) / len(got), 1) if got else None
         competency = comp_of[cid]
+        grade, project_id, assessment_id = pending_at.get(cid, (None, None, None))
         rows.append({
             'competency':     competency,
             'sub_pillar':     str(competency.sub_pillar),
@@ -182,6 +197,9 @@ def _student_competency_rows(student, projects):
             'aggregated':     len(got) > 1,
             'projects':       sorted(projects_of[cid]),
             'pending':        avg is None,
+            'entry_grade':      grade,
+            'entry_project':    project_id,
+            'entry_assessment': assessment_id,
         })
     rows.sort(key=lambda r: (r['score'] is None, -(r['score'] or 0)))
     return rows
