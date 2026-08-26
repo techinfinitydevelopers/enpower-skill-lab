@@ -372,6 +372,34 @@ Verified: fresh report not outdated -> editing a score flags it -> regenerating
 clears it -> deleting a score flags it; and the student-facing banner appears
 and disappears with it. Suites now 49 engine / 61 page.
 
+### Dashboard clean-up — "Clean up" tab of ESL dashboard Changes Document.docx
+Removed tabs and widgets the client asked to drop. Almost all of them pointed at
+static .html filenames that were never wired to a view, so they 404'd or did
+nothing when clicked.
+
+Super Admin
+- dashboard: Assessment Completion Heatmap widget, LMS Usage Summary widget
+- sidebar: School Details link, LMS Management dropdown, Monitoring dropdown
+  (which took Assessment / Attendance / LMS Monitoring and Multi-school
+  Comparison with it)
+Program Coordinator
+- sidebar: LMS Monitoring dropdown, Multi-School Comparison
+Thinking Coach
+- Events dropdown merged into a single Announcements link pointing at the real
+  teacher_announcements page; Event Calendar was a dead href="#"
+- Student Profile removed — also a dead href="#"; Student List already opens the
+  same view via its eye icon
+
+Also cleaned seven now-unreachable entries from the filename -> nav-id map in
+static/js/superadmin/sup-admin-dash.js and re-ran collectstatic.
+
+Verified by rendering each dashboard: 24 assertions covering both what must be
+gone and what must survive, plus the merged Announcements page opening.
+
+NOT done — the document's row reads "School Admin / Remove multi-school tab",
+but School Admin has no such tab; the Multi-school entries live under Super
+Admin and Coordinator and were removed there. Worth confirming that was meant.
+
 ### Still open (unchanged by this pass)
 - Slide 14 teacher views: Class Level, Percentile Competency, Project Level
   Aggregate Comparative, Generate Profile Report — none exist.

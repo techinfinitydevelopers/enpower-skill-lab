@@ -159,8 +159,6 @@ function initializeSidebar() {
             'school-list.html': 'nav-school-list',
             '/super-admin/onboard-school/': 'nav-add-school',
             'onboard-school.html': 'nav-add-school',
-            'school-details.html': 'nav-school-details',
-
             // Users - School Admins
             '/super-admin/school-admins/': 'nav-school-admins',
             'school-admin-list.html': 'nav-school-admins',
@@ -194,16 +192,9 @@ function initializeSidebar() {
             'academic-year-locking.html': 'nav-academic-year-locking',
 
             // LMS Management
-            'lessons-library.html': 'nav-lessons-library',
-            'add-lesson.html': 'nav-add-lesson',
             'categories-modules.html': 'nav-categories-modules',
 
             // Monitoring
-            'assessment-monitoring.html': 'nav-assessment-monitoring',
-            'attendance-monitoring.html': 'nav-attendance-monitoring',
-            'lms-monitoring.html': 'nav-lms-monitoring',
-            'multi-school-comparison.html': 'nav-multi-school-comparison',
-
             // Reports & Analytics
             'platform-analytics.html': 'nav-platform-analytics',
             'download-reports.html': 'nav-download-reports',
