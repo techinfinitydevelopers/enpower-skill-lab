@@ -293,10 +293,17 @@
                         <a href="{% url 'teacher:student_project_upload' %}" id="nav-student-project-upload"><span class="material-symbols-outlined">cloud_upload</span>Student Project Upload</a>
                     </div>
                 </div>
-                <a href="{% url 'teacher:teacher_announcements' %}" id="nav-announcements" class="sidebar-nav-link">
-                    <span class="material-symbols-outlined">campaign</span>
-                    Announcements
-                </a>
+                <div class="sidebar-dropdown">
+                    <a href="#" class="sidebar-dropdown-toggle" id="events-dropdown">
+                        <span class="material-symbols-outlined">event</span>
+                        Events
+                        <span class="material-symbols-outlined dropdown-icon">expand_more</span>
+                    </a>
+                    <div class="sidebar-dropdown-menu">
+                        <a href="#" id="nav-event-calendar"><span class="material-symbols-outlined">calendar_month</span>Event Calendar</a>
+                        <a href="{% url 'teacher:teacher_announcements' %}" id="nav-announcements"><span class="material-symbols-outlined">campaign</span>Announcements</a>
+                    </div>
+                </div>
                 <div class="sidebar-dropdown">
                     <a href="#" class="sidebar-dropdown-toggle" id="reports-dropdown">
                         <span class="material-symbols-outlined">analytics</span>
