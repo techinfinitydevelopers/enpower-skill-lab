@@ -271,6 +271,7 @@ let currentProjectId    = null;
 let currentStudentIds   = [];
 let assessmentsTotal    = 0;
 let assessmentsScored   = 0;
+let currentProjectTitle = '';
 
 const step2Badge = document.getElementById('step2Badge');
 const step3Badge = document.getElementById('step3Badge');
@@ -362,6 +363,7 @@ projectSelect.addEventListener('change', function () {
             // project-wide scoring progress is shown with it.
             assessmentsTotal  = data.assessments_total  || allAssessments.length;
             assessmentsScored = data.assessments_scored || 0;
+            currentProjectTitle = projectTitle;
             fetch(`${DATA_URL}?assessment_id=${encodeURIComponent(allAssessments[0]?.id)}&_=${Date.now()}`, {cache:'no-store'})
                 .then(r => r.json())
                 .then(d => {
@@ -583,6 +585,7 @@ function saveScore(input, studentId, acId, key) {
             renderCell(wrapper, key, data.score);
             refreshStudentAvg(studentId);
             refreshStats();
+            refreshProjectProgress();
             showSaved();
             notify(scoreVal === null ? `Score cleared for ${name}`
                                      : `Score ${scoreVal}/10 saved for ${name}`, 'success');
@@ -768,6 +771,21 @@ function showSaved() {
 function escHtml(str) {
     if (!str) return '';
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Re-read project-wide scoring progress. Called after any score is saved or
+// cleared — the figure is otherwise only fetched when the project dropdown
+// changes, so it went stale the moment the coach entered a score.
+function refreshProjectProgress() {
+    if (!currentProjectId) return;
+    fetch(`${PROJECT_URL}?project_id=${encodeURIComponent(currentProjectId)}&_=${Date.now()}`, {cache:'no-store'})
+        .then(r => r.json())
+        .then(data => {
+            assessmentsTotal  = data.assessments_total  || assessmentsTotal;
+            assessmentsScored = data.assessments_scored || 0;
+            updateGenerateSection(currentProjectTitle);
+        })
+        .catch(() => {});
 }
 
 function updateGenerateSection(projectTitle) {
