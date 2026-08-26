@@ -79,28 +79,8 @@ def api_project_details(request):
         .values('id', 'name', 'assessment_type', 'output_descriptor', 'placement_after_challenge')
     )
 
-    # How far scoring has got. A coach entering Assessment 1 sees the Generate
-    # button right below the table; without this they can't tell that pressing
-    # it now builds the report from a fraction of the project.
-    #
-    # Scoped to the coach's own school. A project runs across many schools, so
-    # counting every school's scores would report "4 of 4" to a coach whose own
-    # class has an assessment untouched — and the reports they generate only
-    # cover their own students anyway.
-    from competencies.models import ScoreEntry
-
-    entries = ScoreEntry.objects.filter(
-        assessment_competency__assessment__project=project, score__isnull=False)
-    school = _teacher_school(request.user)
-    if school:
-        entries = entries.filter(student__school=school)
-
-    scored_assessment_ids = set(
-        entries.values_list('assessment_competency__assessment_id', flat=True).distinct()
-    )
-    for a in assessments:
-        a['has_scores'] = a['id'] in scored_assessment_ids
-    scored_count = sum(1 for a in assessments if a['has_scores'])
+    # How far scoring has got, for whoever calls this endpoint.
+    scored_count = annotate_scoring_progress(assessments, project.id, request.user)
 
     # Profiles whose competencies are mapped to this project's assessments
     comp_ids = list(
@@ -206,10 +186,41 @@ def score_entry(request):
     return render(request, 'teacher/score-entry.html', context)
 
 
+def annotate_scoring_progress(assessments, project_id, user):
+    """Tag each assessment with whether this coach's class has scored it.
+
+    Scoped to the coach's own school: a project runs across many schools, and
+    the Generate button only builds reports for that coach's students, so
+    counting another school's scores would report a project as fully scored
+    when the coach's own class has an assessment untouched.
+
+    Mutates `assessments` in place; returns how many are scored.
+    """
+    from competencies.models import ScoreEntry
+
+    entries = ScoreEntry.objects.filter(
+        assessment_competency__assessment__project_id=project_id, score__isnull=False)
+    school = _teacher_school(user)
+    if school:
+        entries = entries.filter(student__school=school)
+
+    scored_ids = set(
+        entries.values_list('assessment_competency__assessment_id', flat=True).distinct()
+    )
+    for a in assessments:
+        a['has_scores'] = a['id'] in scored_ids
+    return sum(1 for a in assessments if a['has_scores'])
+
+
 @login_required
 @user_passes_test(is_teacher)
 def api_assessments_by_project(request):
-    """AJAX: return assessments for a project"""
+    """AJAX: return assessments for a project, with the coach's scoring progress.
+
+    This is the endpoint the Score Entry page actually calls when a project is
+    picked, so the progress figures have to live here — putting them only on
+    api_project_details left the page reading undefined and rendering "0 of N".
+    """
     from competencies.models import Assessment
     project_id = request.GET.get('project_id', '')
     if not project_id:
@@ -219,7 +230,12 @@ def api_assessments_by_project(request):
         .order_by('order', 'id')
         .values('id', 'name', 'assessment_type')
     )
-    return JsonResponse({'assessments': assessments})
+    scored = annotate_scoring_progress(assessments, project_id, request.user)
+    return JsonResponse({
+        'assessments': assessments,
+        'assessments_total': len(assessments),
+        'assessments_scored': scored,
+    })
 
 
 @login_required
