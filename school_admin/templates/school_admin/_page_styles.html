@@ -1,0 +1,71 @@
+{% comment %}
+Shared styling for the School Admin pages added from the changes document
+(Thinking Coaches, TC profile, Class Overview, Class Attendance). Kept in one
+include so the four pages cannot drift apart.
+{% endcomment %}
+<style>
+    .sa-page { width:100%; padding:1.5rem; }
+    .sa-head { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom:1.25rem; }
+    .sa-title { font-size:1.5rem; font-weight:700; color:#1f2937; margin:0; }
+    .sa-sub { color:#6b7280; font-size:.85rem; margin:.25rem 0 0; }
+
+    .sa-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:.9rem; margin-bottom:1.25rem; }
+    .sa-stat { background:#fff; border:1px solid #e5e7eb; border-radius:.75rem; padding:1rem 1.1rem; }
+    .sa-stat-label { font-size:.68rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:#9ca3af; }
+    .sa-stat-value { font-size:1.6rem; font-weight:800; color:#5b1f6f; line-height:1.1; margin-top:.3rem; }
+    .sa-stat-sub { font-size:.72rem; color:#9ca3af; margin-top:.15rem; }
+
+    .sa-card { background:#fff; border:1px solid #e5e7eb; border-radius:.75rem; margin-bottom:1rem; overflow:hidden; }
+    .sa-card-head { display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;
+                    padding:.9rem 1.1rem; border-bottom:1px solid #f3f4f6; background:#fafafa; }
+    .sa-card-title { font-size:1rem; font-weight:700; color:#1f2937; }
+    .sa-card-meta { font-size:.72rem; color:#9ca3af; margin-top:.15rem; }
+
+    .sa-scroll { overflow-x:auto; }
+    .sa-table { width:100%; border-collapse:collapse; font-size:.85rem; }
+    .sa-table th { text-align:left; font-size:.68rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase;
+                   color:#9ca3af; padding:.6rem 1.1rem; border-bottom:1px solid #f3f4f6; white-space:nowrap; }
+    .sa-table td { padding:.7rem 1.1rem; border-bottom:1px solid #f9fafb; color:#374151; vertical-align:top; }
+    .sa-table tr:last-child td { border-bottom:none; }
+    .sa-table tbody tr:hover { background:#fafafa; }
+    .sa-num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+    .sa-name { font-weight:600; color:#1f2937; }
+    .sa-muted { font-size:.72rem; color:#9ca3af; margin-top:.15rem; }
+
+    .sa-avatar { width:34px; height:34px; border-radius:50%; background:#f3e8ff; color:#5b1f6f;
+                 display:inline-flex; align-items:center; justify-content:center; font-weight:700; font-size:.78rem; flex-shrink:0; }
+    .sa-person { display:flex; align-items:center; gap:.6rem; }
+
+    .sa-chip { display:inline-block; padding:2px 8px; border-radius:999px; font-size:.66rem; font-weight:700; margin-right:.25rem; }
+    .chip-neutral { background:#f3f4f6; color:#4b5563; }
+    .chip-good    { background:#dcfce7; color:#15803d; }
+    .chip-warn    { background:#fef3c7; color:#b45309; }
+    .chip-bad     { background:#fee2e2; color:#b91c1c; }
+    .chip-info    { background:#e0f2fe; color:#0369a1; }
+
+    .sa-bar { position:relative; height:8px; background:#f3f4f6; border-radius:4px; min-width:110px; overflow:hidden; }
+    .sa-bar-fill { position:absolute; inset:0 auto 0 0; background:linear-gradient(90deg,#7c3aed,#a855f7); border-radius:4px; }
+
+    .sa-link { color:#5b1f6f; font-weight:600; text-decoration:none; }
+    .sa-link:hover { text-decoration:underline; }
+
+    .sa-filters { display:flex; gap:.75rem; flex-wrap:wrap; align-items:flex-end; background:#fff;
+                  border:1px solid #e5e7eb; border-radius:.75rem; padding:.9rem 1rem; margin-bottom:1.25rem; }
+    .sa-field { display:flex; flex-direction:column; gap:.25rem; min-width:140px; }
+    .sa-field label { font-size:.68rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:#9ca3af; }
+    .sa-field select { padding:.45rem .6rem; border:1px solid #d1d5db; border-radius:.45rem; font-size:.85rem; background:#fff; color:#1f2937; }
+    .sa-note { margin-left:auto; font-size:.72rem; color:#9ca3af; max-width:280px; line-height:1.4; }
+
+    .sa-empty { background:#fff; border:1px solid #e5e7eb; border-radius:.75rem; padding:2.5rem 1.5rem; text-align:center; color:#6b7280; }
+    .sa-empty .material-symbols-outlined { font-size:42px; color:#d1d5db; }
+
+    .sa-detail-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:0; }
+    .sa-detail { padding:.8rem 1.1rem; border-bottom:1px solid #f9fafb; }
+    .sa-detail-label { font-size:.66rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:#9ca3af; }
+    .sa-detail-value { font-size:.88rem; color:#1f2937; margin-top:.2rem; word-break:break-word; }
+
+    @media (max-width:768px) {
+        .sa-page { padding:1rem; }
+        .sa-note { margin-left:0; max-width:100%; }
+    }
+</style>

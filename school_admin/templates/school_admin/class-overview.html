@@ -1,0 +1,108 @@
+{% extends 'school_admin/base.html' %}
+{% load static %}
+
+{% block title %}Class Overview - School Admin{% endblock %}
+{% block extra_css %}{% include 'school_admin/_page_styles.html' %}{% endblock %}
+
+{% block content %}
+<div class="sa-page">
+    <div class="sa-head">
+        <div>
+            <h1 class="sa-title">Class Overview</h1>
+            <p class="sa-sub">{{ school.school_name }}</p>
+        </div>
+    </div>
+
+    <div class="sa-stats">
+        <div class="sa-stat">
+            <div class="sa-stat-label">Classes</div>
+            <div class="sa-stat-value">{{ rows|length }}</div>
+            <div class="sa-stat-sub">registered</div>
+        </div>
+        <div class="sa-stat">
+            <div class="sa-stat-label">Students</div>
+            <div class="sa-stat-value">{{ total_students }}</div>
+            <div class="sa-stat-sub">active, across all classes</div>
+        </div>
+    </div>
+
+    {% if rows %}
+    <div class="sa-card">
+        <div class="sa-card-head">
+            <div>
+                <div class="sa-card-title">Classes</div>
+                <div class="sa-card-meta">Sessions held is counted from marked attendance, not from the timetable</div>
+            </div>
+        </div>
+        <div class="sa-scroll">
+        <table class="sa-table">
+            <thead><tr>
+                <th>Class</th><th>Name</th><th>Thinking Coach</th><th>Academic year</th>
+                <th class="sa-num">Students</th><th class="sa-num">Sessions held</th><th class="sa-num">Status</th>
+            </tr></thead>
+            <tbody>
+            {% for r in rows %}
+            <tr>
+                <td><span class="sa-name">{{ r.klass.grade }}{{ r.klass.division }}</span>
+                    {% if r.klass.class_code %}<div class="sa-muted">{{ r.klass.class_code }}</div>{% endif %}
+                </td>
+                <td>{{ r.klass.class_name|default:"—" }}</td>
+                <td>
+                    {% if r.coach %}{{ r.coach.get_full_name|default:r.coach.username }}
+                    {% else %}<span class="sa-chip chip-warn">Not assigned</span>{% endif %}
+                </td>
+                <td>{{ r.klass.academic_year|default:"—" }}</td>
+                <td class="sa-num">{% if r.students %}{{ r.students }}{% else %}<span style="color:#d1d5db;">0</span>{% endif %}</td>
+                <td class="sa-num">{{ r.sessions_held }}</td>
+                <td class="sa-num">{% if r.klass.is_active %}<span class="sa-chip chip-good">Active</span>{% else %}<span class="sa-chip chip-neutral">Inactive</span>{% endif %}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="sa-empty">
+        <span class="material-symbols-outlined">class</span>
+        <p style="margin-top:.5rem;">No classes registered for {{ school.school_name }} yet.</p>
+    </div>
+    {% endif %}
+
+    {% if orphans %}
+    <div class="sa-card">
+        <div class="sa-card-head">
+            <div>
+                <div class="sa-card-title">Students in unregistered classes</div>
+                <div class="sa-card-meta">These grade/division pairs have students but no class record, so they carry no coach and no sessions</div>
+            </div>
+        </div>
+        <div class="sa-scroll">
+        <table class="sa-table">
+            <thead><tr><th>Class</th><th class="sa-num">Students</th><th></th></tr></thead>
+            <tbody>
+            {% for o in orphans %}
+            <tr>
+                <td><span class="sa-name">{{ o.grade }}{{ o.division }}</span></td>
+                <td class="sa-num">{{ o.students }}</td>
+                <td><span class="sa-chip chip-warn">No class record</span></td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var link = document.getElementById('nav-class-overview');
+        if (!link) return;
+        link.classList.add('active');
+        var parent = link.closest('.sidebar-dropdown');
+        if (parent) parent.classList.add('active');
+    });
+</script>
+{% endblock %}

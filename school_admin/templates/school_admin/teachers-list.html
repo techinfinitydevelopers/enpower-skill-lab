@@ -1,0 +1,91 @@
+{% extends 'school_admin/base.html' %}
+{% load static %}
+
+{% block title %}Thinking Coaches - School Admin{% endblock %}
+{% block extra_css %}{% include 'school_admin/_page_styles.html' %}{% endblock %}
+
+{% block content %}
+<div class="sa-page">
+    <div class="sa-head">
+        <div>
+            <h1 class="sa-title">Thinking Coaches</h1>
+            <p class="sa-sub">{{ school.school_name }}</p>
+        </div>
+    </div>
+
+    <div class="sa-stats">
+        <div class="sa-stat">
+            <div class="sa-stat-label">Coaches</div>
+            <div class="sa-stat-value">{{ rows|length }}</div>
+            <div class="sa-stat-sub">assigned to this school</div>
+        </div>
+    </div>
+
+    {% if rows %}
+    <div class="sa-card">
+        <div class="sa-card-head">
+            <div>
+                <div class="sa-card-title">Coach list</div>
+                <div class="sa-card-meta">Click a name to open the full profile</div>
+            </div>
+        </div>
+        <div class="sa-scroll">
+        <table class="sa-table">
+            <thead><tr>
+                <th>Coach</th><th>Designation</th><th>Classes</th>
+                <th>Contact</th><th class="sa-num">Status</th>
+            </tr></thead>
+            <tbody>
+            {% for r in rows %}
+            <tr>
+                <td>
+                    <div class="sa-person">
+                        <span class="sa-avatar">{{ r.coach.full_name|slice:":1"|upper }}</span>
+                        <div>
+                            <a class="sa-link" href="{% url 'school_admin_view_teacher' r.coach.id %}">{{ r.coach.full_name|default:"Unnamed" }}</a>
+                            {% if r.coach.employee_id %}<div class="sa-muted">{{ r.coach.employee_id }}</div>{% endif %}
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    {{ r.coach.designation|default:"—" }}
+                    {% if r.coach.specialization %}<div class="sa-muted">{{ r.coach.specialization }}</div>{% endif %}
+                </td>
+                <td>
+                    {% for c in r.classes %}<span class="sa-chip chip-neutral">{{ c }}</span>{% empty %}<span style="color:#d1d5db;">Not assigned</span>{% endfor %}
+                </td>
+                <td>
+                    {% if r.email %}<div>{{ r.email }}</div>{% endif %}
+                    {% if r.coach.mobile_number %}<div class="sa-muted">{{ r.coach.mobile_number }}</div>{% endif %}
+                    {% if not r.email and not r.coach.mobile_number %}—{% endif %}
+                </td>
+                <td class="sa-num">
+                    {% if r.coach.is_active %}<span class="sa-chip chip-good">Active</span>{% else %}<span class="sa-chip chip-bad">Inactive</span>{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="sa-empty">
+        <span class="material-symbols-outlined">person_off</span>
+        <p style="margin-top:.5rem;">No Thinking Coaches assigned to {{ school.school_name }} yet.</p>
+        <p style="margin-top:.25rem;font-size:.8rem;color:#9ca3af;">Coaches appear here once the Super Admin or Program Coordinator assigns them to this school.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var link = document.getElementById('nav-teacher-list');
+        if (!link) return;
+        link.classList.add('active');
+        var parent = link.closest('.sidebar-dropdown');
+        if (parent) parent.classList.add('active');
+    });
+</script>
+{% endblock %}

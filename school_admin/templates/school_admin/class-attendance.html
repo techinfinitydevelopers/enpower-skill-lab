@@ -1,0 +1,152 @@
+{% extends 'school_admin/base.html' %}
+{% load static %}
+
+{% block title %}Class Attendance - School Admin{% endblock %}
+{% block extra_css %}{% include 'school_admin/_page_styles.html' %}{% endblock %}
+
+{% block content %}
+<div class="sa-page">
+    <div class="sa-head">
+        <div>
+            <h1 class="sa-title">Class Attendance</h1>
+            <p class="sa-sub">{{ school.school_name }}</p>
+        </div>
+    </div>
+
+    <div class="sa-stats">
+        <div class="sa-stat">
+            <div class="sa-stat-label">Overall attendance</div>
+            <div class="sa-stat-value">{% if overall_percent is not None %}{{ overall_percent }}%{% else %}&mdash;{% endif %}</div>
+            <div class="sa-stat-sub">across every marked session</div>
+        </div>
+        <div class="sa-stat">
+            <div class="sa-stat-label">Sessions</div>
+            <div class="sa-stat-value">{{ session_total }}</div>
+            <div class="sa-stat-sub">matching the current filter</div>
+        </div>
+        <div class="sa-stat">
+            <div class="sa-stat-label">Classes</div>
+            <div class="sa-stat-value">{{ class_rows|length }}</div>
+            <div class="sa-stat-sub">with attendance recorded</div>
+        </div>
+    </div>
+
+    <form method="get" class="sa-filters">
+        <div class="sa-field">
+            <label for="saGrade">Grade</label>
+            <select name="grade" id="saGrade" onchange="this.form.submit()">
+                <option value="">All grades</option>
+                {% for g in grades %}<option value="{{ g }}" {% if g == grade %}selected{% endif %}>Grade {{ g }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="sa-field">
+            <label for="saDivision">Division</label>
+            <select name="division" id="saDivision" onchange="this.form.submit()">
+                <option value="">All divisions</option>
+                {% for d in divisions %}<option value="{{ d }}" {% if d == division %}selected{% endif %}>{{ d }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="sa-note">
+            A student marked late still counts as attending. The session count is shown with each
+            percentage &mdash; a figure from one session is not a term's attendance.
+        </div>
+    </form>
+
+    {% if class_rows %}
+    <div class="sa-card">
+        <div class="sa-card-head">
+            <div>
+                <div class="sa-card-title">By class</div>
+                <div class="sa-card-meta">Present includes late arrivals</div>
+            </div>
+        </div>
+        <div class="sa-scroll">
+        <table class="sa-table">
+            <thead><tr>
+                <th>Class</th><th style="min-width:130px;">Attendance</th>
+                <th class="sa-num">Percent</th><th class="sa-num">Present</th>
+                <th class="sa-num">Marked</th><th class="sa-num">Sessions</th>
+            </tr></thead>
+            <tbody>
+            {% for r in class_rows %}
+            <tr>
+                <td><span class="sa-name">{{ r.grade }}{{ r.division }}</span></td>
+                <td><div class="sa-bar"><div class="sa-bar-fill" style="width:{{ r.percent }}%;"></div></div></td>
+                <td class="sa-num">
+                    {% if r.percent >= 85 %}<span class="sa-chip chip-good">{{ r.percent }}%</span>
+                    {% elif r.percent >= 60 %}<span class="sa-chip chip-warn">{{ r.percent }}%</span>
+                    {% else %}<span class="sa-chip chip-bad">{{ r.percent }}%</span>{% endif %}
+                </td>
+                <td class="sa-num">{{ r.present }}</td>
+                <td class="sa-num" style="color:#9ca3af;">{{ r.total }}</td>
+                <td class="sa-num">
+                    {{ r.sessions }}
+                    {% if r.sessions < 3 %}<div style="font-size:.66rem;color:#b45309;">few sessions</div>{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+
+    <div class="sa-card">
+        <div class="sa-card-head">
+            <div>
+                <div class="sa-card-title">Sessions</div>
+                <div class="sa-card-meta">
+                    Most recent first{% if session_total > session_rows|length %} &middot; showing {{ session_rows|length }} of {{ session_total }}{% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="sa-scroll">
+        <table class="sa-table">
+            <thead><tr>
+                <th>Date</th><th>Class</th><th>Coach</th><th>Project</th>
+                <th class="sa-num">Present</th><th class="sa-num">Absent</th>
+                <th class="sa-num">Late</th><th class="sa-num">Percent</th><th class="sa-num">Status</th>
+            </tr></thead>
+            <tbody>
+            {% for r in session_rows %}
+            <tr>
+                <td><span class="sa-name">{{ r.session.date|date:"j M Y" }}</span>
+                    {% if r.session.session_number %}<div class="sa-muted">Session {{ r.session.session_number }}</div>{% endif %}
+                </td>
+                <td>{{ r.session.grade }}{{ r.session.division }}</td>
+                <td>{% if r.session.thinking_coach %}{{ r.session.thinking_coach.get_full_name|default:r.session.thinking_coach.username }}{% else %}&mdash;{% endif %}</td>
+                <td>{{ r.session.project.title|default:"—"|truncatechars:28 }}</td>
+                <td class="sa-num">{{ r.present }}</td>
+                <td class="sa-num">{{ r.absent }}</td>
+                <td class="sa-num">{{ r.late }}</td>
+                <td class="sa-num">{% if r.percent is not None %}{{ r.percent }}%{% else %}<span style="color:#d1d5db;">not marked</span>{% endif %}</td>
+                <td class="sa-num">
+                    {% if r.session.class_status == 'held' %}<span class="sa-chip chip-info">Held</span>
+                    {% else %}<span class="sa-chip chip-neutral">Cancelled</span>{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="sa-empty">
+        <span class="material-symbols-outlined">how_to_reg</span>
+        <p style="margin-top:.5rem;">No attendance recorded{% if grade or division %} for this filter{% endif %} yet.</p>
+        <p style="margin-top:.25rem;font-size:.8rem;color:#9ca3af;">Attendance appears here once a Thinking Coach marks a session.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var link = document.getElementById('nav-class-attendance');
+        if (!link) return;
+        link.classList.add('active');
+        var parent = link.closest('.sidebar-dropdown');
+        if (parent) parent.classList.add('active');
+    });
+</script>
+{% endblock %}

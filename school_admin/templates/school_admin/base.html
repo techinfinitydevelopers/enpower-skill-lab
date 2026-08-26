@@ -240,7 +240,7 @@
                         <span class="material-symbols-outlined dropdown-icon">expand_more</span>
                     </a>
                     <div class="sidebar-dropdown-menu">
-                        <a href="#" id="nav-teacher-list"><span class="material-symbols-outlined">psychology</span>Thinking Coaches</a>
+                        <a href="{% url 'school_admin_teacher_list' %}" id="nav-teacher-list"><span class="material-symbols-outlined">psychology</span>Thinking Coaches</a>
                         <a href="{% url 'school_admin_student_list' %}" id="nav-student-list"><span class="material-symbols-outlined">school</span>Student List</a>
                         <a href="{% url 'school_admin_parent_list' %}" id="nav-parent-list"><span class="material-symbols-outlined">family_restroom</span>Parent List</a>
                         {% comment %}
@@ -257,9 +257,9 @@
                         <span class="material-symbols-outlined dropdown-icon">expand_more</span>
                     </a>
                     <div class="sidebar-dropdown-menu">
-                        <a href="#" id="nav-class-overview"><span class="material-symbols-outlined">grid_view</span>Class Overview</a>
+                        <a href="{% url 'school_admin_class_overview' %}" id="nav-class-overview"><span class="material-symbols-outlined">grid_view</span>Class Overview</a>
                         <a href="#" id="nav-class-performance"><span class="material-symbols-outlined">trending_up</span>Class Performance</a>
-                        <a href="#" id="nav-class-attendance"><span class="material-symbols-outlined">how_to_reg</span>Class Attendance</a>
+                        <a href="{% url 'school_admin_class_attendance' %}" id="nav-class-attendance"><span class="material-symbols-outlined">how_to_reg</span>Class Attendance</a>
                     </div>
                 </div>
                 <div class="sidebar-dropdown">

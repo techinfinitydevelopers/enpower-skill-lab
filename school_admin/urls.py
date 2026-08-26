@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from . import pages
 
 # Spec slide 51: "Remove user onboarding feature from school admin (this id is
 # given to principals. Only view access. No inputs)". The onboarding routes are
@@ -12,5 +13,10 @@ urlpatterns = [
     path('change-password/', views.school_admin_change_password, name='school_admin_change_password'),
     path('students/', views.school_admin_student_list, name='school_admin_student_list'),
     path('parents/', views.school_admin_parent_list, name='school_admin_parent_list'),
+    # Pages whose sidebar links were dead (changes document, 'Need to work on')
+    path('thinking-coaches/', pages.teacher_list, name='school_admin_teacher_list'),
+    path('thinking-coaches/<int:teacher_id>/', pages.view_teacher, name='school_admin_view_teacher'),
+    path('classes/overview/', pages.class_overview, name='school_admin_class_overview'),
+    path('classes/attendance/', pages.class_attendance, name='school_admin_class_attendance'),
     path('announcements/', views.school_admin_announcements, name='school_admin_announcements'),
 ]

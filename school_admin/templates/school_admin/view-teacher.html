@@ -1,0 +1,115 @@
+{% extends 'school_admin/base.html' %}
+{% load static %}
+
+{% block title %}{{ coach.full_name|default:"Thinking Coach" }} - School Admin{% endblock %}
+{% block extra_css %}{% include 'school_admin/_page_styles.html' %}{% endblock %}
+
+{% block content %}
+<div class="sa-page">
+    <div class="sa-head">
+        <div>
+            <a class="sa-link" href="{% url 'school_admin_teacher_list' %}" style="font-size:.78rem;display:inline-flex;align-items:center;gap:.25rem;">
+                <span class="material-symbols-outlined" style="font-size:16px;">arrow_back</span> Back to Thinking Coaches
+            </a>
+            <h1 class="sa-title" style="margin-top:.4rem;">{{ coach.full_name|default:"Thinking Coach" }}</h1>
+            <p class="sa-sub">
+                {{ coach.designation|default:"Thinking Coach" }} &middot; {{ school.school_name }}
+                {% if coach.is_active %}<span class="sa-chip chip-good" style="margin-left:.4rem;">Active</span>{% else %}<span class="sa-chip chip-bad" style="margin-left:.4rem;">Inactive</span>{% endif %}
+            </p>
+        </div>
+    </div>
+
+    <div class="sa-stats">
+        <div class="sa-stat">
+            <div class="sa-stat-label">Classes</div>
+            <div class="sa-stat-value">{{ classes|length }}</div>
+            <div class="sa-stat-sub">assigned at this school</div>
+        </div>
+        <div class="sa-stat">
+            <div class="sa-stat-label">Experience</div>
+            <div class="sa-stat-value" style="font-size:1.15rem;">{{ coach.total_experience|default:"—" }}</div>
+            <div class="sa-stat-sub">total</div>
+        </div>
+        <div class="sa-stat">
+            <div class="sa-stat-label">Employment</div>
+            <div class="sa-stat-value" style="font-size:1.15rem;">{{ coach.employment_type|default:"—" }}</div>
+            <div class="sa-stat-sub">{% if coach.joining_date %}joined {{ coach.joining_date|date:"M Y" }}{% else %}joining date not set{% endif %}</div>
+        </div>
+    </div>
+
+    <div class="sa-card">
+        <div class="sa-card-head"><div class="sa-card-title">Contact</div></div>
+        <div class="sa-detail-grid">
+            <div class="sa-detail"><div class="sa-detail-label">Official email</div><div class="sa-detail-value">{{ coach.official_email|default:"—" }}</div></div>
+            <div class="sa-detail"><div class="sa-detail-label">Mobile</div><div class="sa-detail-value">{{ coach.mobile_number|default:"—" }}</div></div>
+            <div class="sa-detail"><div class="sa-detail-label">Alternate number</div><div class="sa-detail-value">{{ coach.alternate_number|default:"—" }}</div></div>
+            <div class="sa-detail"><div class="sa-detail-label">City</div><div class="sa-detail-value">{{ coach.city|default:"—" }}{% if coach.state %}, {{ coach.state }}{% endif %}</div></div>
+        </div>
+    </div>
+
+    <div class="sa-card">
+        <div class="sa-card-head"><div class="sa-card-title">Professional</div></div>
+        <div class="sa-detail-grid">
+            <div class="sa-detail"><div class="sa-detail-label">Employee ID</div><div class="sa-detail-value">{{ coach.employee_id|default:"—" }}</div></div>
+            <div class="sa-detail"><div class="sa-detail-label">Qualification</div><div class="sa-detail-value">{{ coach.qualification|default:"—" }}</div></div>
+            <div class="sa-detail"><div class="sa-detail-label">Specialization</div><div class="sa-detail-value">{{ coach.specialization|default:"—" }}</div></div>
+            <div class="sa-detail"><div class="sa-detail-label">Skill training experience</div><div class="sa-detail-value">{{ coach.skill_training_experience|default:"—" }}</div></div>
+            <div class="sa-detail"><div class="sa-detail-label">Grades taught</div><div class="sa-detail-value">{{ coach.grades_taught|default:"—" }}</div></div>
+            <div class="sa-detail"><div class="sa-detail-label">Languages</div><div class="sa-detail-value">{{ coach.languages_known|default:"—" }}</div></div>
+            <div class="sa-detail"><div class="sa-detail-label">Training style</div><div class="sa-detail-value">{{ coach.training_style|default:"—" }}</div></div>
+            <div class="sa-detail"><div class="sa-detail-label">Certifications</div><div class="sa-detail-value">{{ coach.certifications|default:"—" }}</div></div>
+        </div>
+    </div>
+
+    <div class="sa-card">
+        <div class="sa-card-head">
+            <div>
+                <div class="sa-card-title">Classes at {{ school.school_name }}</div>
+                <div class="sa-card-meta">{{ classes|length }} class{{ classes|length|pluralize:"es" }}</div>
+            </div>
+        </div>
+        {% if classes %}
+        <div class="sa-scroll">
+        <table class="sa-table">
+            <thead><tr><th>Class</th><th>Name</th><th>Academic year</th><th class="sa-num">Sessions</th><th class="sa-num">Status</th></tr></thead>
+            <tbody>
+            {% for c in classes %}
+            <tr>
+                <td><span class="sa-name">{{ c.grade }}{{ c.division }}</span></td>
+                <td>{{ c.class_name|default:"—" }}{% if c.class_code %}<div class="sa-muted">{{ c.class_code }}</div>{% endif %}</td>
+                <td>{{ c.academic_year|default:"—" }}</td>
+                <td class="sa-num">{{ c.total_sessions|default:"—" }}</td>
+                <td class="sa-num">{% if c.is_active %}<span class="sa-chip chip-good">Active</span>{% else %}<span class="sa-chip chip-neutral">Inactive</span>{% endif %}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        {% else %}
+        <div style="padding:1.5rem 1.1rem;color:#9ca3af;font-size:.85rem;">No classes assigned to this coach yet.</div>
+        {% endif %}
+    </div>
+
+    <div class="sa-card">
+        <div class="sa-card-head"><div class="sa-card-title">Onboarding checks</div></div>
+        <div class="sa-detail-grid">
+            <div class="sa-detail"><div class="sa-detail-label">ID proof</div><div class="sa-detail-value">{{ coach.id_proof_submitted|default:"—" }}</div></div>
+            <div class="sa-detail"><div class="sa-detail-label">Address proof</div><div class="sa-detail-value">{{ coach.address_proof_submitted|default:"—" }}</div></div>
+            <div class="sa-detail"><div class="sa-detail-label">Police verification</div><div class="sa-detail-value">{{ coach.police_verification|default:"—" }}</div></div>
+            <div class="sa-detail"><div class="sa-detail-label">Contract</div><div class="sa-detail-value">{{ coach.contract_uploaded|default:"—" }}</div></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var link = document.getElementById('nav-teacher-list');
+        if (!link) return;
+        link.classList.add('active');
+        var parent = link.closest('.sidebar-dropdown');
+        if (parent) parent.classList.add('active');
+    });
+</script>
+{% endblock %}

@@ -451,6 +451,31 @@ invalid step. Applied to onboard-parent and onboard-teacher, which share the
 defect. Also stopped the student picker rendering "Name - 6 ()" now that GR
 number can be blank.
 
+### School Admin pages that had no URL, view or template
+The changes document lists Thinking Coaches ("should be able to see TC profile"),
+Class Overview and Class Attendance as not working. None of them existed - the
+sidebar entries were href="#". Built in `school_admin/pages.py`, all read-only,
+since School Admin is view-only per PPT slide 51.
+
+- Thinking Coaches: coaches at this school with the classes each one runs
+- TC profile: contact, professional detail, assigned classes, onboarding checks.
+  Looked up scoped to the admin's school, so another school's coach is a 404
+  rather than a blank page.
+- Class Overview: coach, student count and sessions held per class. Students
+  carry their own grade/division rather than a Class FK, so they are counted by
+  that pair - which also surfaces grade/division pairs holding students with no
+  Class record at all, listed separately as unregistered.
+- Class Attendance: per-class percentage and the sessions behind it, filterable
+  by grade and division. A late arrival counts as attending. The session count
+  sits beside every percentage, because a class with one marked session
+  otherwise reads the same as a class with thirty.
+
+Verified with 23 assertions covering all four pages, the cross-school 404, and
+the sidebar now linking to real URLs.
+
+Not touched: Class Performance is also a dead href="#" but the document did not
+list it.
+
 ### Still open (unchanged by this pass)
 - Slide 14 teacher views: Class Level, Percentile Competency, Project Level
   Aggregate Comparative, Generate Profile Report — none exist.
