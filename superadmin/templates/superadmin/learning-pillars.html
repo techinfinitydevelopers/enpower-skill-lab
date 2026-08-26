@@ -564,6 +564,11 @@
 .lp-kb-add-sp-btn:hover { background: #fef2f2; }
 
 /* KB badge on main content */
+.lp-kb-toggle { display:flex; align-items:flex-start; gap:8px; margin:8px 0; padding:9px 11px;
+    background:#fff7ed; border:1px solid #fed7aa; border-radius:8px; cursor:pointer; }
+.lp-kb-toggle input { margin-top:2px; flex-shrink:0; width:15px; height:15px; accent-color:#ea580c; cursor:pointer; }
+.lp-kb-toggle strong { display:block; font-size:.78rem; font-weight:700; color:#9a3412; }
+.lp-kb-toggle em { display:block; font-style:normal; font-size:.7rem; color:#c2410c; line-height:1.4; margin-top:2px; }
 .lp-kb-badge {
     display: inline-flex; align-items: center; gap: 4px;
     padding: 3px 10px; border-radius: 20px;
@@ -756,6 +761,14 @@
                     <label class="lp-color-label" onclick="pickLpColor(this)"><input type="radio" name="pillar_color" value="indigo" style="display:none;"><span class="lp-color-dot" style="background:#6366f1;"></span>Indigo</label>
                     <label class="lp-color-label" onclick="pickLpColor(this)"><input type="radio" name="pillar_color" value="amber" style="display:none;"><span class="lp-color-dot" style="background:#f59e0b;"></span>Amber</label>
                 </div>
+                {# Every KB rule reads this flag — naming a pillar "Kaushal Bodh" does nothing. #}
+                <label class="lp-kb-toggle">
+                    <input type="checkbox" name="is_kb">
+                    <span>
+                        <strong>Kaushal Bodh pillar</strong>
+                        <em>Scored and reported separately — kept out of the Skill Passport and career matches</em>
+                    </span>
+                </label>
                 <div style="display:flex;gap:4px;">
                     <button type="submit" class="lp-csl-btn lp-csl-btn-primary">Add</button>
                     <button type="button" class="lp-csl-btn lp-csl-btn-secondary" onclick="toggleEl('cslAddPillarForm')">Cancel</button>
@@ -798,7 +811,7 @@
                     <span class="material-symbols-outlined lp-chev">expand_more</span>
                 </button>
                 <span class="lp-csl-pillar-actions">
-                    <button type="button" class="lp-csl-act" title="Edit" onclick="event.stopPropagation();openLpEditPillar({{ pillar.id }},'{{ pillar.name|escapejs }}','{{ pillar.color }}')">
+                    <button type="button" class="lp-csl-act" title="Edit" onclick="event.stopPropagation();openLpEditPillar({{ pillar.id }},'{{ pillar.name|escapejs }}','{{ pillar.color }}',{{ pillar.is_kb|yesno:'true,false' }})">
                         <span class="material-symbols-outlined" style="font-size:14px;">edit</span>
                     </button>
                     <form method="post" style="display:contents;" onsubmit="event.stopPropagation();return confirm('Delete pillar &quot;{{ pillar.name|escapejs }}&quot;?');">
@@ -1201,6 +1214,15 @@
                     <label class="lp-color-label" data-color="indigo" onclick="pickLpColor(this)"><input type="radio" name="pillar_color" value="indigo" style="display:none;"><span class="lp-color-dot" style="background:#6366f1;"></span>Indigo</label>
                     <label class="lp-color-label" data-color="amber" onclick="pickLpColor(this)"><input type="radio" name="pillar_color" value="amber" style="display:none;"><span class="lp-color-dot" style="background:#f59e0b;"></span>Amber</label>
                 </div>
+                <div class="full">
+                    <label class="lp-kb-toggle">
+                        <input type="checkbox" name="is_kb" id="lpEditPillarIsKb">
+                        <span>
+                            <strong>Kaushal Bodh pillar</strong>
+                            <em>Scored and reported separately — kept out of the Skill Passport and career matches</em>
+                        </span>
+                    </label>
+                </div>
             </div>
             <div class="lp-modal-actions">
                 <button type="button" class="lp-btn-cancel" onclick="document.getElementById('editPillarModal').classList.remove('show')">Cancel</button>
@@ -1306,9 +1328,11 @@ function pickLpColor(label) {
 }
 
 /* ── CSL+ Edit Pillar modal ── */
-function openLpEditPillar(id, name, color) {
+function openLpEditPillar(id, name, color, isKb) {
     document.getElementById('lpEditPillarId').value = id;
     document.getElementById('lpEditPillarName').value = name;
+    // Reflect the pillar's current KB flag, else saving the modal would clear it
+    document.getElementById('lpEditPillarIsKb').checked = !!isKb;
     const modal = document.getElementById('editPillarModal');
     modal.querySelectorAll('.lp-color-label').forEach(l => {
         l.classList.remove('selected');

@@ -271,7 +271,7 @@ for title, seq in proj_defs:
 # ============================================================ ASSESSMENT + AssessmentCompetency
 asmt, c = Assessment.objects.get_or_create(
     project=projects['Bio Conservation'], name='Assessment 1',
-    defaults={'assessment_type': 'Written Assignment', 'order': 1},
+    defaults={'assessment_type': 'Presentation', 'order': 1},
 )
 bump('Assessment', c)
 for order, code in enumerate(['SP1.C1', 'SP1.C2', 'SP2.C1'], start=1):

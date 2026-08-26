@@ -2939,6 +2939,7 @@ def learning_pillars(request):
                 color = request.POST.get('pillar_color')
                 if color:
                     pillar_obj.color = color
+                pillar_obj.is_kb = request.POST.get('is_kb') == 'on'
                 pillar_obj.save()
                 messages.success(request, f'Pillar renamed to "{new_name}".')
 
@@ -2946,17 +2947,22 @@ def learning_pillars(request):
         elif action == 'add_pillar':
             name = request.POST.get('pillar_name', '').strip()
             color = request.POST.get('pillar_color', 'teal')
+            # A Kaushal Bodh pillar is reported on its own and kept out of
+            # profiling. Naming a pillar "Kaushal Bodh" is not enough — every
+            # KB rule keys off this flag, so it has to be set explicitly.
+            is_kb = request.POST.get('is_kb') == 'on'
             if not name:
                 messages.error(request, 'Pillar name is required.')
             else:
                 max_order = Pillar.objects.filter(framework_ref=active_fw_obj).aggregate(models.Max('order'))['order__max'] or 0
                 count = Pillar.objects.filter(framework_ref=active_fw_obj, is_kb=False).count()
-                prefix = active_fw_obj.prefix.replace('-SP', '') if active_fw_obj.prefix.endswith('-SP') else active_fw_obj.prefix
                 Pillar.objects.create(
                     name=name, number=f"{count + 1:02d}", color=color,
-                    order=max_order + 1, framework_ref=active_fw_obj, is_kb=False,
+                    order=max_order + 1, framework_ref=active_fw_obj, is_kb=is_kb,
                 )
-                messages.success(request, f'Pillar "{name}" added!')
+                messages.success(
+                    request,
+                    f'Pillar "{name}" added{" as a Kaushal Bodh pillar — its scores stay out of the Skill Passport." if is_kb else "!"}')
 
         elif action == 'delete_pillar':
             p_id = request.POST.get('pillar_id')
@@ -3172,7 +3178,7 @@ def project_assessment(request):
 
         elif action == 'add_assessment' and active_project:
             name            = request.POST.get('assessment_name', '').strip()
-            assessment_type = request.POST.get('assessment_type', 'Written Assignment')
+            assessment_type = request.POST.get('assessment_type', 'Presentation')
             if name:
                 order = active_project.assessments.count()
                 Assessment.objects.create(project=active_project, name=name, assessment_type=assessment_type, order=order)
@@ -3285,6 +3291,8 @@ def custom_framework(request):
         if action == 'add_pillar':
             name = request.POST.get('pillar_name', '').strip()
             color = request.POST.get('pillar_color', 'teal')
+            # See the note on the other add_pillar branch — KB is a flag, not a name.
+            is_kb = request.POST.get('is_kb') == 'on'
             if not name:
                 messages.error(request, 'Pillar name is required.')
             else:
@@ -3293,9 +3301,11 @@ def custom_framework(request):
                 count = Pillar.objects.filter(framework_ref__is_fixed=False, is_kb=False).count()
                 Pillar.objects.create(
                     name=name, number=f"{count + 1:02d}", color=color,
-                    order=max_order + 1, framework_ref=active_fw_obj, is_kb=False,
+                    order=max_order + 1, framework_ref=active_fw_obj, is_kb=is_kb,
                 )
-                messages.success(request, f'Pillar "{name}" added!')
+                messages.success(
+                    request,
+                    f'Pillar "{name}" added{" as a Kaushal Bodh pillar — its scores stay out of the Skill Passport." if is_kb else "!"}')
 
         elif action == 'edit_pillar':
             p_id = request.POST.get('pillar_id')
@@ -3305,6 +3315,7 @@ def custom_framework(request):
             if name:
                 p_obj.name = name
                 p_obj.color = color
+                p_obj.is_kb = request.POST.get('is_kb') == 'on'
                 p_obj.save()
                 messages.success(request, f'Pillar renamed to "{name}".')
 

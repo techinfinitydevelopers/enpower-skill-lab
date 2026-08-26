@@ -208,3 +208,117 @@ MEDIUM
 - Full line-by-line research pass (no code changes) across the 3 apps + root seed scripts.
 - Findings: parent/urls.py missing app_name; teacher score/feedback/report school-scoping bypass when profile.school None; duplicated content-type logic; debug prints; seed_student_demo hardcodes 2026-07-20; CLAUDE.md stale re ProjectReport/sequence_number.
 - Outcome: no files modified; findings in memory.
+
+## 2026-08-26 — Deck cross-check, framework/profile/project seeding, engine steps 3-5
+Reference: `Dashboard Slide.pptx` (24 slides). Everything below was checked against it.
+
+### Engine (`competencies/engine.py`)
+- Profiling steps 3, 4, 5 implemented (slide 16). Previously only 1-2 + a single ranking.
+  - Step 3: narrow to the student's top `PROFILING_COMPETENCY_POOL = 6` competencies.
+  - Step 4: shortlist `PROFILE_SHORTLIST_COUNT = 5` on the **primary-only** score.
+  - Step 5: re-rank that shortlist on the full primary+secondary score -> top 3.
+- `get_common_strengths()` added — primary competencies shared by >=2 reported profiles.
+- KB rule changed: `get_competency_scores_for_project(include_kb=True)` by default;
+  KB is now stripped inside `run_profiling_engine` only. KB shows in the competency
+  report, never in profiles.
+- `generate_annual_passport` now keys profiling off the **student's own** school
+  framework. It previously did a global scan of all projects, so a CSL+ student
+  could get career matches because some other school ran FSL.
+
+### Models / migration `0025`
+- `ProjectReport.common_strengths` JSONField added.
+- `ASSESSMENT_TYPE_CHOICES` -> `[Presentation, Written, Oral/Portfolio]` (slide 8/9)
+  with a data migration remapping the old labels (reversible).
+
+### UI
+- "What links these matches" block (common strengths) on report + passport, with CSS.
+- Project-level coach feedback (`StudentProjectFeedback`) now rendered — teachers
+  had been able to save it for a while but nothing displayed it.
+
+### Seed + verification (new files at repo root)
+- `seed_frameworks.py` — FSL 5 pillars/17 sub-pillars/68 comps; CSL+ 3/13/52 with
+  KaushalBodh inside it; CSL Foundation 1/3/12. KB moved off FSL per slides 5/6.
+- `seed_profiles.py` — 15 profiles x (3 primary + 2 secondary), deliberately
+  overlapping so step 5 has common strengths to report.
+- `seed_projects.py` — schools onto 3 frameworks, 32 projects incl. plug-ins,
+  104 assessments, 407 mappings, 459 scores, 407 rubric rows, feedback.
+- `verify_reports.py` — 46 assertions, all pass.
+- `verify_pages.py` — 35 rendered-HTML assertions, all pass.
+
+### Verified
+- 46/46 engine + 35/35 page checks. FSL top career match == seeded target profile
+  for all 18 FSL reports; CSL+/CSL Foundation reports carry 0 profiles; KB present
+  in competency reports and absent from every profile weightage; plug-in scores
+  average into the parent project.
+- Rendered through the real view+template stack, not just the ORM. **Not** verified
+  in a real browser (CSS/JS behaviour) — dev server left running on :8005.
+
+### Follow-up same day — profiling pool 6 -> 10
+Slide 16's prose says step 3 keeps the student's "top 5-6 competencies", but a
+pool of 6 starves step 5 ("identify the top 3 profiles") — 11 of 18 FSL reports
+unlocked only ONE profile. Slide 20's worked example lists ten codes under a
+"(10)" header. Ten is the only reading where both steps hold, so
+`PROFILING_COMPETENCY_POOL = 10`.
+
+Measured across the 18 FSL reports:
+
+    pool  profiles per report              common strengths
+      5   18x one                          0/18
+      6   11x one, 7x two                  7/18
+      8   5x one, 8x two, 5x three         13/18
+     10   5x two, 13x three                15/18
+     12   18x three                        18/18
+
+Re-verified after the change: 46/46 engine, 35/35 page.
+
+### Follow-up — "Kaushal Bodh pillar" checkbox on Learning Pillars
+`add_pillar` hardcoded `is_kb=False` in both view branches and no form exposed the
+flag, so a pillar *named* "Kaushal Bodh" was an ordinary pillar: its competencies
+flowed into the Skill Passport AND into career matches, while the KB report stayed
+empty. This is the same shape as the earlier "KB1.C4 in Top 5" confusion, where the
+name said KB but `is_kb` was False.
+
+- Checkbox added to the Add Pillar form and the Edit Pillar modal.
+- `add_pillar` / `rename_pillar` / `edit_pillar` now read `is_kb` from POST.
+- `openLpEditPillar()` takes `isKb` so re-saving the modal cannot silently clear it.
+- Success message spells out the consequence when the box is ticked.
+
+Verified end to end through the real form: unchecked -> False, checked -> True,
+toggle off/on via edit works; a scored is_kb competency under FSL then appeared in
+the all-competency report, in Top 5, and in the KB report, and in NO profile.
+
+### Fix — multi-line {# #} comments rendering as page text (third occurrence)
+Four comments written earlier the same day spanned two lines each, so Django
+printed them verbatim on the page: `_report_body.html` (x2), `_passport_body.html`,
+`learning-pillars.html`. All collapsed to single-line `{# #}`; a full *.html scan
+now reports zero.
+
+Guard added so this cannot ship again: `verify_pages.py` `fetch()` flags any page
+whose visible text contains `{#`, `#}`, `{% ` or `{{ `, and fails the run with the
+URL plus surrounding text. Super Admin pages (Learning Pillars, Profiles &
+Competencies, Project & Assessment) added to the suite for the same reason — the
+leak surfaced there and nothing was rendering those pages. Suite is now 42 checks.
+
+### Decisions taken 2026-08-26
+- `PROFILING_COMPETENCY_POOL = 10` CONFIRMED by the product owner, settling
+  slide 16's "top 5-6" prose against slide 20's ten-item worked example.
+- Step-4 unlock stays slide 16 step 1's "at least 2 primary".
+- Kaushal Bodh keeps Option A: in Top 5 / all skills / sub-pillar / Overall
+  Level, out of profiles only. Reviewed on a real FSL report and accepted.
+
+### PARKED — to discuss, do not implement
+1. Should "top 3 profiles" always be three? Currently shows however many unlock
+   (13 of 18 FSL reports show 3, five show 2). Forcing three needs pool = 12 and
+   admits ~40% matches.
+2. Should students/parents see career-match profiles at all? Slide 15 says
+   competency level only, profiles teacher-side (slide 14). Current build shows
+   them to both. Options: keep / remove from student+parent / annual-only.
+
+### Still open (unchanged by this pass)
+- Slide 14 teacher views: Class Level, Percentile Competency, Project Level
+  Aggregate Comparative, Generate Profile Report — none exist.
+- Slide 15 says students should see competency level only, **not** profiles;
+  current build shows them. Product decision pending.
+- Seeded competency/profile content is realistic dummy data, not the client's.
+- Production not touched — all of the above is local only.
+- Toast visibility bug (earlier) still OPEN.

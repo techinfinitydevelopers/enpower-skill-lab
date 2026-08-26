@@ -207,11 +207,17 @@ def student_report_detail(request, project_id):
     best_match = profiles[0]['match_percent'] if profiles else 0
 
     # Get teacher feedback
-    from competencies.models import StudentAssessmentFeedback
+    from competencies.models import StudentAssessmentFeedback, StudentProjectFeedback
     feedbacks = StudentAssessmentFeedback.objects.filter(
         student=student,
         assessment__project_id=project_id
     ).select_related('entered_by').order_by('-updated_at')
+
+    # The coach's overall note on the project. Teachers have been able to save
+    # this for a while, but nothing rendered it — so students never saw it.
+    project_feedback = StudentProjectFeedback.objects.filter(
+        student=student, project_id=project_id
+    ).select_related('entered_by').first()
 
     # Per-assessment breakdown so the report shows progress across the project,
     # not just the aggregated final score per competency.
@@ -226,6 +232,7 @@ def student_report_detail(request, project_id):
         'strong':      strong,
         'emerging':    emerging,
         'feedbacks':   feedbacks,
+        'project_feedback': project_feedback,
         'overall_score': overall,
         'best_match':  best_match,
         'assessment_breakdown': assessment_breakdown,
@@ -252,6 +259,7 @@ def student_annual_passport(request):
         'student': student,
         'has_data': False,
         'top_3_profiles': [],
+        'common_strengths': [],
         'top_5_competencies': [],
         'skills_to_work_on': [],
         'all_competency_scores': [],
@@ -342,6 +350,7 @@ def student_annual_passport(request):
         context.update({
             'has_data': True,
             'top_3_profiles': profiles,
+            'common_strengths': data.get('common_strengths') or [],
             'top_5_competencies': data.get('top_5_competencies') or [],
             'skills_to_work_on': work_on,
             'all_competency_scores': all_scores,

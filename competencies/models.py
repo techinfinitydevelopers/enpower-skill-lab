@@ -149,11 +149,11 @@ PROJECT_TYPE_CHOICES = [
     ('Final Project',      'Final Project'),
 ]
 
+# Spec slide 8/9/12: Type dropdown is [Presentation, Written, Oral/Portfolio].
 ASSESSMENT_TYPE_CHOICES = [
-    ('Written Assignment', 'Written Assignment'),
-    ('Presentation',       'Presentation'),
-    ('Peer Review',        'Peer Review'),
-    ('Lab Report',         'Lab Report'),
+    ('Presentation',    'Presentation'),
+    ('Written',         'Written'),
+    ('Oral/Portfolio',  'Oral/Portfolio'),
 ]
 
 
@@ -188,7 +188,7 @@ class Project(models.Model):
 class Assessment(models.Model):
     project                  = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='assessments')
     name                     = models.CharField(max_length=200)
-    assessment_type          = models.CharField(max_length=30, choices=ASSESSMENT_TYPE_CHOICES, default='Written Assignment')
+    assessment_type          = models.CharField(max_length=30, choices=ASSESSMENT_TYPE_CHOICES, default='Presentation')
     placement_after_challenge = models.PositiveSmallIntegerField(blank=True, null=True, help_text='After Challenge #')
     output_descriptor        = models.TextField(blank=True)
     additional_instructions  = models.TextField(blank=True, help_text='Additional instructions for the teacher')
@@ -263,6 +263,9 @@ class ProjectReport(models.Model):
     student               = models.ForeignKey('student.Student', on_delete=models.CASCADE, related_name='project_reports')
     project               = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='reports')
     top_3_profiles        = models.JSONField(default=list)
+    # Spec slide 16 step 5 — primary competencies shared by >=2 of the reported
+    # profiles, i.e. the theme running through the student's career matches.
+    common_strengths      = models.JSONField(default=list, blank=True)
     top_5_competencies    = models.JSONField(default=list)
     skills_to_work_on     = models.JSONField(default=list)
     all_competency_scores = models.JSONField(default=dict)

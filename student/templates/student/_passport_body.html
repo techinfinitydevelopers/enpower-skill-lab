@@ -107,6 +107,28 @@ parent's view of their child's passport, so both stay identical.
             </div>
             {% endfor %}
         </div>
+
+        {# Spec slide 16 step 5: primary competencies shared by 2+ of the matches above. #}
+        {% if common_strengths %}
+        <div class="common-strengths">
+            <div class="cs-head">
+                <span class="material-symbols-outlined">hub</span>
+                Common Strengths
+            </div>
+            <div class="cs-list">
+                {% for cs in common_strengths %}
+                <div class="cs-row">
+                    <div class="cs-main">
+                        <div class="cs-name">{{ cs.competency_name }}</div>
+                        {% if cs.competency_desc %}<div class="cs-desc">{{ cs.competency_desc }}</div>{% endif %}
+                        <div class="cs-shared">Shared by {% for n in cs.shared_by %}{{ n }}{% if not forloop.last %} · {% endif %}{% endfor %}</div>
+                    </div>
+                    <div class="cs-score">{{ cs.score }}<span>/10</span></div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
     </div>
     {% endif %}
 

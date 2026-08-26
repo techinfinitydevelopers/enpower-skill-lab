@@ -321,10 +321,9 @@
                     <div class="pa-field">
                         <label>Assessment Type</label>
                         <select name="assessment_type">
-                            <option>Written Assignment</option>
                             <option>Presentation</option>
-                            <option>Peer Review</option>
-                            <option>Lab Report</option>
+                            <option>Written</option>
+                            <option>Oral/Portfolio</option>
                         </select>
                     </div>
                 </div>
@@ -361,10 +360,9 @@
                         <div class="pa-field">
                             <label>Assessment Type</label>
                             <select name="assessment_type">
-                                <option {% if a.assessment_type == 'Written Assignment' %}selected{% endif %}>Written Assignment</option>
                                 <option {% if a.assessment_type == 'Presentation' %}selected{% endif %}>Presentation</option>
-                                <option {% if a.assessment_type == 'Peer Review' %}selected{% endif %}>Peer Review</option>
-                                <option {% if a.assessment_type == 'Lab Report' %}selected{% endif %}>Lab Report</option>
+                                <option {% if a.assessment_type == 'Written' %}selected{% endif %}>Written</option>
+                                <option {% if a.assessment_type == 'Oral/Portfolio' %}selected{% endif %}>Oral/Portfolio</option>
                             </select>
                         </div>
                     </div>

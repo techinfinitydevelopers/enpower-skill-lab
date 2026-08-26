@@ -15,6 +15,17 @@ SECONDARY_COMPETENCY_WEIGHT = 0.10
 MIN_PRIMARY_FOR_UNLOCK      = 2
 TOP_PROFILES_COUNT          = 3
 TOP_COMPETENCIES_COUNT      = 5
+# Spec slide 16 step 3: profiling looks only at the student's strongest
+# competencies from the project, not every competency assessed.
+#
+# Slide 16's prose says "top 5-6", but slide 20's worked example lists ten codes
+# under a "(10)" header, and a pool of 6 starves step 5 ("top 3 profiles") —
+# most reports then unlock only one profile. Confirmed with the product owner
+# on 2026-08-26: the pool is 10, and step 4 picks 5 profiles out of it.
+PROFILING_COMPETENCY_POOL   = 10
+# Spec slide 16 step 4: shortlist by primary-only score, then rank that
+# shortlist by the full primary+secondary score in step 5.
+PROFILE_SHORTLIST_COUNT     = 5
 
 
 def attach_competency_descriptions(*score_lists):
@@ -100,7 +111,7 @@ def profiling_enabled(project):
     return bool(getattr(fw, 'is_fixed', False))
 
 
-def get_competency_scores_for_project(student, project, include_kb=False):
+def get_competency_scores_for_project(student, project, include_kb=True):
     """
     Returns a dict: { competency_id: final_score }
 
@@ -111,8 +122,11 @@ def get_competency_scores_for_project(student, project, include_kb=False):
     If no Plug-In:
       - Just average scores per competency across all assessments in project
 
-    By default, KB (Kaushal Bodh) competencies are EXCLUDED from the result.
-    Pass include_kb=True to get KB scores (for KB-only reports).
+    KB (Kaushal Bodh) competencies ARE included — spec slide 15 lists the
+    all-competency report and the KB report as two views of the same score
+    set, so KB belongs in Top-5 / sub-pillar / skills-to-work-on. KB is kept
+    out of profile scoring only, inside `run_profiling_engine`.
+    Pass include_kb=False for a KB-free view.
     """
     project_scores  = _scores_for_single_project(student, project)
     plugin          = project.plugins.filter(status='Active').first()
@@ -306,20 +320,49 @@ def run_profiling_engine(competency_scores):
       },
       ...
     ]
-    Only includes unlocked profiles.
+    Implements spec slide 16 steps 1-5:
+      step 3  narrow to the student's strongest PROFILING_COMPETENCY_POOL
+              competencies — a weak competency must not be able to carry a
+              profile into the ranking
+      step 1  unlock profiles with >= MIN_PRIMARY_FOR_UNLOCK primaries in that pool
+      step 2  distribute weightage (secondary 10% each, remainder across primary)
+      step 4  shortlist PROFILE_SHORTLIST_COUNT profiles on the PRIMARY-ONLY score
+      step 5  re-rank that shortlist on the full primary+secondary score
+
+    Steps 4 and 5 deliberately sort on different scores, so the shortlist can
+    drop a profile that the full score would have ranked highly.
+
+    Kaushal Bodh competencies never take part in profiling — they are reported
+    separately and must not influence career matches.
     """
+    competency_scores = _exclude_kb_scores(competency_scores)
+    if not competency_scores:
+        return []
+
+    # Step 3
+    pool = dict(
+        sorted(competency_scores.items(), key=lambda kv: kv[1], reverse=True)
+        [:PROFILING_COMPETENCY_POOL]
+    )
+
     profiles = Profile.objects.prefetch_related(
         'primary_competencies', 'secondary_competencies'
     ).all()
 
+    # Steps 1-2
     results = []
     for profile in profiles:
-        result = _calculate_profile_score(profile, competency_scores)
+        result = _calculate_profile_score(profile, pool)
         if result is not None:
             results.append(result)
 
-    results.sort(key=lambda x: x['score'], reverse=True)
-    return results
+    # Step 4
+    results.sort(key=lambda x: x['primary_score'], reverse=True)
+    shortlist = results[:PROFILE_SHORTLIST_COUNT]
+
+    # Step 5
+    shortlist.sort(key=lambda x: x['score'], reverse=True)
+    return shortlist
 
 
 def _calculate_profile_score(profile, competency_scores):
@@ -351,19 +394,71 @@ def _calculate_profile_score(profile, competency_scores):
     for c in assessed_secondaries:
         weightage[c.id] = SECONDARY_COMPETENCY_WEIGHT
 
-    # Step 3: Profile score
+    # Full score (primary + secondary) — used for the final step-5 ranking
     score = 0.0
     for comp_id, weight in weightage.items():
         if comp_id in competency_scores:
             score += competency_scores[comp_id] * weight
+
+    # Primary-only score — used for the step-4 shortlist. Weights are
+    # renormalised over the primaries so it stays on the same 1-10 scale and
+    # a profile with many secondaries isn't penalised here.
+    primary_score = 0.0
+    if assessed_primaries:
+        share = 1.0 / len(assessed_primaries)
+        for c in assessed_primaries:
+            primary_score += competency_scores[c.id] * share
 
     return {
         'profile_id':   profile.id,
         'profile_name': profile.name,
         'profile_number': profile.number,
         'score':        round(score, 2),
+        'primary_score': round(primary_score, 2),
+        'primary_ids':  [c.id for c in assessed_primaries],
         'weightage':    weightage,
     }
+
+
+def get_common_strengths(top_profiles, competency_scores):
+    """Spec slide 16 step 5: "Identify the top 3 profiles and the common strengths".
+
+    A common strength is a primary competency shared by at least two of the
+    reported profiles — the theme running through the student's matches. A
+    strict intersection across all three is almost always empty when profiles
+    carry only 2-3 primaries each, so >= 2 is the useful threshold.
+
+    Returns rows sorted by how many profiles share the competency, then score.
+    """
+    from .models import Competency
+
+    if not top_profiles:
+        return []
+
+    counts = defaultdict(list)
+    for p in top_profiles:
+        for cid in (p.get('primary_ids') or []):
+            counts[cid].append(p.get('profile_name'))
+
+    shared = {cid: names for cid, names in counts.items() if len(names) >= 2}
+    if not shared:
+        return []
+
+    comps = {c.id: c for c in Competency.objects.filter(id__in=shared)}
+    rows = [
+        {
+            'competency_id':   cid,
+            'competency_code': comps[cid].code if cid in comps else '',
+            'competency_name': comps[cid].name if cid in comps else '',
+            'competency_desc': comps[cid].description if cid in comps else '',
+            'score':           round(competency_scores.get(cid, 0), 2),
+            'shared_by':       names,
+            'shared_count':    len(names),
+        }
+        for cid, names in shared.items()
+    ]
+    rows.sort(key=lambda r: (-r['shared_count'], -r['score']))
+    return rows
 
 
 # ─────────────────────────────────────────────
@@ -383,10 +478,12 @@ def build_report_data(student, project):
         return None
 
     if profiling_enabled(project):
-        profile_results = run_profiling_engine(competency_scores)
-        top_3 = profile_results[:TOP_PROFILES_COUNT]
+        profile_results  = run_profiling_engine(competency_scores)
+        top_3            = profile_results[:TOP_PROFILES_COUNT]
+        common_strengths = get_common_strengths(top_3, competency_scores)
     else:
-        top_3 = []
+        top_3            = []
+        common_strengths = []
 
     # All competency scores with names
     comp_ids  = list(competency_scores.keys())
@@ -412,6 +509,7 @@ def build_report_data(student, project):
 
     return {
         'top_3_profiles':        top_3,
+        'common_strengths':      common_strengths,
         'top_5_competencies':    top_5,
         'skills_to_work_on':     skills_to_work_on,
         'all_competency_scores': all_comp_scores,
@@ -441,6 +539,7 @@ def generate_project_report(student, project):
         project=project,
         defaults={
             'top_3_profiles':        data['top_3_profiles'],
+            'common_strengths':      data['common_strengths'],
             'top_5_competencies':    data['top_5_competencies'],
             'skills_to_work_on':     data['skills_to_work_on'],
             'all_competency_scores': data['all_competency_scores'],
@@ -633,16 +732,19 @@ def generate_annual_passport(student):
     if not competency_scores:
         return None
 
-    fsl_project = Project.objects.filter(
-        sequence_number__isnull=False, status='Active'
-    ).filter(framework_ref__is_fixed=True).exists() or not Project.objects.filter(
-        sequence_number__isnull=False, status='Active', framework_ref__isnull=False
-    ).exists()
-    if fsl_project:
-        profile_results = run_profiling_engine(competency_scores)
-        top_3           = profile_results[:TOP_PROFILES_COUNT]
+    # Profiling follows the student's own framework, not a global scan of every
+    # project — a CSL+ student must not get career matches because some other
+    # school runs FSL. A student with no framework set keeps the legacy
+    # behaviour of showing profiles.
+    school    = getattr(student, 'school', None)
+    framework = getattr(school, 'framework_ref', None) if school else None
+    if framework is None or framework.is_fixed:
+        profile_results  = run_profiling_engine(competency_scores)
+        top_3            = profile_results[:TOP_PROFILES_COUNT]
+        common_strengths = get_common_strengths(top_3, competency_scores)
     else:
-        top_3 = []
+        top_3            = []
+        common_strengths = []
 
     comp_ids  = list(competency_scores.keys())
     comp_objs = {c.id: c for c in Competency.objects.filter(id__in=comp_ids)}
@@ -661,6 +763,7 @@ def generate_annual_passport(student):
 
     return {
         'top_3_profiles':        top_3,
+        'common_strengths':      common_strengths,
         'top_5_competencies':    all_comp_scores[:TOP_COMPETENCIES_COUNT],
         'skills_to_work_on':     sorted(all_comp_scores, key=lambda x: x['score'])[:3],
         'all_competency_scores': all_comp_scores,

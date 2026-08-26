@@ -409,6 +409,11 @@ def parent_child_report_detail(request, student_id, project_id):
         'feedbacks': StudentAssessmentFeedback.objects.filter(
             student=child, assessment__project_id=project_id
         ).select_related('entered_by').order_by('-updated_at'),
+        # The coach's overall note on the project — saved by teachers but not
+        # rendered anywhere until now.
+        'project_feedback': StudentProjectFeedback.objects.filter(
+            student=child, project_id=project_id
+        ).select_related('entered_by').first(),
         'overall_score': round(sum(values) / len(values), 1) if values else 0,
         'best_match': profiles[0]['match_percent'] if profiles else 0,
         'assessment_breakdown': get_per_assessment_breakdown(child, report.project),
@@ -435,7 +440,7 @@ def parent_child_passport(request, student_id):
 
     context = {
         'child': child, 'student': child, 'has_data': False,
-        'top_3_profiles': [], 'top_5_competencies': [], 'skills_to_work_on': [],
+        'top_3_profiles': [], 'top_5_competencies': [], 'skills_to_work_on': [], 'common_strengths': [],
         'all_competency_scores': [], 'very_strong': [], 'strong': [], 'emerging': [],
         'work_on': [], 'top_project': None, 'overall_score': 0,
         'sub_pillar_groups': [],
@@ -489,6 +494,7 @@ def parent_child_passport(request, student_id):
         context.update({
             'has_data': True,
             'top_3_profiles': profiles,
+            'common_strengths': data.get('common_strengths') or [],
             'top_5_competencies': data.get('top_5_competencies') or [],
             'skills_to_work_on': data.get('skills_to_work_on') or [],
             'all_competency_scores': all_scores,
