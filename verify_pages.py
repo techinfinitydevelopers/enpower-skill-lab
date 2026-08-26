@@ -232,6 +232,16 @@ def run():
                 check(f'{label} has data (not an empty state)',
                       not any(m in body for m in ('No scores recorded', 'No projects',
                                                   'Nothing to aggregate')))
+            # Score Entry: the Generate button is project-level but sits under
+            # whichever assessment is open, so it must show project-wide progress.
+            code, body, _ = fetch(client, '/teacher/academics/score-entry/')
+            check('score entry 200', code == 200, f'status {code}')
+            raw = client.get('/teacher/academics/score-entry/', follow=True).content.decode('utf-8', 'replace')
+            check('score entry shows scoring progress', 'generateProgress' in raw)
+            check('score entry warns when assessments are unscored', 'generateWarning' in raw)
+            check('generate button says it covers all assessments',
+                  'Generate Project Reports (all assessments)' in raw)
+
             code, body, _ = fetch(client, f'/teacher/score-viewing/?view=project_wise&grade={grade}')
             check('slide 14 "repeated competencies" note',
                   'Repeated competencies are aggregated' in body)

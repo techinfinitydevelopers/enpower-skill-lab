@@ -193,6 +193,42 @@ def check_top5_and_bands():
               f'top5={n5} all={nall} work_on={nw}')
 
 
+def check_outdated_flag():
+    """A stored report must advertise that its scores have moved on.
+
+    The flag and its UI existed for a while but nothing ever set it True, so a
+    coach who generated after assessment 1 left students on a partial report
+    with no indication anything was missing.
+    """
+    print('\n9. ProjectReport.is_outdated tracks score changes')
+    report = ProjectReport.objects.select_related('student', 'project').first()
+    if not report:
+        check('a report exists to test', False)
+        return
+    student, project = report.student, report.project
+
+    engine.generate_project_report(student, project)
+    report.refresh_from_db()
+    check('fresh report is not outdated', report.is_outdated is False)
+
+    entry = ScoreEntry.objects.filter(
+        student=student, assessment_competency__assessment__project=project).first()
+    if not entry:
+        check('a score exists to change', False)
+        return
+    original = entry.score
+    entry.score = 10 if original != 10 else 9
+    entry.save()
+    report.refresh_from_db()
+    check('changing a score marks it outdated', report.is_outdated is True)
+
+    entry.score = original
+    entry.save()
+    engine.generate_project_report(student, project)
+    report.refresh_from_db()
+    check('regenerating clears the flag', report.is_outdated is False)
+
+
 def run():
     generate_all()
     check_fsl_target_profiles()
@@ -202,6 +238,7 @@ def run():
     check_annual_passport()
     check_common_strengths()
     check_top5_and_bands()
+    check_outdated_flag()
 
     print(f'\n{"="*60}\nPASS {len(PASS)}   FAIL {len(FAIL)}')
     for f in FAIL:

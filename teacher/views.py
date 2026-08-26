@@ -79,6 +79,20 @@ def api_project_details(request):
         .values('id', 'name', 'assessment_type', 'output_descriptor', 'placement_after_challenge')
     )
 
+    # How far scoring has got. A coach entering Assessment 1 sees the Generate
+    # button right below the table; without this they can't tell that pressing
+    # it now builds the report from a fraction of the project.
+    from competencies.models import ScoreEntry
+    scored_assessment_ids = set(
+        ScoreEntry.objects
+        .filter(assessment_competency__assessment__project=project, score__isnull=False)
+        .values_list('assessment_competency__assessment_id', flat=True)
+        .distinct()
+    )
+    for a in assessments:
+        a['has_scores'] = a['id'] in scored_assessment_ids
+    scored_count = sum(1 for a in assessments if a['has_scores'])
+
     # Profiles whose competencies are mapped to this project's assessments
     comp_ids = list(
         project.assessments
@@ -99,6 +113,8 @@ def api_project_details(request):
         'project_type': project.project_type,
         'profiles': profiles,
         'assessments': assessments,
+        'assessments_total': len(assessments),
+        'assessments_scored': scored_count,
     })
 
 

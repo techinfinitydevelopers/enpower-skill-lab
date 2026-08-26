@@ -340,6 +340,32 @@ api_generate_report.
 Code lives in `teacher/score_views.py` rather than `teacher/views.py`, which was
 already ~1700 lines. 15 assertions added to verify_pages.py — suite now 57.
 
+### Fix — stale reports were invisible; Generate button read as per-assessment
+Raised by the user: entering scores for Assessment 1 puts "Generate Reports for
+All Students" directly below the table, which reads as an assessment-level
+action. It is project-level, and pressing it early builds the report from a
+fraction of the project.
+
+Digging in found the worse half: `is_outdated` was only ever written as False
+(engine.py) and never True, so the flag was dead. The UI for it already existed
+— a banner on the student's report ("Scores changed after this report") and an
+"outdated" tag on the coach's Score Viewing table — and neither had ever
+appeared. A coach who generated after assessment 1 left students on a partial
+report with nothing indicating it.
+
+1. `competencies/signals.py` — post_save/post_delete on ScoreEntry marks the
+   matching ProjectReport outdated. A signal, not a call inside score entry, so
+   bulk import / admin / shell writes cannot miss it. Plug-In scores invalidate
+   the PARENT project's report, since that is where they merge (slide 24).
+2. `api_project_details` now returns assessments_total / assessments_scored and
+   a per-assessment has_scores; the Generate block shows "N of M assessments
+   scored" and warns when any are unscored.
+3. Button relabelled "Generate Project Reports (all assessments)".
+
+Verified: fresh report not outdated -> editing a score flags it -> regenerating
+clears it -> deleting a score flags it; and the student-facing banner appears
+and disappears with it. Suites now 49 engine / 61 page.
+
 ### Still open (unchanged by this pass)
 - Slide 14 teacher views: Class Level, Percentile Competency, Project Level
   Aggregate Comparative, Generate Profile Report — none exist.

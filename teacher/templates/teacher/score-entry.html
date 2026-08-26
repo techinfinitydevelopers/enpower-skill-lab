@@ -209,12 +209,14 @@
                     <p style="font-size:12px; color:#94a3b8; margin-top:3px;">
                         Scores from <strong>all assessments</strong> in this project will be combined to generate the report for <span id="generateStudentCount">0 students</span>.
                     </p>
+                    <p id="generateProgress" style="font-size:12px; color:#475569; margin-top:6px; font-weight:600;"></p>
+                    <p id="generateWarning" style="display:none; font-size:12px; color:#b45309; background:#fff7ed; border:1px solid #fed7aa; border-radius:8px; padding:7px 10px; margin-top:8px;"></p>
                 </div>
                 <button id="bulkGenerateBtn" onclick="bulkGenerateReports()"
                     style="display:inline-flex; align-items:center; gap:8px; background:linear-gradient(135deg,#3b0f50,#5A1F6E); color:#fff; border:none; border-radius:10px; padding:12px 28px; font-size:14px; font-weight:700; cursor:pointer; white-space:nowrap; font-family:'Poppins',sans-serif;"
                     onmouseover="this.style.opacity='0.88'" onmouseout="this.style.opacity='1'">
                     <span class="material-symbols-outlined" style="font-size:18px;">auto_awesome</span>
-                    Generate Reports for All Students
+                    Generate Project Reports (all assessments)
                 </button>
             </div>
             <!-- Progress bar -->
@@ -267,6 +269,8 @@ let allAssessments      = [];
 let currentAssessmentId = null;
 let currentProjectId    = null;
 let currentStudentIds   = [];
+let assessmentsTotal    = 0;
+let assessmentsScored   = 0;
 
 const step2Badge = document.getElementById('step2Badge');
 const step3Badge = document.getElementById('step3Badge');
@@ -353,7 +357,11 @@ projectSelect.addEventListener('change', function () {
                 setSelectEnabled(assessmentNumSelect, false);
             }
 
-            // Show generate section at project level — fetch student count
+            // Show generate section at project level — fetch student count.
+            // The button sits below whichever assessment is open, so the
+            // project-wide scoring progress is shown with it.
+            assessmentsTotal  = data.assessments_total  || allAssessments.length;
+            assessmentsScored = data.assessments_scored || 0;
             fetch(`${DATA_URL}?assessment_id=${encodeURIComponent(allAssessments[0]?.id)}&_=${Date.now()}`, {cache:'no-store'})
                 .then(r => r.json())
                 .then(d => {
@@ -770,6 +778,25 @@ function updateGenerateSection(projectTitle) {
         document.getElementById('generateProjectName').textContent = name;
         document.getElementById('generateStudentCount').textContent =
             `${currentStudentIds.length} student${currentStudentIds.length !== 1 ? 's' : ''}`;
+
+        const progressEl = document.getElementById('generateProgress');
+        const warnEl     = document.getElementById('generateWarning');
+        if (assessmentsTotal > 0) {
+            progressEl.textContent =
+                `${assessmentsScored} of ${assessmentsTotal} assessment${assessmentsTotal !== 1 ? 's' : ''} scored`;
+            const pending = assessmentsTotal - assessmentsScored;
+            if (pending > 0) {
+                warnEl.style.display = 'block';
+                warnEl.textContent =
+                    `${pending} assessment${pending !== 1 ? 's have' : ' has'} no scores yet. ` +
+                    `Generating now builds the report from what exists — regenerate once the rest are scored.`;
+            } else {
+                warnEl.style.display = 'none';
+            }
+        } else {
+            progressEl.textContent = '';
+            warnEl.style.display = 'none';
+        }
     } else {
         section.style.display = 'none';
     }
@@ -814,7 +841,7 @@ async function bulkGenerateReports() {
     }
 
     btn.disabled = false;
-    btn.innerHTML = `<span class="material-symbols-outlined" style="font-size:18px;">auto_awesome</span> Generate Reports for All Students`;
+    btn.innerHTML = `<span class="material-symbols-outlined" style="font-size:18px;">auto_awesome</span> Generate Project Reports (all assessments)`;
     textEl.textContent  = 'Done';
     countEl.textContent = `${total} / ${total}`;
     bar.style.width     = '100%';
