@@ -82,12 +82,21 @@ def api_project_details(request):
     # How far scoring has got. A coach entering Assessment 1 sees the Generate
     # button right below the table; without this they can't tell that pressing
     # it now builds the report from a fraction of the project.
+    #
+    # Scoped to the coach's own school. A project runs across many schools, so
+    # counting every school's scores would report "4 of 4" to a coach whose own
+    # class has an assessment untouched — and the reports they generate only
+    # cover their own students anyway.
     from competencies.models import ScoreEntry
+
+    entries = ScoreEntry.objects.filter(
+        assessment_competency__assessment__project=project, score__isnull=False)
+    school = _teacher_school(request.user)
+    if school:
+        entries = entries.filter(student__school=school)
+
     scored_assessment_ids = set(
-        ScoreEntry.objects
-        .filter(assessment_competency__assessment__project=project, score__isnull=False)
-        .values_list('assessment_competency__assessment_id', flat=True)
-        .distinct()
+        entries.values_list('assessment_competency__assessment_id', flat=True).distinct()
     )
     for a in assessments:
         a['has_scores'] = a['id'] in scored_assessment_ids
