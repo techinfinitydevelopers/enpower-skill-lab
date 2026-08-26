@@ -103,7 +103,10 @@ class Student(models.Model):
     division = models.CharField(max_length=10)
     roll_number = models.CharField(max_length=20)
     academic_year = models.CharField(max_length=20)
-    gr_number = models.CharField(max_length=50, unique=True)
+    # Optional: schools onboard mid-year and often don't have the admission
+    # number to hand. Stored as NULL rather than '' when absent, because
+    # `unique` would reject a second blank string but allows many NULLs.
+    gr_number = models.CharField(max_length=50, unique=True, blank=True, null=True)
     previous_school = models.CharField(max_length=200, blank=True, null=True)
     stream = models.CharField(max_length=20, choices=STREAM_CHOICES, blank=True, null=True)
     school_board = models.CharField(max_length=20, choices=SCHOOL_BOARD_CHOICES)

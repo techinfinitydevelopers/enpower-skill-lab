@@ -172,7 +172,7 @@
                     <label for="students" class="form-label">Link to Student(s) <span class="required">*</span></label>
                     <select id="students" name="students" class="form-input" multiple required>
                         {% for student in students %}
-                        <option value="{{ student.id }}">{{ student.full_name }} - {{ student.student_class }} ({{ student.gr_number }})</option>
+                        <option value="{{ student.id }}">{{ student.full_name }} - {{ student.student_class }}{% if student.division %}{{ student.division }}{% endif %}{% if student.gr_number %} ({{ student.gr_number }}){% endif %}</option>
                         {% empty %}
                         <option value="" disabled>No students available</option>
                         {% endfor %}
@@ -532,4 +532,5 @@
 
 {% block extra_js %}
 <script src="{% static 'js/superadmin/onboard-parent.js' %}"></script>
+<script src="{% static 'js/superadmin/stepped-form-submit.js' %}"></script>
 {% endblock %}

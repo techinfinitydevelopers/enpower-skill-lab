@@ -407,6 +407,50 @@ NOT done — the document's row reads "School Admin / Remove multi-school tab",
 but School Admin has no such tab; the Multi-school entries live under Super
 Admin and Coordinator and were removed there. Worth confirming that was meant.
 
+### "Need to work on" tab — the three real bugs
+From ESL dashboard Changes Document.docx. Items 4 (academic year locking), 11
+(check tabs with other PC credentials) and 12 (parent credentials) were dropped
+by the user.
+
+**GR number was mandatory.** `gr_number = CharField(unique=True)` with no
+blank/null. Now optional, stored as NULL rather than '' — `unique` permits many
+NULLs but only one empty string, so '' would have rejected the second student
+without one. Removed from the onboarding form's required set and from both
+bulk-import required lists; the duplicate check now only fires on a supplied
+value. Verified two students save with no GR number while a genuine duplicate is
+still rejected.
+
+**Bulk upload "not working" was the sample file.** The sample hardcoded
+"Delhi Public School", which exists in no environment, so downloading the sample
+and uploading it back failed every student / teacher / school-admin row with
+"School ... not found". The school column now offers the real schools and the
+example row uses one of them. Three further defects found on the way:
+  - the inline dropdown list is capped near 255 chars by Excel, which silently
+    truncated 8 schools to 7; long lists now live on a hidden sheet
+  - the coordinator sample left the required `id_proof` blank, so its very first
+    import always failed; any required cell left blank is now filled
+  - both school-admin sample rows pointed at one school, and a school takes only
+    one admin, so row 2 always failed; rows now spread across schools that are
+    actually free, and never exceed that count
+  - duplicate coordinator PAN/Aadhaar surfaced the raw
+    "UNIQUE constraint failed: coordinator_programcoordinator.pan_number"
+    instead of naming the field
+  4 of 5 role samples now import cleanly; coordinator still reports its PAN as
+  taken, which is correct — the placeholder PAN belongs to a coordinator seeded
+  in Dec 2025.
+
+**Parent onboarding "not submitting" was hidden required fields.** The form has
+8 steps and hides all but the current one with `display: none`. Pressing Submit
+on step 8 validates the whole form; an empty required field in a hidden step
+cannot be focused, so the browser logs "not focusable" and refuses silently.
+There was no submit handler at all, and `validateCurrentStep()` only checked
+fields carrying a custom validator, not HTML5 `required`, so Next let users past
+empty ones. `static/js/superadmin/stepped-form-submit.js` now reveals the step
+holding the first invalid control and reports it there, and blocks Next on an
+invalid step. Applied to onboard-parent and onboard-teacher, which share the
+defect. Also stopped the student picker rendering "Name - 6 ()" now that GR
+number can be blank.
+
 ### Still open (unchanged by this pass)
 - Slide 14 teacher views: Class Level, Percentile Competency, Project Level
   Aggregate Comparative, Generate Profile Report — none exist.

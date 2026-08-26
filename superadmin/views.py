@@ -1013,7 +1013,8 @@ def onboard_student(request):
             student.division = request.POST.get('division', '')
             student.roll_number = request.POST.get('roll_number', '')
             student.academic_year = request.POST.get('academic_year', '')
-            student.gr_number = request.POST.get('gr_number', '')
+            # NULL not '' — `unique` permits many NULLs but only one ''
+            student.gr_number = request.POST.get('gr_number', '').strip() or None
             student.previous_school = request.POST.get('previous_school', '')
             student.stream = request.POST.get('stream', '')
             student.school_board = request.POST.get('school_board', '')

@@ -446,7 +446,7 @@ EXCEL_CONFIG = {
             'division': 'Division',
             'roll_number': 'Roll Number',
             'academic_year': 'Academic Year',
-            'gr_number': 'GR / Admission Number',
+            'gr_number': 'GR / Admission Number (optional)',
             'previous_school': 'Previous School',
             'stream': 'Stream',
             'school_board': 'School Board',
@@ -500,7 +500,7 @@ EXCEL_CONFIG = {
         'required_fields': {
             'first_name', 'last_name', 'gender', 'date_of_birth', 'nationality',
             'school_name',
-            'student_class', 'division', 'roll_number', 'academic_year', 'gr_number', 'school_board',
+            'student_class', 'division', 'roll_number', 'academic_year', 'school_board',
             'school_email',
             'enrollment_date',
             'emergency_name', 'emergency_relationship', 'emergency_mobile',
@@ -657,15 +657,70 @@ EXCEL_CONFIG = {
 }
 
 
+def _live_school_names():
+    """Every school name in the system, for the sample's school dropdown."""
+    from schools.models import School
+    return [
+        (n or '').strip()
+        for n in School.objects.order_by('school_name').values_list('school_name', flat=True)
+        if (n or '').strip()
+    ]
+
+
+def _schools_without_admin():
+    """Schools that can still take a School Admin.
+
+    The sample's example rows are picked from these so a freshly downloaded
+    sample imports cleanly — a school already holding an active admin rejects a
+    second one, which looked like the importer was broken.
+    """
+    from schools.models import School
+    from school_admin.models import SchoolAdmin
+
+    taken = set(
+        SchoolAdmin.objects.filter(school__isnull=False)
+        .values_list('school__school_name', flat=True)
+    )
+    return [n for n in _live_school_names() if n not in taken]
+
+
 def _generate_excel(role):
     """Generate Excel (.xlsx) sample for any role with dropdowns and required highlighting."""
     config = EXCEL_CONFIG[role]
     data = SAMPLE_DATA[role]
     headers_raw = data['headers']
     header_map = config['header_map']
-    dropdowns = config['dropdowns']
+    dropdowns = dict(config['dropdowns'])
     required_fields = config['required_fields']
     headers_display = [header_map.get(h, h) for h in headers_raw]
+
+    # The sample shipped a hardcoded "Delhi Public School" that exists in no
+    # environment, so downloading the sample and uploading it back failed every
+    # row with 'School ... not found'. Offer the real schools instead, and make
+    # the example row use one of them.
+    school_names = _live_school_names()
+    sample_schools = _schools_without_admin() if role == 'school_admin' else school_names
+    sample_schools = sample_schools or school_names
+    if 'school_name' in headers_raw and school_names:
+        dropdowns['school_name'] = school_names
+        col = headers_raw.index('school_name')
+        # Give each sample row a different school where possible — a school can
+        # only have one active admin, so two rows on the same school would make
+        # the second fail.
+        rows = data['rows']
+        # Never emit more example rows than can actually import: a school takes
+        # one admin, so with a single free school a second row is guaranteed to
+        # fail and reads as a broken importer.
+        if role == 'school_admin':
+            rows = rows[:max(1, len(sample_schools))]
+        data = {
+            **data,
+            'rows': [
+                [sample_schools[r_i % len(sample_schools)] if i == col else v
+                 for i, v in enumerate(row)]
+                for r_i, row in enumerate(rows)
+            ],
+        }
 
     wb = Workbook()
     ws = wb.active
@@ -707,19 +762,48 @@ def _generate_excel(role):
         cell.alignment = Alignment(horizontal='center', vertical='center')
         cell.border = thin_border
 
-    # Row 3+: Sample data
+    # Row 3+: Sample data.
+    # A required column left blank in the sample makes the very first upload
+    # fail — the coordinator sample shipped an empty id_proof and every import
+    # was rejected. Fill any such gap with the field's first dropdown option, or
+    # a readable placeholder.
+    def _sample_value(field, value):
+        if str(value or '').strip() or field not in required_fields:
+            return value
+        options = dropdowns.get(field)
+        if options:
+            return options[0]
+        return header_map.get(field, field)
+
     for row_idx, row_data in enumerate(data['rows'], 3):
         for col_idx, value in enumerate(row_data, 1):
-            cell = ws.cell(row=row_idx, column=col_idx, value=value)
+            field = headers_raw[col_idx - 1] if col_idx - 1 < len(headers_raw) else ''
+            cell = ws.cell(row=row_idx, column=col_idx, value=_sample_value(field, value))
             cell.font = data_font
             cell.border = thin_border
 
     # -- Data Validations (dropdowns) for rows 3 to 1000 --
+    # Inline option lists are capped near 255 characters by Excel, which silently
+    # truncated the school list. Anything that long goes on a hidden sheet and is
+    # referenced as a range, which has no practical limit.
+    lookup_ws = None
+    lookup_col = 0
     for field_name, options in dropdowns.items():
         if field_name in headers_raw:
             col_idx = headers_raw.index(field_name) + 1
             col_letter = get_column_letter(col_idx)
-            formula = '"' + ','.join(options) + '"'
+            inline = '"' + ','.join(options) + '"'
+            if len(inline) <= 255 and not any(',' in o for o in options):
+                formula = inline
+            else:
+                if lookup_ws is None:
+                    lookup_ws = wb.create_sheet('_options')
+                    lookup_ws.sheet_state = 'hidden'
+                lookup_col += 1
+                letter = get_column_letter(lookup_col)
+                for i, opt in enumerate(options, 1):
+                    lookup_ws.cell(row=i, column=lookup_col, value=opt)
+                formula = f"'_options'!${letter}$1:${letter}${len(options)}"
             dv = DataValidation(type='list', formula1=formula, allow_blank=True)
             dv.error = f'Please select a valid option for {header_map.get(field_name, field_name)}'
             dv.errorTitle = 'Invalid Value'
@@ -1039,7 +1123,7 @@ def _process_student(row, created_by):
 
     required = ['first_name', 'last_name', 'gender', 'date_of_birth', 'nationality',
                 'school_name',
-                'student_class', 'division', 'roll_number', 'academic_year', 'gr_number', 'school_board',
+                'student_class', 'division', 'roll_number', 'academic_year', 'school_board',
                 'school_email',
                 'enrollment_date',
                 'emergency_name', 'emergency_relationship', 'emergency_mobile',
@@ -1050,12 +1134,14 @@ def _process_student(row, created_by):
             raise ValueError(f'{field} is required')
 
     email = row['school_email']
-    gr_number = row['gr_number']
+    gr_number = (row.get('gr_number') or '').strip() or None
 
     if email and User.objects.filter(email=email).exists():
         raise ValueError(f'Email "{email}" already exists')
 
-    if Student.objects.filter(gr_number=gr_number).exists():
+    # Only a supplied GR number can clash; blanks are stored as NULL and many
+    # NULLs are allowed.
+    if gr_number and Student.objects.filter(gr_number=gr_number).exists():
         raise ValueError(f'GR Number "{gr_number}" already exists')
 
     school = None
@@ -1336,6 +1422,18 @@ def _process_coordinator(row, created_by):
     email = row['official_email']
     if User.objects.filter(username=email).exists():
         raise ValueError(f'Email "{email}" already exists')
+
+    # Aadhaar and PAN are unique on the model. Without these checks the importer
+    # surfaced the raw database text — "UNIQUE constraint failed:
+    # coordinator_programcoordinator.pan_number" — which tells the person
+    # uploading nothing about which row or field to change.
+    pan = (row.get('pan_number') or '').upper()
+    if pan and ProgramCoordinator.objects.filter(pan_number=pan).exists():
+        raise ValueError(f'PAN "{pan}" is already registered to another coordinator')
+
+    aadhar = (row.get('aadhar_number') or '').strip()
+    if aadhar and ProgramCoordinator.objects.filter(aadhar_number=aadhar).exists():
+        raise ValueError(f'Aadhaar "{aadhar}" is already registered to another coordinator')
 
     password = generate_password()
     name_parts = row['full_name'].split(' ', 1)
