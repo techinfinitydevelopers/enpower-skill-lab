@@ -215,5 +215,11 @@ EMAIL_SUPPRESSED_ROLES = {
 # so any link inside one has to be absolute and has to point at production.
 SITE_URL = os.environ.get('SITE_URL', 'https://enpower.techinfinity.link').rstrip('/')
 
+# How long a password reset link stays valid. Django's default is 3 days,
+# which is long for a link that hands over an account; 24 hours is enough for
+# someone to act on an email and short enough to limit a forwarded or leaked
+# one. The token also dies on first use, or if the user logs in meanwhile.
+PASSWORD_RESET_TIMEOUT = int(os.environ.get('PASSWORD_RESET_TIMEOUT', 60 * 60 * 24))
+
 # Auth
 LOGIN_URL = '/login/'
