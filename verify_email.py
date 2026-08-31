@@ -113,7 +113,37 @@ offenders = [l for l in out.splitlines()
              if 'competencies/emails.py' not in l and 'verify_email.py' not in l]
 check('no view calls send_mail directly', not offenders, '; '.join(offenders[:3]))
 
-# ── 5. Optional live send ───────────────────────────────────────────────
+# ── 5. Each call site names the right role ──────────────────────────────
+# The gate only helps if the caller passes the role it actually onboards. A
+# typo here would quietly mail a Student, so the roles are asserted, not
+# assumed.
+print('\nCALL SITES  (superadmin/views.py)')
+import re                                                # noqa: E402
+
+src = open('superadmin/views.py', encoding='utf-8').read()
+roles_used = re.findall(r"send_raw\((?:.|\n)*?role='([A-Z_]+)'", src)
+expected = ['SCHOOL_ADMIN', 'SUPER_ADMIN', 'STUDENT', 'THINKING_COACH',
+            'PARENT', 'PROGRAM_COORDINATOR']
+check('all six onboarding sends name a role',
+      sorted(roles_used) == sorted(expected),
+      f'found {sorted(roles_used)}')
+
+check('no onboarding email still links to localhost',
+      '127.0.0.1:8000/login' not in src and 'localhost:8000/login' not in src)
+
+# The two suppressed roles must show credentials on screen instead, or the
+# admin never learns the password they are supposed to hand over.
+for role, marker in [('Student', 'students are not emailed'),
+                     ('Parent', 'parents are not emailed')]:
+    check(f'{role} success message falls back to on-screen credentials',
+          marker in src)
+
+bulk = open('superadmin/bulk_import.py', encoding='utf-8').read()
+check('bulk import routes through competencies.emails',
+      'from competencies.emails import send_onboarding' in bulk
+      and 'from django.core.mail import send_mail' not in bulk)
+
+# ── 6. Optional live send ───────────────────────────────────────────────
 if len(sys.argv) > 1:
     to = sys.argv[1]
     print(f'\nLIVE SEND  -> {to}')
