@@ -25,21 +25,55 @@ except ImportError:  # dotenv is optional; env vars still work without it
     pass
 
 
+def _env_flag(name, default=False):
+    return os.environ.get(name, str(default)).strip().lower() in ('1', 'true', 'yes', 'on')
+
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-0=g)t-7njmyr6(5w%c(54$c859@x7z9ymxml-ow%n1o21(tsi2'
+# The literal below is the historical development key and stays as the default
+# so nothing breaks; set SECRET_KEY in the environment on any real host.
+SECRET_KEY = os.environ.get(
+    'SECRET_KEY',
+    'django-insecure-0=g)t-7njmyr6(5w%c(54$c859@x7z9ymxml-ow%n1o21(tsi2')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = _env_flag('DEBUG', True)
 
 ALLOWED_HOSTS = [
     '68.183.93.246',
     'enpower.techinfinity.link',
     'www.enpower.techinfinity.link',
     'localhost',
-    '127.0.0.1']
+    '127.0.0.1',
+]
+
+# Railway hands the service its own hostname, which changes when a domain is
+# added or the service is renamed, so it cannot be hard-coded above.
+_railway_host = os.environ.get('RAILWAY_PUBLIC_DOMAIN')
+if _railway_host:
+    ALLOWED_HOSTS.append(_railway_host)
+
+# Anything else the host needs, comma separated.
+ALLOWED_HOSTS += [h.strip() for h in os.environ.get('ALLOWED_HOSTS', '').split(',') if h.strip()]
+
+# Django 4+ checks the Origin header on any HTTPS POST against this list, so a
+# form on a domain missing from it fails CSRF with no useful error.
+CSRF_TRUSTED_ORIGINS = [
+    'https://enpower.techinfinity.link',
+    'https://www.enpower.techinfinity.link',
+]
+if _railway_host:
+    CSRF_TRUSTED_ORIGINS.append(f'https://{_railway_host}')
+CSRF_TRUSTED_ORIGINS += [o.strip() for o in
+                         os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',') if o.strip()]
+
+# Railway terminates TLS at its edge and forwards over plain HTTP. Without
+# this Django thinks every request is insecure, and builds http:// links.
+if os.environ.get('RAILWAY_ENVIRONMENT') or _env_flag('TRUST_PROXY_SSL_HEADER'):
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 
 # Application definition
@@ -74,6 +108,11 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # Serves everything under STATIC_ROOT straight from this process. On the
+    # droplet nginx does it; on Railway there is nothing in front, so without
+    # this every stylesheet, script and the email logo 404s. Must sit directly
+    # after SecurityMiddleware.
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -114,12 +153,27 @@ WSGI_APPLICATION = 'enpower_skill_lab.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+# SQLite by default, which is what the droplet runs. Two environment
+# variables can change that without touching this file:
+#
+#   DATABASE_URL   a full URL (Railway sets this when a Postgres service is
+#                  attached) — takes precedence over everything else
+#   SQLITE_PATH    where the SQLite file lives, so it can be pointed at a
+#                  mounted volume on a host with an ephemeral filesystem
+#
+# On a container host the working directory is wiped on every deploy, so
+# leaving SQLite at its default there loses the database on each push.
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': os.environ.get('SQLITE_PATH') or (BASE_DIR / 'db.sqlite3'),
     }
 }
+
+if os.environ.get('DATABASE_URL'):
+    import dj_database_url
+    DATABASES['default'] = dj_database_url.config(
+        conn_max_age=600, conn_health_checks=True)
 
 
 # Password validation
@@ -162,6 +216,18 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 
+STORAGES = {
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {
+        # Compresses and fingerprints on collectstatic so files can be cached
+        # hard. The non-manifest variant is used deliberately: the manifest
+        # one raises at request time for any file a template references but
+        # collectstatic did not find, which would take a page down over a
+        # missing image.
+        'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage',
+    },
+}
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
@@ -170,8 +236,15 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'accounts.User'
 
 # Media Files (User uploads like school logos, profile photos, etc.)
+# MEDIA_ROOT is env-driven for the same reason as SQLITE_PATH: on a container
+# host these are user uploads sitting on a disk that is wiped on every deploy,
+# so it has to point at a mounted volume.
 MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_ROOT = os.environ.get('MEDIA_ROOT') or os.path.join(BASE_DIR, 'media')
+
+# Whether Django itself should serve /media/. Turn this off on a host where
+# nginx or a CDN handles it (the droplet does).
+SERVE_MEDIA = _env_flag('SERVE_MEDIA', True)
 
 # ── Email ───────────────────────────────────────────────────────────────
 # Live sending goes through ZeptoMail. Every value is read from the
@@ -182,10 +255,6 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # ZeptoMail expects the SMTP username `emailapikey` and the send-mail token as
 # the password, and it will reject any From address outside a domain verified
 # in the ZeptoMail console.
-
-def _env_flag(name, default=False):
-    return os.environ.get(name, str(default)).strip().lower() in ('1', 'true', 'yes', 'on')
-
 
 EMAIL_BACKEND = os.environ.get(
     'EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')

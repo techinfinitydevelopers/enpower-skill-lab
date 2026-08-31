@@ -1,0 +1,31 @@
+# Runtime dependencies. Kept to what the application actually imports —
+# python-docx, python-pptx and lxml were only ever used by local scripts for
+# reading the client's documents, so they are deliberately not here.
+
+Django==5.2.8
+
+# Excel export: report downloads and the bulk-upload templates.
+openpyxl==3.1.5
+
+# Django's ImageField requires Pillow. There are ImageFields on school logos
+# and profile photos, so this is needed even though no module imports it.
+pillow==12.0.0
+
+# Reads .env locally. On Railway the variables come from the environment and
+# this simply finds no file, which is fine.
+python-dotenv==1.2.1
+
+# WSGI server.
+gunicorn==23.0.0
+
+# Serves static files from the app process. There is no nginx in front on
+# Railway, so without this the CSS, JS and the email logo all 404.
+whitenoise==6.8.2
+
+# Lets DATABASE_URL configure the database. Present so a Postgres service can
+# be attached without another code change; harmless when unset.
+dj-database-url==2.3.0
+psycopg2-binary==2.9.11
+
+# Timezone data, which some slim base images do not carry.
+tzdata==2025.2
