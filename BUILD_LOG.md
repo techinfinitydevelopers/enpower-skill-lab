@@ -614,3 +614,42 @@ the server, including a live send from each. Existing suites unchanged at 49 / 6
 - Announcement and password-reset templates exist in `competencies/emails.py` but
   nothing calls them yet — no flow is wired to either.
 - Toast visibility bug still OPEN.
+
+---
+
+## 2026-08-31 (later) — Branded HTML emails
+
+**Commit:** `9783ae2` — live on production.
+
+Emails were going out as bare plain text. They now go as multipart/alternative:
+the existing text stays as the fallback, with a table-based HTML version
+alongside it.
+
+Three templates extend one layout in `competencies/templates/emails/` —
+`onboarding`, `announcement`, `password_reset`. The markup is deliberately old
+fashioned (tables, inline styles, no shorthand properties) because mail clients
+are. Colours follow the dashboard: `#5b1f6f` with the logo's gold as an accent
+rule.
+
+The logo is an **inline part** (`cid:enpowerlogo`), not a hosted URL, so it
+renders with remote images blocked and survives the site moving to another
+domain — which matters given the planned Railway move.
+`static/assets/images/email-logo.png` is the brand logo at 400px **flattened
+onto white**; transparency renders as black in some clients.
+`mixed_subtype = 'related'` is what makes the cid resolve — without it the logo
+arrives as a detached attachment.
+
+Also fixed: the plain-text onboarding body said "log in using the above
+credentials" with nothing to click. It now carries the login link.
+
+### Verification
+`verify_email.py` — 61 offline checks (was 34). Each template renders with no
+leftover template syntax, keeps its text part, references the logo, and has an
+attachment whose `Content-ID` matches the cid. A live run sends all three.
+64/64 from the laptop and 64/64 from the droplet; both sets landed in Gmail's
+Inbox, not spam. Other suites unchanged at 49 / 63.
+
+### Still open
+- Announcement and password-reset templates are built but **no flow calls
+  them** — nothing sends an announcement email today.
+- Toast visibility bug still OPEN.
