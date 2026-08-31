@@ -23,11 +23,20 @@ caller was doing. Onboarding must not fail because a mail server is unreachable.
 """
 
 import logging
+from email.mime.image import MIMEImage
+from pathlib import Path
 
 from django.conf import settings
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
 
 logger = logging.getLogger('enpower.email')
+
+# Branded HTML lives in competencies/templates/emails/. Every message goes out
+# as multipart/alternative: the plain-text body built below stays the fallback,
+# so a text-only client still gets a readable email.
+LOGO_PATH = Path(settings.BASE_DIR) / 'static' / 'assets' / 'images' / 'email-logo.png'
+LOGO_CID = 'enpowerlogo'
 
 ROLE_LABELS = {
     'SCHOOL_ADMIN': 'School Admin',
@@ -84,7 +93,56 @@ def send_raw(subject, body, to, role):
     return _send(subject, body, to, role=role)
 
 
-def _send(subject, body, to, role=None):
+def _login_url():
+    site = (getattr(settings, 'SITE_URL', '') or '').rstrip('/')
+    return f'{site}/login/' if site else ''
+
+
+def _base_context(role=None, school_name=None, program_name=None, **extra):
+    """Values every template needs, so no child has to rebuild them."""
+    site_url = (getattr(settings, 'SITE_URL', '') or '').rstrip('/')
+    ctx = {
+        'role_label': role_label(role),
+        'school_name': school_name,
+        'programme': program_name or 'ENpower Skill Lab',
+        'site_url': site_url,
+        # The bare host reads better inside a sentence than the full URL.
+        'site_url_label': site_url.split('://', 1)[-1],
+    }
+    ctx.update(extra)
+    return ctx
+
+
+def _attach_logo(message):
+    """Embed the logo as an inline part referenced by cid:enpowerlogo.
+
+    A hosted <img src="https://..."> would break with images blocked and again
+    the day the site changes domain, so the file travels with the message. It
+    is 23 KB, against a volume of 150-200 emails a year.
+
+    ``mixed_subtype = 'related'`` is what makes the client resolve the cid: it
+    wraps the alternative parts and the image in one multipart/related. Without
+    it the logo arrives as a detached attachment.
+    """
+    try:
+        with open(LOGO_PATH, 'rb') as handle:
+            image = MIMEImage(handle.read())
+    except OSError as e:
+        # A missing logo must not cost us the email; alt text carries the name.
+        logger.warning('Email logo missing at %s: %s', LOGO_PATH, e)
+        return
+    image.add_header('Content-ID', f'<{LOGO_CID}>')
+    image.add_header('Content-Disposition', 'inline', filename='enpower-logo.png')
+    message.mixed_subtype = 'related'
+    message.attach(image)
+
+
+def _send(subject, body, to, role=None, template=None, context=None):
+    """Send one message, gated by role.
+
+    ``body`` is the plain-text version and is always sent. When ``template`` is
+    given, the branded HTML is attached alongside it and the client picks.
+    """
     if not to:
         return False
     if is_suppressed(role):
@@ -92,9 +150,18 @@ def _send(subject, body, to, role=None):
                     to, role_label(role), subject)
         return False
     try:
-        send_mail(subject=subject, message=body,
-                  from_email=settings.DEFAULT_FROM_EMAIL,
-                  recipient_list=[to], fail_silently=False)
+        message = EmailMultiAlternatives(
+            subject=subject, body=body,
+            from_email=settings.DEFAULT_FROM_EMAIL, to=[to])
+
+        if template:
+            ctx = dict(context or {})
+            ctx.setdefault('subject', subject)
+            message.attach_alternative(
+                render_to_string(f'emails/{template}', ctx), 'text/html')
+            _attach_logo(message)
+
+        message.send(fail_silently=False)
         return True
     except Exception as e:
         logger.error('Email FAILED to %s (%s): %s: %s', to, subject, type(e).__name__, e)
@@ -121,12 +188,19 @@ def send_onboarding(to, name, login_id, password, role,
         f'Login ID: {login_id}',
         f'One-Time Password: {password}',
         '',
+        f'Log in: {_login_url()}' if _login_url() else '',
+        '',
         'Please log in using the above credentials and reset your password '
         'after your first login.',
         '',
         SIGN_OFF,
     )
-    return _send(f'Welcome to ENpower Skill Lab — {label} Account', body, to, role=role)
+    return _send(
+        f'Welcome to ENpower Skill Lab — {label} Account', body, to, role=role,
+        template='onboarding.html',
+        context=_base_context(role, school_name, program_name,
+                              name=name, login_id=login_id, password=password,
+                              preheader=f'Your {label} login for {programme}'))
 
 
 # ── 2. Announcement / event / newsletter ────────────────────────────────
@@ -152,7 +226,12 @@ def send_announcement(to, name, title, details, role,
         '',
         SIGN_OFF,
     )
-    return _send(title or 'ENpower Skill Lab — Update', body, to, role=role)
+    return _send(
+        title or 'ENpower Skill Lab — Update', body, to, role=role,
+        template='announcement.html',
+        context=_base_context(role, school_name, program_name,
+                              name=name, title=title or 'Update', details=details or '',
+                              preheader=f'An update for {programme}'))
 
 
 def send_announcement_bulk(announcement, recipients):
@@ -200,4 +279,9 @@ def send_password_reset(to, name, reset_link, role,
         '',
         SIGN_OFF,
     )
-    return _send('Password Reset — ENpower Skill Lab', body, to, role=role)
+    return _send(
+        'Password Reset — ENpower Skill Lab', body, to, role=role,
+        template='password_reset.html',
+        context=_base_context(role, school_name, program_name,
+                              name=name, reset_link=reset_link,
+                              preheader='Reset your ENpower Skill Lab password'))

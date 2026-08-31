@@ -1,0 +1,65 @@
+{% extends 'emails/_base.html' %}
+
+{% block content %}
+<p style="margin:0 0 18px 0; font-size:17px; line-height:26px; color:#1f1a24;">
+  Dear <strong>{{ name }}</strong>,
+</p>
+
+<p style="margin:0 0 26px 0; font-size:15px; line-height:25px; color:#3f3547;">
+  Here&rsquo;s an important update for <strong style="color:#5b1f6f;">{{ programme }}</strong>.
+</p>
+
+{# ── the announcement itself ─────────────────────────────────────────── #}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+       style="background-color:#faf8fc; border-left:4px solid #5b1f6f; border-radius:0 10px 10px 0;">
+  <tr>
+    <td style="padding:20px 24px;">
+      <p style="margin:0 0 10px 0; font-size:17px; line-height:26px; font-weight:700; color:#5b1f6f;">
+        {{ title }}
+      </p>
+      {% if details %}
+      <p style="margin:0; font-size:15px; line-height:25px; color:#3f3547; white-space:pre-line;">{{ details }}</p>
+      {% endif %}
+    </td>
+  </tr>
+</table>
+
+{# ── context: which programme, school and role this reached ──────────── #}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0 0 0;">
+  <tr>
+    <td style="padding:0 0 8px 0; font-size:13px; line-height:20px; color:#8a8194; width:110px;" valign="top">
+      Program
+    </td>
+    <td style="padding:0 0 8px 0; font-size:14px; line-height:20px; color:#3f3547;">{{ programme }}</td>
+  </tr>
+  {% if school_name %}
+  <tr>
+    <td style="padding:0 0 8px 0; font-size:13px; line-height:20px; color:#8a8194;" valign="top">School</td>
+    <td style="padding:0 0 8px 0; font-size:14px; line-height:20px; color:#3f3547;">{{ school_name }}</td>
+  </tr>
+  {% endif %}
+  <tr>
+    <td style="font-size:13px; line-height:20px; color:#8a8194;" valign="top">Your Role</td>
+    <td style="font-size:14px; line-height:20px; color:#3f3547;">{{ role_label }}</td>
+  </tr>
+</table>
+
+{% if site_url %}
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0 6px 0;">
+  <tr>
+    <td align="center" bgcolor="#5b1f6f" style="border-radius:8px;">
+      <a href="{{ site_url }}/login/"
+         style="display:inline-block; padding:14px 34px; font-size:15px; font-weight:700;
+                color:#ffffff; text-decoration:none; border-radius:8px;
+                font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+        Open your dashboard
+      </a>
+    </td>
+  </tr>
+</table>
+{% endif %}
+
+<p style="margin:14px 0 6px 0; font-size:14px; line-height:23px; color:#6c6377;">
+  For more details, please log in to your ENpower Skill Lab dashboard.
+</p>
+{% endblock %}

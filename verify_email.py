@@ -103,6 +103,62 @@ finally:
     settings.EMAIL_BACKEND = real_backend
     mail.outbox = []
 
+# ── 3b. The branded HTML ────────────────────────────────────────────────
+# Every message goes out as multipart/alternative with the plain text intact,
+# plus the logo as an inline part. A template that fails to render, or a cid
+# that does not match the attachment, produces an email with a broken image —
+# which nobody notices until a principal receives one.
+print('\nHTML TEMPLATES')
+settings.EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
+try:
+    built = {}
+    mail.outbox = []
+    emails.send_onboarding(
+        to='t@example.com', name='Anjali Nair', login_id='BV-SA-2026-004',
+        password='Enpower@2026', role='SCHOOL_ADMIN',
+        school_name='Bright Valley International School', program_name='FSL Programme')
+    built['onboarding'] = mail.outbox[0]
+
+    mail.outbox = []
+    emails.send_announcement(
+        to='t@example.com', name='Rahul Mehta', title='Showcase on 12 September',
+        details='Grade 6 and 7 projects will be presented.', role='THINKING_COACH',
+        school_name='Bright Valley International School')
+    built['announcement'] = mail.outbox[0]
+
+    mail.outbox = []
+    emails.send_password_reset(
+        to='t@example.com', name='Priya Sharma', role='PROGRAM_COORDINATOR',
+        reset_link='https://enpower.techinfinity.link/reset/Mg/abc-123/')
+    built['password_reset'] = mail.outbox[0]
+
+    for name, msg in built.items():
+        html = msg.alternatives[0][0] if msg.alternatives else ''
+        check(f'{name}: has an HTML alternative', bool(html))
+        check(f'{name}: keeps the plain-text body', len(msg.body) > 80)
+        check(f'{name}: no unrendered template syntax',
+              not any(t in html for t in ('{{', '{%', '{#')))
+        check(f'{name}: references the inline logo', 'cid:enpowerlogo' in html)
+        check(f'{name}: carries the logo as a related part',
+              msg.mixed_subtype == 'related' and len(msg.attachments) == 1)
+        cid = msg.attachments[0].get('Content-ID') if msg.attachments else None
+        check(f'{name}: attachment Content-ID matches the cid', cid == '<enpowerlogo>',
+              str(cid))
+        check(f'{name}: no localhost link', '127.0.0.1' not in html and 'localhost' not in html)
+
+    ob = built['onboarding'].alternatives[0][0]
+    check('onboarding HTML shows the login ID', 'BV-SA-2026-004' in ob)
+    check('onboarding HTML shows the password', 'Enpower@2026' in ob)
+    check('onboarding HTML names the role and school',
+          'School Admin' in ob and 'Bright Valley International School' in ob)
+    check('onboarding text also carries the login link', '/login/' in built['onboarding'].body)
+    check('reset HTML carries the reset link', 'abc-123' in
+          built['password_reset'].alternatives[0][0])
+    check('logo file exists', emails.LOGO_PATH.exists(), str(emails.LOGO_PATH))
+finally:
+    settings.EMAIL_BACKEND = real_backend
+    mail.outbox = []
+
 # ── 4. No path around the gate ──────────────────────────────────────────
 print('\nNO BYPASS')
 import subprocess                                       # noqa: E402
@@ -146,15 +202,35 @@ check('bulk import routes through competencies.emails',
 # ── 6. Optional live send ───────────────────────────────────────────────
 if len(sys.argv) > 1:
     to = sys.argv[1]
+    where = sys.argv[2] if len(sys.argv) > 2 else ''
+    tag = f' [{where}]' if where else ''
     print(f'\nLIVE SEND  -> {to}')
-    try:
-        ok = emails.send_onboarding(
-            to=to, name='Test Recipient', login_id='TEST-0001',
-            password='TempPass@123', role='SCHOOL_ADMIN',
-            school_name='Test School', program_name='ENpower Skill Lab')
-        check('ZeptoMail accepted the message', ok, 'check the inbox, and spam')
-    except Exception as e:
-        check('ZeptoMail accepted the message', False, f'{type(e).__name__}: {e}')
+
+    # All three templates, so the branding can be checked in a real client
+    # rather than inferred from the markup.
+    sends = [
+        ('onboarding', lambda: emails.send_onboarding(
+            to=to, name='Anjali Nair', login_id='BV-SA-2026-004',
+            password='Enpower@2026', role='SCHOOL_ADMIN',
+            school_name=f'Bright Valley International School{tag}',
+            program_name='FSL Programme')),
+        ('announcement', lambda: emails.send_announcement(
+            to=to, name='Rahul Mehta',
+            title=f'Annual Skill Passport Showcase - 12 September{tag}',
+            details='All Grade 6 and 7 projects will be presented in the main '
+                    'auditorium.\nPlease ensure scores are entered before 10 September.',
+            role='THINKING_COACH', school_name='Bright Valley International School',
+            program_name='FSL Programme')),
+        ('password reset', lambda: emails.send_password_reset(
+            to=to, name='Priya Sharma',
+            reset_link=f'{getattr(settings, "SITE_URL", "")}/reset/Mg/sample-token/',
+            role='PROGRAM_COORDINATOR', program_name='CSL+ Programme')),
+    ]
+    for label, fn in sends:
+        try:
+            check(f'ZeptoMail accepted: {label}', fn())
+        except Exception as e:
+            check(f'ZeptoMail accepted: {label}', False, f'{type(e).__name__}: {e}')
 else:
     print('\nLIVE SEND  skipped - pass an address to send one: '
           'python verify_email.py you@example.com')

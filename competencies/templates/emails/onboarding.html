@@ -1,0 +1,76 @@
+{% extends 'emails/_base.html' %}
+
+{% block content %}
+<p style="margin:0 0 18px 0; font-size:17px; line-height:26px; color:#1f1a24;">
+  Dear <strong>{{ name }}</strong>,
+</p>
+
+<p style="margin:0 0 18px 0; font-size:15px; line-height:25px; color:#3f3547;">
+  Welcome to <strong style="color:#5b1f6f;">{{ programme }}</strong> &mdash; ENpower Skill Lab!
+</p>
+
+<p style="margin:0 0 26px 0; font-size:15px; line-height:25px; color:#3f3547;">
+  You have been onboarded as <strong>{{ role_label }}</strong>{% if school_name %} for
+  <strong>{{ school_name }}</strong>{% endif %}.
+</p>
+
+{# ── credentials ─────────────────────────────────────────────────────── #}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+       style="background-color:#faf8fc; border:1px solid #e9e2f0; border-radius:10px;">
+  <tr>
+    <td style="padding:22px 24px;">
+      <p style="margin:0 0 16px 0; font-size:11px; line-height:16px; letter-spacing:.09em;
+                text-transform:uppercase; color:#8a8194; font-weight:700;">
+        Your login credentials
+      </p>
+
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="padding:0 0 10px 0; font-size:13px; line-height:20px; color:#6c6377; width:145px;"
+              valign="top">
+            Login ID
+          </td>
+          <td style="padding:0 0 10px 0; font-size:15px; line-height:20px; color:#1f1a24;
+                     font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+                     font-weight:700; word-break:break-all;">
+            {{ login_id }}
+          </td>
+        </tr>
+        <tr>
+          <td style="font-size:13px; line-height:20px; color:#6c6377;" valign="top">
+            One-Time Password
+          </td>
+          <td style="font-size:15px; line-height:20px; color:#1f1a24;
+                     font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+                     font-weight:700; word-break:break-all;">
+            {{ password }}
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
+{# ── call to action ──────────────────────────────────────────────────── #}
+{% if site_url %}
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0 6px 0;">
+  <tr>
+    <td align="center" bgcolor="#5b1f6f" style="border-radius:8px;">
+      <a href="{{ site_url }}/login/"
+         style="display:inline-block; padding:14px 34px; font-size:15px; font-weight:700;
+                color:#ffffff; text-decoration:none; border-radius:8px;
+                font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+        Log in to your dashboard
+      </a>
+    </td>
+  </tr>
+</table>
+<p style="margin:0 0 22px 0; font-size:12px; line-height:19px; color:#8a8194;">
+  Or open <a href="{{ site_url }}/login/" style="color:#5b1f6f;">{{ site_url_label }}/login/</a>
+</p>
+{% endif %}
+
+<p style="margin:0 0 6px 0; font-size:14px; line-height:23px; color:#6c6377;">
+  Please log in using the credentials above and reset your password after your first login.
+</p>
+{% endblock %}
