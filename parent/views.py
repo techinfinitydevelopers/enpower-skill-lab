@@ -309,27 +309,6 @@ def parent_profile_update(request):
         })
 
 
-@login_required
-@user_passes_test(is_parent)
-def parent_change_password(request):
-    """Parent change password view"""
-    if request.method == 'POST':
-        form = PasswordChangeForm(request.user, request.POST)
-        if form.is_valid():
-            user = form.save()
-            update_session_auth_hash(request, user)
-            messages.success(request, 'Your password was successfully updated!')
-            return redirect('parent_change_password')
-        else:
-            messages.error(request, 'Please correct the errors below.')
-    else:
-        form = PasswordChangeForm(request.user)
-
-    return render(request, 'parent/change_password.html', {'form': form})
-
-
-# ---------- Child reports (parents could not open these at all) ----------
-
 def _child_or_404(request, student_id):
     """Fetch one of the requesting parent's own children, or 404.
 

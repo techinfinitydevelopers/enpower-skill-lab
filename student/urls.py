@@ -16,5 +16,4 @@ urlpatterns = [
     path('events/', views.student_event_calendar, name='student_event_calendar'),
     path('newsletter/', views.student_newsletter, name='student_newsletter'),
     path('announcements/', views.student_announcements, name='student_announcements'),
-    path('change-password/', views.student_change_password, name='student_change_password'),
 ]

@@ -591,32 +591,6 @@ def update_avatar(request):
 
 @login_required
 @user_passes_test(is_student)
-def student_change_password(request):
-    """Student change-password page (mirrors the parent flow).
-
-    Additive: lets a student change their password after first login. Uses
-    Django's built-in PasswordChangeForm — no model or existing-flow changes.
-    """
-    from django.contrib.auth.forms import PasswordChangeForm
-    from django.contrib.auth import update_session_auth_hash
-
-    if request.method == 'POST':
-        form = PasswordChangeForm(request.user, request.POST)
-        if form.is_valid():
-            user = form.save()
-            update_session_auth_hash(request, user)
-            messages.success(request, 'Your password was successfully updated!')
-            return redirect('student:student_change_password')
-        else:
-            messages.error(request, 'Please correct the errors below.')
-    else:
-        form = PasswordChangeForm(request.user)
-
-    return render(request, 'student/change_password.html', {'form': form})
-
-
-@login_required
-@user_passes_test(is_student)
 def student_kb_report(request):
     """Kaushal Bodh report — spec slide 32, "Customised report (KB)".
 
