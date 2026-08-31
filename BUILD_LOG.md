@@ -516,6 +516,37 @@ Verified: 23 assertions on the email templates and the blank-bank-details import
 plus the report pages checked for every panel, correct scoping, and the absence
 of skill profiles for the coordinator. Suites unchanged at 49 / 63.
 
+### School Admin reports, and the last dead navigation entries
+Every dashboard now has zero dead navigation entries.
+
+**Dashboard panels.** The School Admin dashboard already showed the four
+grade-wise figures, but as plain tables from a second implementation in
+`attendance/services.py`. It now renders the shared slide-52 component, so all
+three reporting roles draw from one module and cannot drift apart. The old
+helpers were used by nothing else.
+
+**Download Reports** at /school-admin/reports/download/ shows the same four
+panels with an Excel export — one sheet per panel, written from the same data
+the screen renders, so the file and the page cannot disagree. Column widths are
+sized from the longest value so nothing arrives as ####.
+
+**Removed:** eight dead School Admin entries (Class Performance, Assessment
+Reports, Class Assessment Summary, Student Attendance, Teacher Attendance,
+Attendance Reports, School Reports, Student Reports), the Assessments and
+Attendance sections left holding nothing, and Academic Year Locking from Super
+Admin.
+
+One mistake worth recording: the first attempt at removing the empty sections
+used a regex whose `.*?` ran past a section boundary and took the working Users
+section with it — Thinking Coaches, Student List and Parent List all vanished.
+Caught by reading the diff, reverted with git, and redone by locating each
+section from its toggle id and asserting the block contained exactly one anchor
+before deleting.
+
+Verified with 20 assertions covering the dashboard panels, the download page,
+the workbook's four sheets and its contents, plus a full dead-link audit of all
+six dashboards. Suites unchanged at 49 / 63 / 23.
+
 ### Still open (unchanged by this pass)
 - Slide 14 teacher views: Class Level, Percentile Competency, Project Level
   Aggregate Comparative, Generate Profile Report — none exist.

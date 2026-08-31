@@ -16,12 +16,7 @@ def school_admin_dashboard(request):
     Additive only: no model/migration changes.
     """
     from .models import SchoolAdmin
-    from attendance.services import (
-        grade_wise_distribution,
-        grade_wise_attendance,
-        grade_wise_project_completion,
-        grade_wise_top_profiles,
-    )
+    from competencies import report_panels
 
     # Resolve the admin's own school. Guard if missing -> empty state, no crash.
     try:
@@ -31,28 +26,18 @@ def school_admin_dashboard(request):
         profile = None
         school = None
 
-    distribution = []
-    attendance = []
-    project_completion = []
-    top_profiles = []
-    total_students = 0
+    # The four grade-wise panels (presentation slide 52), from the shared
+    # component every role's report screens use, scoped to this one school.
+    panels = report_panels.build([school.id], month=(request.GET.get('month') or None)) if school else None
+    total_students = panels['distribution']['total'] if panels else 0
 
-    if school is not None:
-        distribution = grade_wise_distribution(school)
-        attendance = grade_wise_attendance(school)
-        project_completion = grade_wise_project_completion(school)
-        top_profiles = grade_wise_top_profiles(school)
-        total_students = sum(row['count'] for row in distribution)
 
     context = {
         'page_title': 'Dashboard',
         'school': school,
         'school_admin_profile': profile,
         'total_students': total_students,
-        'grade_distribution': distribution,
-        'grade_attendance': attendance,
-        'grade_project_completion': project_completion,
-        'grade_top_profiles': top_profiles,
+        'panels': panels,
     }
     return render(request, 'school_admin/dashboard.html', context)
 

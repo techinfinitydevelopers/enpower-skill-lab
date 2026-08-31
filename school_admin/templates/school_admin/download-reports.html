@@ -1,0 +1,55 @@
+{% extends 'school_admin/base.html' %}
+{% load static %}
+
+{% block title %}Download Reports - School Admin{% endblock %}
+
+{% block extra_css %}
+{% include 'report_panels/_styles.html' %}
+<style>
+    .dr-page { width:100%; padding:1.5rem; }
+    .dr-head { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem;
+               flex-wrap:wrap; margin-bottom:1.25rem; }
+    .dr-title { font-size:1.5rem; font-weight:700; color:#1f2937; margin:0; }
+    .dr-sub { color:#6b7280; font-size:.85rem; margin:.25rem 0 0; }
+    .dr-btn { display:inline-flex; align-items:center; gap:.4rem; padding:.6rem 1.1rem;
+              border-radius:.5rem; font-size:.85rem; font-weight:600; text-decoration:none;
+              background:#5b1f6f; color:#fff; border:1px solid #5b1f6f; white-space:nowrap; }
+    .dr-btn:hover { background:#4a1a5c; color:#fff; }
+    .dr-btn .material-symbols-outlined { font-size:18px; }
+    .dr-hint { font-size:.72rem; color:#9ca3af; margin-top:.35rem; text-align:right; }
+    @media (max-width:768px) { .dr-page { padding:1rem; } .dr-hint { text-align:left; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dr-page">
+
+    <div class="dr-head">
+        <div>
+            <h1 class="dr-title">Download Reports</h1>
+            <p class="dr-sub">{{ school.school_name }}</p>
+        </div>
+        <div>
+            <a class="dr-btn" href="?export=xlsx{% if panels.month %}&month={{ panels.month }}{% endif %}">
+                <span class="material-symbols-outlined">download</span> Download Excel
+            </a>
+            <div class="dr-hint">Four sheets — one per report below</div>
+        </div>
+    </div>
+
+    {% include 'report_panels/_panels.html' %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var link = document.getElementById('nav-download-reports');
+        if (!link) return;
+        link.classList.add('active');
+        var parent = link.closest('.sidebar-dropdown');
+        if (parent) parent.classList.add('active');
+    });
+</script>
+{% endblock %}

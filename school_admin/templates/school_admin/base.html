@@ -258,43 +258,17 @@
                     </a>
                     <div class="sidebar-dropdown-menu">
                         <a href="{% url 'school_admin_class_overview' %}" id="nav-class-overview"><span class="material-symbols-outlined">grid_view</span>Class Overview</a>
-                        <a href="#" id="nav-class-performance"><span class="material-symbols-outlined">trending_up</span>Class Performance</a>
                         <a href="{% url 'school_admin_class_attendance' %}" id="nav-class-attendance"><span class="material-symbols-outlined">how_to_reg</span>Class Attendance</a>
                     </div>
                 </div>
-                <div class="sidebar-dropdown">
-                    <a href="#" class="sidebar-dropdown-toggle" id="assessments-dropdown">
-                        <span class="material-symbols-outlined">quiz</span>
-                        Assessments
-                        <span class="material-symbols-outlined dropdown-icon">expand_more</span>
-                    </a>
-                    <div class="sidebar-dropdown-menu">
-                        <a href="#" id="nav-assessment-reports"><span class="material-symbols-outlined">assessment</span>Assessment Reports</a>
-                        <a href="#" id="nav-class-assessment"><span class="material-symbols-outlined">summarize</span>Class Assessment Summary</a>
-                    </div>
-                </div>
-                <div class="sidebar-dropdown">
-                    <a href="#" class="sidebar-dropdown-toggle" id="attendance-dropdown">
-                        <span class="material-symbols-outlined">how_to_reg</span>
-                        Attendance
-                        <span class="material-symbols-outlined dropdown-icon">expand_more</span>
-                    </a>
-                    <div class="sidebar-dropdown-menu">
-                        <a href="#" id="nav-student-attendance"><span class="material-symbols-outlined">school</span>Student Attendance</a>
-                        <a href="#" id="nav-teacher-attendance"><span class="material-symbols-outlined">psychology</span>Teacher Attendance</a>
-                        <a href="#" id="nav-attendance-reports"><span class="material-symbols-outlined">fact_check</span>Attendance Reports</a>
-                    </div>
-                </div>
-                <div class="sidebar-dropdown">
+                                                <div class="sidebar-dropdown">
                     <a href="#" class="sidebar-dropdown-toggle" id="reports-dropdown">
                         <span class="material-symbols-outlined">description</span>
                         Reports
                         <span class="material-symbols-outlined dropdown-icon">expand_more</span>
                     </a>
                     <div class="sidebar-dropdown-menu">
-                        <a href="#" id="nav-school-reports"><span class="material-symbols-outlined">domain</span>School Reports</a>
-                        <a href="#" id="nav-student-reports"><span class="material-symbols-outlined">school</span>Student Reports</a>
-                        <a href="#" id="nav-download-reports"><span class="material-symbols-outlined">file_download</span>Download Reports</a>
+                        <a href="{% url 'school_admin_download_reports' %}" id="nav-download-reports"><span class="material-symbols-outlined">file_download</span>Download Reports</a>
                     </div>
                 </div>
                 <div class="sidebar-dropdown">

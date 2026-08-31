@@ -38,7 +38,7 @@
             <p>Grades Tracked</p>
             <span class="material-symbols-outlined">school</span>
         </div>
-        <p class="stat-card-value">{{ grade_distribution|length }}</p>
+        <p class="stat-card-value">{{ panels.distribution.bars|length }}</p>
     </div>
 </div>
 
@@ -74,103 +74,14 @@
         </div>
     </div>
 </div>
+{% comment %}
+The four grade-wise panels from presentation slide 52. Rendered from the shared
+component so School Admin, Program Coordinator and Super Admin show the same
+charts over their own school scope.
+{% endcomment %}
+{% include 'report_panels/_styles.html' %}
+{% include 'report_panels/_panels.html' %}
 
-<!-- Per-Grade Real Data (PPT slides 50-51) -->
-<div class="main-content-grid">
-    <div class="left-column">
-        <!-- Grade-wise Student Distribution -->
-        <div class="card-custom">
-            <h3 class="card-custom-title">Student Distribution by Grade</h3>
-            <div class="table-responsive-wrapper">
-                <table class="table-custom mt-4">
-                    <thead>
-                        <tr><th>Grade</th><th>Active Students</th></tr>
-                    </thead>
-                    <tbody>
-                        {% for row in grade_distribution %}
-                        <tr>
-                            <td>Grade {{ row.grade }}</td>
-                            <td><span class="bold-value">{{ row.count }}</span></td>
-                        </tr>
-                        {% empty %}
-                        <tr><td colspan="2" class="text-muted">No student data available yet.</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Grade-wise Attendance (this month) -->
-        <div class="card-custom mt-4">
-            <h3 class="card-custom-title">Monthly Attendance by Grade</h3>
-            <div class="table-responsive-wrapper">
-                <table class="table-custom mt-4">
-                    <thead>
-                        <tr><th>Grade</th><th>Attendance %</th></tr>
-                    </thead>
-                    <tbody>
-                        {% for row in grade_attendance %}
-                        <tr>
-                            <td>Grade {{ row.grade }}</td>
-                            <td><span class="bold-value">{{ row.percent }}%</span></td>
-                        </tr>
-                        {% empty %}
-                        <tr><td colspan="2" class="text-muted">No attendance recorded this month.</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Grade-wise Project Completion -->
-        <div class="card-custom mt-4">
-            <h3 class="card-custom-title">Project Completion by Grade</h3>
-            <div class="table-responsive-wrapper">
-                <table class="table-custom mt-4">
-                    <thead>
-                        <tr><th>Grade</th><th>Completed</th><th>Total</th></tr>
-                    </thead>
-                    <tbody>
-                        {% for row in grade_project_completion %}
-                        <tr>
-                            <td>Grade {{ row.grade }}</td>
-                            <td><span class="bold-value">{{ row.completed }}</span></td>
-                            <td>{{ row.total }}</td>
-                        </tr>
-                        {% empty %}
-                        <tr><td colspan="3" class="text-muted">No completed projects yet.</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- Right Column: Top Skill Profiles by Grade -->
-    <div class="right-column">
-        <div class="card-custom">
-            <h3 class="card-custom-title-sm">Top Skill Profiles by Grade</h3>
-            <div class="quick-actions-list mt-4">
-                {% for row in grade_top_profiles %}
-                <div class="card-custom" style="padding:1rem;">
-                    <p class="metric-label">Grade {{ row.grade }}</p>
-                    {% if row.profiles %}
-                    <ol style="margin:0.5rem 0 0 1.25rem;">
-                        {% for name in row.profiles %}
-                        <li class="metric-value" style="font-size:0.95rem;">{{ name }}</li>
-                        {% endfor %}
-                    </ol>
-                    {% else %}
-                    <p class="text-muted">No profiles generated yet.</p>
-                    {% endif %}
-                </div>
-                {% empty %}
-                <p class="text-muted">No profile data available yet.</p>
-                {% endfor %}
-            </div>
-        </div>
-    </div>
-</div>
 
 {% endif %}
 
