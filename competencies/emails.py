@@ -183,6 +183,36 @@ def _send(subject, body, to, role=None, template=None, context=None):
         return False
 
 
+# ── 0. Generic notice ───────────────────────────────────────────────────
+
+def send_notice(to, name, role, heading, paragraphs, facts=None, closing=None,
+                subject=None, school_name=None, program_name=None):
+    """A branded message that is not one of the three document templates.
+
+    Used for one-off notifications such as a password-change confirmation, so
+    those do not have to go out as bare text while everything else is branded.
+    ``facts`` is a list of (label, value) pairs shown in the detail box.
+    """
+    body = _lines(
+        f'Dear {name},',
+        '',
+        *paragraphs,
+        '',
+        *[f'{label}: {value}' for label, value in (facts or [])],
+        '',
+        closing or '',
+        '',
+        SIGN_OFF,
+    )
+    return _send(
+        subject or heading, body, to, role=role,
+        template='notice.html',
+        context=_base_context(role, school_name, program_name,
+                              name=name, heading=heading, paragraphs=paragraphs,
+                              facts=facts or [], closing=closing,
+                              preheader=paragraphs[0] if paragraphs else heading))
+
+
 # ── 1. Onboarding ───────────────────────────────────────────────────────
 
 def send_onboarding(to, name, login_id, password, role,

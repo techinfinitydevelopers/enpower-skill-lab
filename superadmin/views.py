@@ -7,7 +7,7 @@ from django.db import models, transaction
 from django.db.models import Q
 from django.contrib.auth import get_user_model, logout
 from django.contrib.auth.hashers import make_password
-from competencies.emails import send_raw
+from competencies.emails import send_notice, send_onboarding
 from django.conf import settings
 from django.utils import timezone
 from schools.models import School
@@ -19,6 +19,16 @@ import secrets
 import string
 
 # Helper function to check role
+def _school_name(profile):
+    """School name for an onboarding email, or None if the profile has none.
+
+    Teacher and Student carry a school FK; Parent does not. Returning None
+    simply drops the line from the email rather than sending a blank one.
+    """
+    school = getattr(profile, 'school', None)
+    return getattr(school, 'school_name', None) if school else None
+
+
 def is_superadmin(user):
     return user.is_authenticated and user.role == "SUPER_ADMIN"
 
@@ -757,27 +767,11 @@ def onboard_school_admin(request):
             # Send email with credentials
             try:
                 school = School.objects.get(id=data.get('school'))
-                email_subject = 'Welcome to Enpower Skill Lab - Your Admin Account'
-                email_body = f"""
-Dear {school_admin.full_name},
-
-You have been registered as a School Administrator for {school.school_name}.
-
-Your Login Credentials:
-- Username: {user.email}
-- Temporary Password: {temp_password}
-- Login URL: {request.build_absolute_uri('/')[:-1]}/login/
-
-IMPORTANT: Please change your password immediately after your first login for security reasons.
-
-If you have any questions, please contact support.
-
-Best regards,
-Enpower Skill Lab Team
-                """
-
-                send_raw(email_subject, email_body, school_admin.email,
-                         role='SCHOOL_ADMIN')
+                send_onboarding(
+                    to=school_admin.email, name=school_admin.full_name,
+                    login_id=user.username, password=temp_password,
+                    role='SCHOOL_ADMIN',
+                    school_name=getattr(school, 'school_name', None))
 
                 messages.success(request, f'School Admin "{school_admin.full_name}" has been successfully onboarded! Credentials sent to {school_admin.email}.')
             except Exception as email_error:
@@ -926,20 +920,20 @@ def change_password(request):
             
             # Send email notification
             try:
-                send_raw(
-                    subject='Password Changed - ENpower Skill Lab',
-                    body=f'''Hello {request.user.get_full_name() or request.user.username},
-
-Your password for ENpower Skill Lab Super Admin account has been changed successfully.
-
-If you did not make this change, please contact the administrator immediately.
-
-Date & Time: {timezone.now().strftime("%B %d, %Y at %I:%M %p")}
-
-Best regards,
-ENpower Skill Lab Team''',
+                send_notice(
                     to=request.user.email,
+                    name=request.user.get_full_name() or request.user.username,
                     role='SUPER_ADMIN',
+                    subject='Password Changed - ENpower Skill Lab',
+                    heading='Your password has been changed',
+                    paragraphs=[
+                        'The password for your ENpower Skill Lab Super Admin '
+                        'account has been changed successfully.',
+                    ],
+                    facts=[('Date & Time',
+                            timezone.now().strftime('%B %d, %Y at %I:%M %p'))],
+                    closing='If you did not make this change, please contact '
+                            'the administrator immediately.',
                 )
             except Exception as email_error:
                 # Log email error but don't fail the password change
@@ -1101,33 +1095,11 @@ def onboard_student(request):
             
             # Send welcome email with credentials
             try:
-                email_subject = 'Welcome to ENpower Skill Lab - Your Login Credentials'
-                email_body = f"""
-Dear {student.full_name},
-
-Welcome to ENpower Skill Lab! Your student account has been created successfully.
-
-Here are your login credentials:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🆔 Login ID: {skill_lab_reg_id}
-🔑 Temporary Password: {temp_password}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-🔗 Login URL: {settings.SITE_URL}/login/
-
-Skill Lab ID: {skill_lab_reg_id}
-Class: {student.student_class} - {student.division}
-Role: Student
-
-⚠️ IMPORTANT: Please change your password after your first login for security purposes.
-
-If you have any questions, please contact your teacher or the administration.
-
-Best regards,
-ENpower Skill Lab Team
-                """
-                
-                sent = send_raw(email_subject, email_body, email, role='STUDENT')
+                sent = send_onboarding(
+                    to=email, name=student.full_name,
+                    login_id=skill_lab_reg_id, password=temp_password,
+                    role='STUDENT',
+                    school_name=_school_name(student))
                 messages.success(request, f'Student {student.full_name} added successfully! '
                           + (f'Credentials sent to {email}' if sent else
                              f'Login ID: {skill_lab_reg_id} | Password: {temp_password} '
@@ -1365,32 +1337,11 @@ def onboard_teacher(request):
             
             # Send welcome email with credentials
             try:
-                email_subject = 'Welcome to ENpower Skill Lab - Your Login Credentials'
-                email_body = f"""
-Dear {teacher.full_name},
-
-Welcome to ENpower Skill Lab! Your account has been created successfully.
-
-Here are your login credentials:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📧 Email: {email}
-🔑 Temporary Password: {temp_password}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-🔗 Login URL: {settings.SITE_URL}/login/
-
-Employee ID: {employee_id}
-Role: Thinking Coach / Teacher
-
-⚠️ IMPORTANT: Please change your password after your first login for security purposes.
-
-If you have any questions, please contact the administration.
-
-Best regards,
-ENpower Skill Lab Team
-                """
-                
-                sent = send_raw(email_subject, email_body, email, role='THINKING_COACH')
+                sent = send_onboarding(
+                    to=email, name=teacher.full_name,
+                    login_id=email, password=temp_password,
+                    role='THINKING_COACH',
+                    school_name=_school_name(teacher))
                 messages.success(request, f'Teacher {teacher.full_name} added successfully! '
                           + (f'Credentials sent to {email}' if sent else
                              f'Login ID: {email} | Password: {temp_password}'))
@@ -1682,40 +1633,10 @@ def onboard_parent(request):
             
             # Send welcome email with credentials
             try:
-                email_subject = 'Welcome to ENpower Skill Lab - Your Login Credentials'
-                students_text = ', '.join(linked_students) if linked_students else 'Not yet linked'
-                email_body = f"""
-Dear {parent.full_name},
-
-Welcome to ENpower Skill Lab! Your parent account has been created successfully.
-
-Here are your login credentials:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🆔 Login ID: {user.username}
-🔑 Temporary Password: {temp_password}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-🔗 Login URL: {settings.SITE_URL}/login/
-
-Parent ID: {parent.parent_id}
-Linked Student(s): {students_text}
-Role: Parent/Guardian
-
-⚠️ IMPORTANT: Please change your password after your first login for security purposes.
-
-You can use the parent portal to:
-- Track your child's progress
-- View attendance records
-- Communicate with teachers
-- Access reports and certificates
-
-If you have any questions, please contact the administration.
-
-Best regards,
-ENpower Skill Lab Team
-                """
-                
-                sent = send_raw(email_subject, email_body, email, role='PARENT')
+                sent = send_onboarding(
+                    to=email, name=parent.full_name,
+                    login_id=user.username, password=temp_password,
+                    role='PARENT')
                 messages.success(request, f'Parent "{parent.full_name}" onboarded successfully! '
                           + (f'Credentials sent to {email}' if sent else
                              f'Login ID: {user.username} | Password: {temp_password} '
@@ -1998,30 +1919,10 @@ def onboard_coordinator(request):
             
             # Send email with credentials
             try:
-                email_subject = 'Welcome to Enpower Skill Lab - Your Program Coordinator Account'
-                email_body = f"""
-Dear {coordinator.full_name},
-
-You have been registered as a Program Coordinator at Enpower Skill Lab.
-
-Your Login Credentials:
-- Username: {user.email}
-- Temporary Password: {temp_password}
-- Login URL: {request.build_absolute_uri('/')[:-1]}/login/
-
-IMPORTANT: Please change your password immediately after your first login for security reasons.
-
-After logging in, you can access your dashboard at:
-{request.build_absolute_uri('/')[:-1]}/coordinator/dashboard/
-
-If you have any questions, please contact support.
-
-Best regards,
-Enpower Skill Lab Team
-                """
-
-                send_raw(email_subject, email_body, coordinator.official_email,
-                         role='PROGRAM_COORDINATOR')
+                send_onboarding(
+                    to=coordinator.official_email, name=coordinator.full_name,
+                    login_id=user.email, password=temp_password,
+                    role='PROGRAM_COORDINATOR')
 
                 messages.success(request, f'Program Coordinator "{coordinator.full_name}" onboarded successfully! Credentials sent to {coordinator.official_email}.')
             except Exception as email_error:

@@ -1,0 +1,66 @@
+{% extends 'emails/_base.html' %}
+
+{% comment %}
+For one-off notifications that are not one of the three document templates —
+a password-change confirmation, for instance. `paragraphs` is a list of lines;
+`facts` is an optional list of (label, value) pairs shown in the detail box.
+{% endcomment %}
+
+{% block content %}
+<h1 style="margin:0 0 6px 0; font-size:21px; line-height:29px; font-weight:700; color:#1c1022;">
+  {{ heading }}
+</h1>
+<p style="margin:0 0 22px 0; font-size:13px; line-height:20px; color:#9186a0;">
+  Greetings from ENpower Skill Lab!
+</p>
+
+{% for para in paragraphs %}
+<p style="margin:0 0 16px 0; font-size:14px; line-height:24px; color:#5c4a68;">{{ para }}</p>
+{% endfor %}
+
+{% if facts %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+       style="margin-top:8px; background-color:#f8f5fb; border:1px solid #ebe4f1; border-radius:8px;">
+  <tr>
+    <td style="padding:18px 20px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        {% for label, value in facts %}
+        <tr>
+          <td style="{% if not forloop.last %}padding:0 0 11px 0;{% endif %}
+                     font-size:14px; line-height:21px; color:#5c4a68;">
+            <strong style="color:#1c1022;">{{ label }}:</strong> {{ value }}
+          </td>
+        </tr>
+        {% endfor %}
+      </table>
+    </td>
+  </tr>
+</table>
+{% endif %}
+
+{% if site_url %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+       style="margin:26px 0 6px 0;">
+  <tr>
+    <td align="center">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td align="center" bgcolor="#eab434" style="background-color:#eab434; border-radius:22px;">
+            <a href="{{ site_url }}/login/"
+               style="display:inline-block; padding:13px 32px; font-size:14px; font-weight:700;
+                      color:#3a1149; text-decoration:none; border-radius:22px;
+                      font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+              Open your Dashboard
+            </a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+{% endif %}
+
+{% if closing %}
+<p style="margin:18px 0 0 0; font-size:13px; line-height:21px; color:#8b7d97;">{{ closing }}</p>
+{% endif %}
+{% endblock %}

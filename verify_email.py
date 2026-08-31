@@ -177,26 +177,27 @@ offenders = [l for l in out.splitlines()
              if 'competencies/emails.py' not in l and 'verify_email.py' not in l]
 check('no view calls send_mail directly', not offenders, '; '.join(offenders[:3]))
 
-# ── 5. Each call site names the right role ──────────────────────────────
-# The gate only helps if the caller passes the role it actually onboards. A
-# typo here would quietly mail a Student, so the roles are asserted, not
-# assumed.
-print('\nCALL SITES  (superadmin/views.py)')
+# ── 5. Every onboarding path is branded, and names the right role ───────
+# The gate only helps if the caller passes the role it actually onboards, and
+# the branding only helps if every path uses a template: a view that builds its
+# own body would quietly send bare text while everything else looks designed.
+print('\nONBOARDING PATHS')
 import re                                                # noqa: E402
 
 src = open('superadmin/views.py', encoding='utf-8').read()
-roles_used = re.findall(r"send_raw\((?:.|\n)*?role='([A-Z_]+)'", src)
-expected = ['SCHOOL_ADMIN', 'SUPER_ADMIN', 'STUDENT', 'THINKING_COACH',
-            'PARENT', 'PROGRAM_COORDINATOR']
-check('all six onboarding sends name a role',
-      sorted(roles_used) == sorted(expected),
-      f'found {sorted(roles_used)}')
 
-check('no onboarding email still links to localhost',
+roles = re.findall(r"send_onboarding\((?:.|\n)*?role='([A-Z_]+)'", src)
+check('all five manual onboarding paths use the branded template',
+      sorted(roles) == ['PARENT', 'PROGRAM_COORDINATOR', 'SCHOOL_ADMIN',
+                        'STUDENT', 'THINKING_COACH'],
+      f'found {sorted(roles)}')
+check('the password-change confirmation is branded too',
+      'send_notice(' in src and "role='SUPER_ADMIN'" in src)
+check('no view still hand-builds an email body',
+      'email_subject' not in src and 'email_body' not in src)
+check('no onboarding email links to localhost',
       '127.0.0.1:8000/login' not in src and 'localhost:8000/login' not in src)
 
-# The two suppressed roles must show credentials on screen instead, or the
-# admin never learns the password they are supposed to hand over.
 for role, marker in [('Student', 'students are not emailed'),
                      ('Parent', 'parents are not emailed')]:
     check(f'{role} success message falls back to on-screen credentials',
@@ -206,6 +207,29 @@ bulk = open('superadmin/bulk_import.py', encoding='utf-8').read()
 check('bulk import routes through competencies.emails',
       'from competencies.emails import send_onboarding' in bulk
       and 'from django.core.mail import send_mail' not in bulk)
+
+# Manual and bulk must produce the same email for one role, or a principal
+# onboarded by hand receives a different message from one who was imported.
+settings.EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
+try:
+    mail.outbox = []
+    emails.send_onboarding(to='a@example.com', name='A', login_id='ID-1',
+                           password='p1', role='SCHOOL_ADMIN', school_name='S')
+    manual = mail.outbox[0]
+    check('manual and bulk share one template',
+          bool(manual.alternatives) and '#3a1149' in manual.alternatives[0][0])
+
+    mail.outbox = []
+    emails.send_notice(to='a@example.com', name='A', role='SUPER_ADMIN',
+                       heading='Your password has been changed',
+                       paragraphs=['Done.'], facts=[('When', 'today')])
+    notice = mail.outbox[0]
+    check('send_notice renders branded HTML',
+          bool(notice.alternatives) and '#3a1149' in notice.alternatives[0][0]
+          and '{{' not in notice.alternatives[0][0])
+finally:
+    settings.EMAIL_BACKEND = real_backend
+    mail.outbox = []
 
 # ── 6. Optional live send ───────────────────────────────────────────────
 if len(sys.argv) > 1:
