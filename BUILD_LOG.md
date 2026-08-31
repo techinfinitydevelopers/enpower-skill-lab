@@ -698,3 +698,61 @@ goes out, or Gmail's image proxy caches the 404. Verified 200 before sending.
 ### Verification
 63 offline checks; 66 with a live send. Green locally and on the droplet, both
 sets delivered to the Inbox. Other suites unchanged at 49 / 63.
+
+---
+
+## 2026-08-31 (v3) — Forgot password, and one branded email everywhere
+
+**Commits:** `091d122`, `59e719e` — live on production.
+
+### Manual onboarding was still unbranded
+Only the bulk importer used the new template. The five onboarding forms in
+`superadmin/views.py` each hand-built their own plain-text body, so a principal
+added by hand received a different, unbranded email from one imported from a
+spreadsheet. All five now call `send_onboarding`; ~130 lines of duplicated
+message text are gone.
+
+The Super Admin password-change confirmation was the last plain-text message.
+It uses a new generic `notice` template (heading, paragraphs, optional fact
+box). **No view hand-builds an email body any more**, and `verify_email.py`
+asserts it.
+
+### Forgot password — built
+The login page's "Forgot Password?" link pointed at `href="#"`. There was no
+reset URL, no view, no way to recover an account — only the email template,
+which nothing called.
+
+`accounts/password_reset.py` — two views, templates matching the login page.
+
+**Limited to School Admin, Thinking Coach, Program Coordinator.** Students and
+Parents are excluded for the same reason they get no email at all; the page
+says so and tells them to contact the school office. Super Admin is excluded —
+recovered by a developer.
+
+Decisions worth keeping:
+- The role is **re-checked when the link is used**, not only when it was made,
+  so a link cannot outlive a role change.
+- The reply is **identical whether or not the address matched** — otherwise the
+  form becomes a way to test which school staff are registered.
+- `PASSWORD_RESET_TIMEOUT` = **24 hours** (env-overridable). Django's default is
+  3 days, long for a link that hands over an account. The token also dies on
+  first use or if the user logs in meanwhile.
+
+### Verification
+`verify_password_reset.py` — **47 checks**, driving the real URLs and reading
+the link out of the outbox as a recipient would: each allowed role resets and
+signs in with the new password, the link dies after one use, blocked roles get
+no email, forged links for blocked roles are refused, tampered uid and token are
+refused, an unknown address gets the same reply as a real one. Every password it
+touches is restored.
+
+Also verified on production itself: `/forgot-password/` returns 200, the login
+link is wired, a real POST returns 302 and shows the message, and a genuine
+reset email was delivered with a working link.
+
+Suites: 47 (reset) + 67 (email) + 49 (reports) + 63 (pages), all green, locally
+and on the droplet.
+
+### Still open
+- **Announcement email** — template ready, still no flow calls it.
+- Toast visibility bug still OPEN.
