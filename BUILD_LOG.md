@@ -555,3 +555,62 @@ six dashboards. Suites unchanged at 49 / 63 / 23.
 - Seeded competency/profile content is realistic dummy data, not the client's.
 - Production not touched — all of the above is local only.
 - Toast visibility bug (earlier) still OPEN.
+
+---
+
+## 2026-08-31 — Real email via ZeptoMail; Students and Parents excluded
+
+**Commits:** `31f758c`, `a7ee384` — live on production.
+
+### What changed
+Mail was going to a Mailtrap sandbox with the credentials hardcoded in
+`settings.py`, so nothing had ever reached a real inbox. SMTP settings now come
+from the environment (`.env`, gitignored), defaulting to ZeptoMail, with
+`.env.example` documenting every value.
+
+Students and Parents are no longer emailed at all. Their login IDs are
+system-generated and handed over by the school, and neither role can change its
+own password. The rule is `settings.EMAIL_SUPPRESSED_ROLES` and it is enforced
+in exactly one function, `competencies/emails.py::_send`.
+
+To make the gate unavoidable, the six views that called `send_mail` directly now
+call `send_raw`, which applies it. **No `send_mail` call remains anywhere outside
+`competencies/emails.py`**, and the suite asserts that.
+
+`normalise_role()` folds `'Student'`, `'STUDENT'` and `'Thinking Coach'` to one
+form, because the bulk importer passes display labels while the views pass role
+codes; without it the importer would have walked straight past the gate.
+
+### Bugs this surfaced
+- Three onboarding emails carried a `http://127.0.0.1:8000/login/` link. Harmless
+  against a sandbox, useless the moment mail is real. Links now build from
+  `settings.SITE_URL`.
+- The Student and Parent success messages said "Credentials sent to ..." — now a
+  lie. They show the login ID and password on screen instead, which is the only
+  way the admin sees the password they have to hand over.
+- No `EMAIL_TIMEOUT` was set, so a hung SMTP server would have held an onboarding
+  request until gunicorn killed the worker. Now 20s.
+- **DigitalOcean blocks outbound 25, 465 and 587.** The first production send sat
+  until it timed out. ZeptoMail also answers on 2525, which is open; STARTTLS and
+  AUTH both succeed there. The server's `.env` uses 2525, local uses 587.
+
+### Who gets mail
+| Role | Onboarding email |
+|------|------------------|
+| School Admin, Thinking Coach, Program Coordinator, Super Admin | sent |
+| Student, Parent | suppressed and logged |
+
+Both manual onboarding and bulk upload pass through the same gate.
+
+### Verification
+`verify_email.py` — 34 checks: configuration, the gate in every spelling the
+callers use, the gate under a real `send_onboarding` call on the locmem backend,
+no bypass, and the role named at each of the six call sites. 34/34 locally and on
+the server, including a live send from each. Existing suites unchanged at 49 / 63.
+
+### Still open
+- ZeptoMail domain `enpowerskilllab.com` is verified; SPF/DKIM alignment not
+  checked, so first real sends should be watched for spam placement.
+- Announcement and password-reset templates exist in `competencies/emails.py` but
+  nothing calls them yet — no flow is wired to either.
+- Toast visibility bug still OPEN.
