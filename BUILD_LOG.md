@@ -653,3 +653,48 @@ Inbox, not spam. Other suites unchanged at 49 / 63.
 - Announcement and password-reset templates are built but **no flow calls
   them** — nothing sends an announcement email today.
 - Toast visibility bug still OPEN.
+
+---
+
+## 2026-08-31 (v2) — Email redesign, and the Gmail attachment chip
+
+**Commit:** `d36e055` — live on production.
+
+### The attachment chip
+The logo travelled as an inline `cid:` part. It rendered fine, but **Gmail
+counts any attached part, inline or not**, so every message showed an
+`enpower-logo.png` chip beneath it in the inbox list — as if the mail carried a
+file. It did not.
+
+Fixed by hosting the image:
+`SITE_URL/static/assets/images/email-badge.png`. No chip, and with images
+blocked the alt text carries the name. The trade is that a domain change would
+break the image in already-sent mail; that is the normal cost of hosted assets
+and is worth it against a chip on every message.
+
+This reverses the call made earlier the same day. The cid approach was chosen
+to survive the planned Railway move — correct in principle, but the chip is
+visible to every recipient and the domain change is one-off.
+
+### New layout
+Rebuilt to the reference the client sent: dark purple header band (`#3a1149`)
+with the shield badge and product name, white card, bold greeting, details box,
+a short list of what the role can do, and a gold pill button.
+
+`static/assets/images/email-badge.png` is generated from the shield in the brand
+logo, on a white rounded tile **baked onto the header colour** — rounded corners
+via CSS do not survive Outlook. **The header `bgcolor` and the badge PNG's
+background must stay identical (`#3a1149`)** or the tile shows a seam;
+`verify_email.py` asserts it. `email-logo.png` is gone with the cid approach.
+
+The onboarding email now lists what that role can actually reach — entering
+scores for a coach, grade-wise reports for a principal. Every line names a
+screen that exists.
+
+### Deploy order matters
+`collectstatic` must run and the badge URL must return 200 **before** any mail
+goes out, or Gmail's image proxy caches the 404. Verified 200 before sending.
+
+### Verification
+63 offline checks; 66 with a live send. Green locally and on the droplet, both
+sets delivered to the Inbox. Other suites unchanged at 49 / 63.
