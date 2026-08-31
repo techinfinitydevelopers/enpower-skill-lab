@@ -7,7 +7,7 @@ from django.db import models, transaction
 from django.db.models import Q
 from django.contrib.auth import get_user_model, logout
 from django.contrib.auth.hashers import make_password
-from django.core.mail import send_mail
+from competencies.emails import send_raw
 from django.conf import settings
 from django.utils import timezone
 from schools.models import School
@@ -776,13 +776,8 @@ Best regards,
 Enpower Skill Lab Team
                 """
 
-                send_mail(
-                    email_subject,
-                    email_body,
-                    settings.DEFAULT_FROM_EMAIL,
-                    [school_admin.email],
-                    fail_silently=False,
-                )
+                send_raw(email_subject, email_body, school_admin.email,
+                         role='SCHOOL_ADMIN')
 
                 messages.success(request, f'School Admin "{school_admin.full_name}" has been successfully onboarded! Credentials sent to {school_admin.email}.')
             except Exception as email_error:
@@ -931,9 +926,9 @@ def change_password(request):
             
             # Send email notification
             try:
-                send_mail(
+                send_raw(
                     subject='Password Changed - ENpower Skill Lab',
-                    message=f'''Hello {request.user.get_full_name() or request.user.username},
+                    body=f'''Hello {request.user.get_full_name() or request.user.username},
 
 Your password for ENpower Skill Lab Super Admin account has been changed successfully.
 
@@ -943,9 +938,8 @@ Date & Time: {timezone.now().strftime("%B %d, %Y at %I:%M %p")}
 
 Best regards,
 ENpower Skill Lab Team''',
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[request.user.email],
-                    fail_silently=True,
+                    to=request.user.email,
+                    role='SUPER_ADMIN',
                 )
             except Exception as email_error:
                 # Log email error but don't fail the password change
@@ -1119,7 +1113,7 @@ Here are your login credentials:
 🔑 Temporary Password: {temp_password}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-🔗 Login URL: http://127.0.0.1:8000/login/
+🔗 Login URL: {settings.SITE_URL}/login/
 
 Skill Lab ID: {skill_lab_reg_id}
 Class: {student.student_class} - {student.division}
@@ -1133,14 +1127,11 @@ Best regards,
 ENpower Skill Lab Team
                 """
                 
-                send_mail(
-                    email_subject,
-                    email_body,
-                    settings.DEFAULT_FROM_EMAIL,
-                    [email],
-                    fail_silently=False,
-                )
-                messages.success(request, f'Student {student.full_name} added successfully! Credentials sent to {email}')
+                sent = send_raw(email_subject, email_body, email, role='STUDENT')
+                messages.success(request, f'Student {student.full_name} added successfully! '
+                          + (f'Credentials sent to {email}' if sent else
+                             f'Login ID: {skill_lab_reg_id} | Password: {temp_password} '
+                             f'(students are not emailed - please hand these over directly)'))
             except Exception as mail_error:
                 messages.warning(request, f'Student added but email failed: {str(mail_error)}. Password: {temp_password}')
             
@@ -1386,7 +1377,7 @@ Here are your login credentials:
 🔑 Temporary Password: {temp_password}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-🔗 Login URL: http://127.0.0.1:8000/login/
+🔗 Login URL: {settings.SITE_URL}/login/
 
 Employee ID: {employee_id}
 Role: Thinking Coach / Teacher
@@ -1399,14 +1390,10 @@ Best regards,
 ENpower Skill Lab Team
                 """
                 
-                send_mail(
-                    email_subject,
-                    email_body,
-                    settings.DEFAULT_FROM_EMAIL,
-                    [email],
-                    fail_silently=False,
-                )
-                messages.success(request, f'Teacher {teacher.full_name} added successfully! Credentials sent to {email}')
+                sent = send_raw(email_subject, email_body, email, role='THINKING_COACH')
+                messages.success(request, f'Teacher {teacher.full_name} added successfully! '
+                          + (f'Credentials sent to {email}' if sent else
+                             f'Login ID: {email} | Password: {temp_password}'))
             except Exception as mail_error:
                 messages.warning(request, f'Teacher added but email failed: {str(mail_error)}. Password: {temp_password}')
             
@@ -1708,7 +1695,7 @@ Here are your login credentials:
 🔑 Temporary Password: {temp_password}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-🔗 Login URL: http://127.0.0.1:8000/login/
+🔗 Login URL: {settings.SITE_URL}/login/
 
 Parent ID: {parent.parent_id}
 Linked Student(s): {students_text}
@@ -1728,14 +1715,11 @@ Best regards,
 ENpower Skill Lab Team
                 """
                 
-                send_mail(
-                    email_subject,
-                    email_body,
-                    settings.DEFAULT_FROM_EMAIL,
-                    [email],
-                    fail_silently=False,
-                )
-                messages.success(request, f'Parent "{parent.full_name}" onboarded successfully! Credentials sent to {email}')
+                sent = send_raw(email_subject, email_body, email, role='PARENT')
+                messages.success(request, f'Parent "{parent.full_name}" onboarded successfully! '
+                          + (f'Credentials sent to {email}' if sent else
+                             f'Login ID: {user.username} | Password: {temp_password} '
+                             f'(parents are not emailed - please hand these over directly)'))
             except Exception as mail_error:
                 messages.warning(request, f'Parent added but email failed: {str(mail_error)}. Password: {temp_password}')
             
@@ -2036,13 +2020,8 @@ Best regards,
 Enpower Skill Lab Team
                 """
 
-                send_mail(
-                    email_subject,
-                    email_body,
-                    settings.DEFAULT_FROM_EMAIL,
-                    [coordinator.official_email],
-                    fail_silently=False,
-                )
+                send_raw(email_subject, email_body, coordinator.official_email,
+                         role='PROGRAM_COORDINATOR')
 
                 messages.success(request, f'Program Coordinator "{coordinator.full_name}" onboarded successfully! Credentials sent to {coordinator.official_email}.')
             except Exception as email_error:

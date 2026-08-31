@@ -16,6 +16,14 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Secrets (SMTP credentials today) live in .env, which is gitignored. Anything
+# already present in the real environment wins, so the server can override.
+try:
+    from dotenv import load_dotenv
+    load_dotenv(BASE_DIR / '.env', override=False)
+except ImportError:  # dotenv is optional; env vars still work without it
+    pass
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -165,18 +173,47 @@ AUTH_USER_MODEL = 'accounts.User'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# Email Configuration - Mailtrap (Testing)
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'sandbox.smtp.mailtrap.io'
-EMAIL_PORT = 2525
-EMAIL_USE_TLS = True
-EMAIL_USE_SSL = False
-EMAIL_HOST_USER = '2ca19f495669cb'
-EMAIL_HOST_PASSWORD = 'f4d75ebe3ce319'  # Replace with your complete Mailtrap password
-DEFAULT_FROM_EMAIL = 'Enpower Skill Lab <noreply@enpowerskilllab.com>'
+# ── Email ───────────────────────────────────────────────────────────────
+# Live sending goes through ZeptoMail. Every value is read from the
+# environment (see .env.example) so the credentials never sit in the repo and
+# so a developer can point at Mailtrap, or at the console backend, without
+# touching this file.
+#
+# ZeptoMail expects the SMTP username `emailapikey` and the send-mail token as
+# the password, and it will reject any From address outside a domain verified
+# in the ZeptoMail console.
 
-# For console testing (emails printed to terminal), uncomment this:
-# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+def _env_flag(name, default=False):
+    return os.environ.get(name, str(default)).strip().lower() in ('1', 'true', 'yes', 'on')
+
+
+EMAIL_BACKEND = os.environ.get(
+    'EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.zeptomail.in')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
+EMAIL_USE_TLS = _env_flag('EMAIL_USE_TLS', True)
+EMAIL_USE_SSL = _env_flag('EMAIL_USE_SSL', False)
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'emailapikey')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.environ.get(
+    'DEFAULT_FROM_EMAIL', 'ENpower Skill Lab <noreply@enpowerskilllab.com>')
+
+# Without this a hung SMTP server holds the request open until gunicorn kills
+# the worker, which would take an onboarding form down with it.
+EMAIL_TIMEOUT = int(os.environ.get('EMAIL_TIMEOUT', '20'))
+
+# Students and Parents receive system-generated login IDs handed to them by the
+# school, so no credential email is sent to those two roles. Enforced centrally
+# in competencies/emails.py — every send passes through that gate.
+EMAIL_SUPPRESSED_ROLES = {
+    r.strip().upper().replace(' ', '_')
+    for r in os.environ.get('EMAIL_SUPPRESSED_ROLES', 'STUDENT,PARENT').split(',')
+    if r.strip()
+}
+
+# Public address of the site. Emails leave the server and are opened elsewhere,
+# so any link inside one has to be absolute and has to point at production.
+SITE_URL = os.environ.get('SITE_URL', 'https://enpower.techinfinity.link').rstrip('/')
 
 # Auth
 LOGIN_URL = '/login/'
