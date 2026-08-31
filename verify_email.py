@@ -168,13 +168,27 @@ finally:
     mail.outbox = []
 
 # ── 4. No path around the gate ──────────────────────────────────────────
+# Walks the tree rather than shelling out to `git grep`: this suite is also run
+# inside the deployed container, which has the source but no git binary.
 print('\nNO BYPASS')
-import subprocess                                       # noqa: E402
-out = subprocess.run(
-    ['git', 'grep', '-rn', '--', 'send_mail(', '*.py'],
-    capture_output=True, text=True).stdout
-offenders = [l for l in out.splitlines()
-             if 'competencies/emails.py' not in l and 'verify_email.py' not in l]
+import pathlib                                          # noqa: E402
+
+SKIP_DIRS = {'venv', '.venv', '__pycache__', '.git', 'node_modules', 'staticfiles'}
+ALLOWED = {'competencies/emails.py', 'verify_email.py'}
+
+offenders = []
+for path in pathlib.Path(settings.BASE_DIR).rglob('*.py'):
+    rel = path.relative_to(settings.BASE_DIR).as_posix()
+    if any(part in SKIP_DIRS for part in path.parts) or rel in ALLOWED:
+        continue
+    try:
+        text = path.read_text(encoding='utf-8', errors='ignore')
+    except OSError:
+        continue
+    for n, line in enumerate(text.splitlines(), 1):
+        if 'send_mail(' in line:
+            offenders.append(f'{rel}:{n}')
+
 check('no view calls send_mail directly', not offenders, '; '.join(offenders[:3]))
 
 # ── 5. Every onboarding path is branded, and names the right role ───────
