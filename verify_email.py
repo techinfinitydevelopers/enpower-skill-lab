@@ -138,13 +138,12 @@ try:
         check(f'{name}: keeps the plain-text body', len(msg.body) > 80)
         check(f'{name}: no unrendered template syntax',
               not any(t in html for t in ('{{', '{%', '{#')))
-        check(f'{name}: references the inline logo', 'cid:enpowerlogo' in html)
-        check(f'{name}: carries the logo as a related part',
-              msg.mixed_subtype == 'related' and len(msg.attachments) == 1)
-        cid = msg.attachments[0].get('Content-ID') if msg.attachments else None
-        check(f'{name}: attachment Content-ID matches the cid', cid == '<enpowerlogo>',
-              str(cid))
+        check(f'{name}: loads the logo over https',
+              f'src="{settings.SITE_URL}/static/{emails.LOGO_STATIC_PATH}"' in html)
+        # A cid: part is what made Gmail show an attachment chip on every mail.
+        check(f'{name}: sends no attachment', not msg.attachments and 'cid:' not in html)
         check(f'{name}: no localhost link', '127.0.0.1' not in html and 'localhost' not in html)
+        check(f'{name}: header colour matches the badge tile', '#3a1149' in html)
 
     ob = built['onboarding'].alternatives[0][0]
     check('onboarding HTML shows the login ID', 'BV-SA-2026-004' in ob)
@@ -154,7 +153,16 @@ try:
     check('onboarding text also carries the login link', '/login/' in built['onboarding'].body)
     check('reset HTML carries the reset link', 'abc-123' in
           built['password_reset'].alternatives[0][0])
-    check('logo file exists', emails.LOGO_PATH.exists(), str(emails.LOGO_PATH))
+    ob_pts = built['onboarding'].alternatives[0][0]
+    check('onboarding lists what a School Admin can do',
+          'Download the full school report as Excel' in ob_pts)
+
+    from pathlib import Path
+    badge = Path(settings.BASE_DIR) / 'static' / emails.LOGO_STATIC_PATH
+    check('badge file exists in static/', badge.exists(), str(badge))
+    collected = Path(settings.STATIC_ROOT) / emails.LOGO_STATIC_PATH
+    check('badge is collected into STATIC_ROOT (run collectstatic if not)',
+          collected.exists(), str(collected))
 finally:
     settings.EMAIL_BACKEND = real_backend
     mail.outbox = []

@@ -23,8 +23,6 @@ caller was doing. Onboarding must not fail because a mail server is unreachable.
 """
 
 import logging
-from email.mime.image import MIMEImage
-from pathlib import Path
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
@@ -35,8 +33,13 @@ logger = logging.getLogger('enpower.email')
 # Branded HTML lives in competencies/templates/emails/. Every message goes out
 # as multipart/alternative: the plain-text body built below stays the fallback,
 # so a text-only client still gets a readable email.
-LOGO_PATH = Path(settings.BASE_DIR) / 'static' / 'assets' / 'images' / 'email-logo.png'
-LOGO_CID = 'enpowerlogo'
+#
+# The header logo is fetched over HTTPS. It used to travel as an inline cid:
+# attachment, which rendered correctly but made Gmail print an
+# "enpower-logo.png" chip under every message in the inbox list -- it counts any
+# attached part, inline or not. A hosted URL has no chip; with images blocked
+# the alt text carries the name.
+LOGO_STATIC_PATH = 'assets/images/email-badge.png'
 
 ROLE_LABELS = {
     'SCHOOL_ADMIN': 'School Admin',
@@ -47,7 +50,42 @@ ROLE_LABELS = {
     'PARENT': 'Parent',
 }
 
-SIGN_OFF = 'Regards,\nTeam ENpower Skill Lab'
+SIGN_OFF = 'Warm regards,\nTeam ENpower Skill Lab'
+
+# Shown as a short list in the onboarding email. Each line names something the
+# role can actually reach today -- promising a screen that does not exist is
+# worse than saying nothing, so this list is trimmed, not aspirational.
+DASHBOARD_POINTS = {
+    'SCHOOL_ADMIN': [
+        'View grade-wise reports for your school',
+        'Track class performance and project completion',
+        'Monitor attendance across grades',
+        'Download the full school report as Excel',
+    ],
+    'THINKING_COACH': [
+        'Enter assessment scores for your students',
+        'Generate project and annual Skill Passport reports',
+        'Mark and review class attendance',
+        'See announcements and the event calendar',
+    ],
+    'PROGRAM_COORDINATOR': [
+        'Monitor every school mapped to you',
+        'Track project progress and completion',
+        'View grade-wise programme reports',
+    ],
+    'SUPER_ADMIN': [
+        'Manage schools, frameworks, projects and users',
+        'Onboard staff individually or in bulk',
+        'View platform-wide reports and analytics',
+    ],
+}
+
+
+def dashboard_points(role):
+    return DASHBOARD_POINTS.get(normalise_role(role), [
+        'View your reports and progress',
+        'See announcements and upcoming events',
+    ])
 
 
 def role_label(role):
@@ -101,6 +139,7 @@ def _login_url():
 def _base_context(role=None, school_name=None, program_name=None, **extra):
     """Values every template needs, so no child has to rebuild them."""
     site_url = (getattr(settings, 'SITE_URL', '') or '').rstrip('/')
+    static_prefix = (settings.STATIC_URL or 'static/').strip('/')
     ctx = {
         'role_label': role_label(role),
         'school_name': school_name,
@@ -108,33 +147,10 @@ def _base_context(role=None, school_name=None, program_name=None, **extra):
         'site_url': site_url,
         # The bare host reads better inside a sentence than the full URL.
         'site_url_label': site_url.split('://', 1)[-1],
+        'badge_url': f'{site_url}/{static_prefix}/{LOGO_STATIC_PATH}' if site_url else '',
     }
     ctx.update(extra)
     return ctx
-
-
-def _attach_logo(message):
-    """Embed the logo as an inline part referenced by cid:enpowerlogo.
-
-    A hosted <img src="https://..."> would break with images blocked and again
-    the day the site changes domain, so the file travels with the message. It
-    is 23 KB, against a volume of 150-200 emails a year.
-
-    ``mixed_subtype = 'related'`` is what makes the client resolve the cid: it
-    wraps the alternative parts and the image in one multipart/related. Without
-    it the logo arrives as a detached attachment.
-    """
-    try:
-        with open(LOGO_PATH, 'rb') as handle:
-            image = MIMEImage(handle.read())
-    except OSError as e:
-        # A missing logo must not cost us the email; alt text carries the name.
-        logger.warning('Email logo missing at %s: %s', LOGO_PATH, e)
-        return
-    image.add_header('Content-ID', f'<{LOGO_CID}>')
-    image.add_header('Content-Disposition', 'inline', filename='enpower-logo.png')
-    message.mixed_subtype = 'related'
-    message.attach(image)
 
 
 def _send(subject, body, to, role=None, template=None, context=None):
@@ -159,7 +175,6 @@ def _send(subject, body, to, role=None, template=None, context=None):
             ctx.setdefault('subject', subject)
             message.attach_alternative(
                 render_to_string(f'emails/{template}', ctx), 'text/html')
-            _attach_logo(message)
 
         message.send(fail_silently=False)
         return True
@@ -200,6 +215,7 @@ def send_onboarding(to, name, login_id, password, role,
         template='onboarding.html',
         context=_base_context(role, school_name, program_name,
                               name=name, login_id=login_id, password=password,
+                              dashboard_points=dashboard_points(role),
                               preheader=f'Your {label} login for {programme}'))
 
 

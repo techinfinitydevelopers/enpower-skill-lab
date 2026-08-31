@@ -5,9 +5,10 @@ Written for mail clients, not browsers, which is why it looks dated: tables
 instead of flexbox, inline styles instead of a stylesheet, and no shorthand
 properties Outlook drops. Anything clever here breaks somewhere.
 
-The logo comes in as an inline attachment (cid:enpowerlogo) rather than a
-hosted URL, so it renders with images blocked and keeps working if the site
-moves to a different domain. competencies/emails.py attaches it.
+The logo is loaded from {{ badge_url }} over HTTPS. It used to travel as an
+inline cid: attachment, which rendered fine but made Gmail show an
+"enpower-logo.png" chip under every message in the inbox list. A hosted URL
+has neither problem; if images are blocked the alt text carries the name.
 
 Child templates fill in `content`. `preheader` is the grey line Gmail shows
 next to the subject in the inbox list.
@@ -22,64 +23,78 @@ next to the subject in the inbox list.
 <meta name="supported-color-schemes" content="light only">
 <title>{{ subject }}</title>
 </head>
-<body style="margin:0; padding:0; width:100%; background-color:#f3f1f6;">
+<body style="margin:0; padding:0; width:100%; background-color:#f5f3f8;">
 
-{% comment %} Inbox preview line, then whitespace so the body text does not follow it. {% endcomment %}
+{% comment %} Inbox preview line, then whitespace so body text does not follow it. {% endcomment %}
 <div style="display:none; max-height:0; overflow:hidden; opacity:0; color:transparent; height:0; width:0;">
   {{ preheader|default:subject }}&#847;&nbsp;&#847;&nbsp;&#847;&nbsp;&#847;&nbsp;&#847;&nbsp;&#847;&nbsp;&#847;&nbsp;&#847;&nbsp;&#847;&nbsp;&#847;&nbsp;&#847;&nbsp;&#847;&nbsp;&#847;&nbsp;&#847;&nbsp;&#847;&nbsp;
 </div>
 
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
-       style="background-color:#f3f1f6;">
+       style="background-color:#f5f3f8;">
   <tr>
-    <td align="center" style="padding:32px 12px;">
+    <td align="center" style="padding:28px 12px 40px 12px;">
 
       <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0"
-             style="width:100%; max-width:600px; background-color:#ffffff;
-                    border-radius:14px; overflow:hidden;
-                    border:1px solid #e6e1ec;
+             style="width:100%; max-width:600px;
                     font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
 
-        {# Brand bar — the logo is dark purple, so it needs a light ground #}
+        {# ── header band ──────────────────────────────────────────────── #}
+        {# bgcolor must match the badge PNG's own background, or the tile shows a seam #}
         <tr>
-          <td align="center" style="padding:32px 32px 24px 32px; background-color:#ffffff;">
-            <img src="cid:enpowerlogo" alt="ENpower Skill Lab" width="190"
-                 style="display:block; width:190px; max-width:60%; height:auto; border:0; outline:none;">
+          <td bgcolor="#3a1149"
+              style="background-color:#3a1149; padding:18px 24px; border-radius:10px 10px 0 0;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td width="44" style="width:44px;" valign="middle">
+                  <img src="{{ badge_url }}" alt="ENpower" width="44" height="44"
+                       style="display:block; width:44px; height:44px; border:0; outline:none;">
+                </td>
+                <td style="padding-left:14px; font-size:15px; line-height:22px;
+                           font-weight:700; color:#ffffff; letter-spacing:.01em;"
+                    valign="middle">
+                  ENpower Skill Lab
+                </td>
+              </tr>
+            </table>
           </td>
         </tr>
-        <tr>
-          <td style="height:4px; line-height:4px; font-size:0; background-color:#5b1f6f;">&nbsp;</td>
-        </tr>
-        <tr>
-          <td style="height:3px; line-height:3px; font-size:0; background-color:#f9b233;">&nbsp;</td>
-        </tr>
 
-        {# ── message ────────────────────────────────────────────────── #}
+        {# ── message ──────────────────────────────────────────────────── #}
         <tr>
-          <td style="padding:36px 40px 8px 40px;">
+          <td bgcolor="#ffffff"
+              style="background-color:#ffffff; padding:32px 34px 10px 34px;">
             {% block content %}{% endblock %}
           </td>
         </tr>
 
-        {# ── sign-off ───────────────────────────────────────────────── #}
+        {# ── sign-off ─────────────────────────────────────────────────── #}
         <tr>
-          <td style="padding:8px 40px 36px 40px;">
-            <p style="margin:0; font-size:15px; line-height:24px; color:#3f3547;">
-              Regards,<br>
-              <strong style="color:#5b1f6f;">Team ENpower Skill Lab</strong>
-            </p>
+          <td bgcolor="#ffffff"
+              style="background-color:#ffffff; padding:8px 34px 30px 34px;
+                     border-radius:0 0 10px 10px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="border-top:1px solid #ede8f2; padding-top:20px;">
+                  <p style="margin:0; font-size:13px; line-height:21px; color:#8b7d97;">
+                    Warm regards,<br>
+                    <span style="color:#5b1f6f; font-weight:600;">Team ENpower Skill Lab</span>
+                  </p>
+                </td>
+              </tr>
+            </table>
           </td>
         </tr>
 
-        {# ── footer ─────────────────────────────────────────────────── #}
+        {# ── outside the card ─────────────────────────────────────────── #}
         <tr>
-          <td style="padding:22px 40px; background-color:#faf8fc; border-top:1px solid #eee9f2;">
-            <p style="margin:0 0 6px 0; font-size:12px; line-height:19px; color:#8a8194;">
+          <td style="padding:18px 34px 0 34px;">
+            <p style="margin:0 0 5px 0; font-size:11px; line-height:18px; color:#a397ad;">
               This is an automated message from the ENpower Skill Lab platform.
               Please do not reply to this address.
             </p>
-            <p style="margin:0; font-size:12px; line-height:19px; color:#8a8194;">
-              {% if site_url %}<a href="{{ site_url }}" style="color:#5b1f6f; text-decoration:none;">{{ site_url_label }}</a> &nbsp;&middot;&nbsp; {% endif %}
+            <p style="margin:0; font-size:11px; line-height:18px; color:#a397ad;">
+              {% if site_url %}<a href="{{ site_url }}" style="color:#8b7d97; text-decoration:none;">{{ site_url_label }}</a> &nbsp;&middot;&nbsp; {% endif %}
               ENpower &mdash; Think. Create. Lead.
             </p>
           </td>
