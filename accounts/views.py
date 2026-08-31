@@ -1,8 +1,32 @@
-from django.shortcuts import render, redirect
-from django.contrib.auth import authenticate, login
 from django.contrib import messages
+from django.contrib.auth import authenticate, login
+from django.shortcuts import redirect, render
 
-# Create your views here.
+# Where each role lands after signing in. Kept as one table because two places
+# need it: the login view, and `home` below.
+ROLE_DASHBOARDS = {
+    'SUPER_ADMIN': '/super-admin/dashboard/',
+    'PROGRAM_COORDINATOR': '/coordinator/dashboard/',
+    'SCHOOL_ADMIN': '/school-admin/dashboard/',
+    'THINKING_COACH': '/teacher/dashboard/',
+    'PARENT': '/parent/dashboard/',
+    'STUDENT': '/student/dashboard/',
+}
+
+
+def home(request):
+    """The site root.
+
+    Nothing was mapped here, so the main domain answered 404 — which is what a
+    visitor saw after the apex redirect landed them on the bare hostname.
+    Signed-in visitors go to their own dashboard, everyone else to the login
+    page.
+    """
+    if request.user.is_authenticated:
+        target = ROLE_DASHBOARDS.get(getattr(request.user, 'role', None))
+        if target:
+            return redirect(target)
+    return redirect('login')
 
 
 def login_view(request):
@@ -20,22 +44,16 @@ def login_view(request):
 
             login(request, user)
 
-            # Redirect based on role
-            if role == "SUPER_ADMIN":
-                return redirect('superadmin_dashboard')
-            if role == "PROGRAM_COORDINATOR":
-                return redirect('/coordinator/dashboard/')
-            if role == "SCHOOL_ADMIN":
-                return redirect('/school-admin/dashboard/')
-            if role == "THINKING_COACH":
-                return redirect('/teacher/dashboard/')
-            if role == "PARENT":
-                return redirect('/parent/dashboard/')
-            if role == "STUDENT":
-                return redirect('/student/dashboard/')
+            target = ROLE_DASHBOARDS.get(role)
+            if target:
+                return redirect(target)
+            # A role with no dashboard should not leave the user on a blank
+            # page; send them back with something to read.
+            messages.error(request, "No dashboard is configured for this role.")
+            return redirect('login')
 
         else:
             messages.error(request, "Invalid credentials")
             return redirect('login')
 
-    return render(request, 'accounts/login.html')    
+    return render(request, 'accounts/login.html')

@@ -4,6 +4,10 @@ from . import password_reset, views
 
 
 urlpatterns = [
+    # The site root. Without this the main domain answers 404, which is where
+    # the apex redirect lands a visitor.
+    path('', views.home, name='home'),
+
     path('login/', views.login_view, name='login'),
 
     # Forgot password. Open to School Admins, Thinking Coaches and Program
