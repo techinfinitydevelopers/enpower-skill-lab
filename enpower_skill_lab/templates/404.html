@@ -1,0 +1,51 @@
+{% load static %}<!DOCTYPE html>
+{% comment %}
+Error pages are deliberately standalone — no `extends`, no `include`, no
+context processors. Django renders 500.html with an empty context, and an error
+page that itself depends on the app is an error page that fails when it is
+needed. Everything here is inline for the same reason.
+{% endcomment %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Page not found - ENpower Skill Lab</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: "Poppins", -apple-system, "Segoe UI", Roboto, sans-serif;
+               background: #f8f9ff; color: #1f1a24; min-height: 100vh;
+               display: flex; align-items: center; justify-content: center; padding: 24px; }
+        .card { width: 100%; max-width: 520px; background: #fff; border: 1px solid #ece7f2;
+                border-radius: 16px; padding: 44px 40px; text-align: center;
+                box-shadow: 0 1px 3px rgba(31, 26, 36, .04); }
+        .logo { height: 42px; margin-bottom: 30px; }
+        .code { font-size: 60px; line-height: 1; font-weight: 700; color: #5b1f6f;
+                letter-spacing: -.02em; }
+        .rule { width: 46px; height: 3px; background: #f9b233; border-radius: 2px;
+                margin: 18px auto 22px; }
+        h1 { font-size: 21px; font-weight: 600; margin-bottom: 10px; }
+        p { font-size: 14px; line-height: 23px; color: #6c6377; margin-bottom: 28px; }
+        .btn { display: inline-block; padding: 13px 30px; border-radius: 10px;
+               background: #6b30ee; color: #fff; text-decoration: none;
+               font-size: 14px; font-weight: 600; }
+        .btn:hover { background: #5b25db; }
+        .foot { margin-top: 26px; font-size: 12px; color: #a397ad; }
+        @media (max-width: 520px) { .card { padding: 34px 24px; } .code { font-size: 48px; } }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <img class="logo" src="{% static 'assets/images/enpower-logo-trimmed.png' %}" alt="ENpower Skill Lab">
+        <div class="code">404</div>
+        <div class="rule"></div>
+        <h1>We couldn&rsquo;t find that page</h1>
+        <p>
+            The link may be out of date, or the page may have moved. Nothing is wrong
+            with your account.
+        </p>
+        <a class="btn" href="/">Go to your dashboard</a>
+        <div class="foot">ENpower &mdash; Think. Create. Lead.</div>
+    </div>
+</body>
+</html>
