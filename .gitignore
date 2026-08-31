@@ -10,3 +10,5 @@ db.sqlite3
 media/
 staticfiles/
 staticfiles/*
+# Railway data dumps — real user data, never commit
+railway_backup_*.json.gz

@@ -1,12 +1,9 @@
 {% extends 'emails/_base.html' %}
 
 {% block content %}
-<h1 style="margin:0 0 6px 0; font-size:21px; line-height:29px; font-weight:700; color:#1c1022;">
+<h1 style="margin:0 0 22px 0; font-size:21px; line-height:29px; font-weight:700; color:#1c1022;">
   Dear {{ name }},
 </h1>
-<p style="margin:0 0 22px 0; font-size:13px; line-height:20px; color:#9186a0;">
-  Greetings from ENpower Skill Lab!
-</p>
 
 <p style="margin:0 0 22px 0; font-size:14px; line-height:24px; color:#5c4a68;">
   Welcome to <strong style="color:#5b1f6f;">{{ programme }}</strong>. You have been
@@ -42,19 +39,6 @@
       </table>
     </td>
   </tr>
-</table>
-
-<p style="margin:24px 0 10px 0; font-size:14px; line-height:22px; font-weight:700; color:#1c1022;">
-  What you can do from your dashboard:
-</p>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-  {% for item in dashboard_points %}
-  <tr>
-    <td width="18" valign="top"
-        style="width:18px; font-size:14px; line-height:23px; color:#9186a0;">&bull;</td>
-    <td style="padding-bottom:7px; font-size:14px; line-height:23px; color:#5c4a68;">{{ item }}</td>
-  </tr>
-  {% endfor %}
 </table>
 
 {% if site_url %}

@@ -50,42 +50,7 @@ ROLE_LABELS = {
     'PARENT': 'Parent',
 }
 
-SIGN_OFF = 'Warm regards,\nTeam ENpower Skill Lab'
-
-# Shown as a short list in the onboarding email. Each line names something the
-# role can actually reach today -- promising a screen that does not exist is
-# worse than saying nothing, so this list is trimmed, not aspirational.
-DASHBOARD_POINTS = {
-    'SCHOOL_ADMIN': [
-        'View grade-wise reports for your school',
-        'Track class performance and project completion',
-        'Monitor attendance across grades',
-        'Download the full school report as Excel',
-    ],
-    'THINKING_COACH': [
-        'Enter assessment scores for your students',
-        'Generate project and annual Skill Passport reports',
-        'Mark and review class attendance',
-        'See announcements and the event calendar',
-    ],
-    'PROGRAM_COORDINATOR': [
-        'Monitor every school mapped to you',
-        'Track project progress and completion',
-        'View grade-wise programme reports',
-    ],
-    'SUPER_ADMIN': [
-        'Manage schools, frameworks, projects and users',
-        'Onboard staff individually or in bulk',
-        'View platform-wide reports and analytics',
-    ],
-}
-
-
-def dashboard_points(role):
-    return DASHBOARD_POINTS.get(normalise_role(role), [
-        'View your reports and progress',
-        'See announcements and upcoming events',
-    ])
+SIGN_OFF = 'Regards,\nTeam ENpower Skill Lab'
 
 
 def role_label(role):
@@ -245,7 +210,6 @@ def send_onboarding(to, name, login_id, password, role,
         template='onboarding.html',
         context=_base_context(role, school_name, program_name,
                               name=name, login_id=login_id, password=password,
-                              dashboard_points=dashboard_points(role),
                               preheader=f'Your {label} login for {programme}'))
 
 

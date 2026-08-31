@@ -153,16 +153,96 @@ try:
     check('onboarding text also carries the login link', '/login/' in built['onboarding'].body)
     check('reset HTML carries the reset link', 'abc-123' in
           built['password_reset'].alternatives[0][0])
-    ob_pts = built['onboarding'].alternatives[0][0]
-    check('onboarding lists what a School Admin can do',
-          'Download the full school report as Excel' in ob_pts)
-
     from pathlib import Path
     badge = Path(settings.BASE_DIR) / 'static' / emails.LOGO_STATIC_PATH
     check('badge file exists in static/', badge.exists(), str(badge))
     collected = Path(settings.STATIC_ROOT) / emails.LOGO_STATIC_PATH
     check('badge is collected into STATIC_ROOT (run collectstatic if not)',
           collected.exists(), str(collected))
+finally:
+    settings.EMAIL_BACKEND = real_backend
+    mail.outbox = []
+
+# ── 3c. The client's wording, line for line ─────────────────────────────
+# The client supplied these three templates. Everything below is their copy
+# with the placeholders filled in; the assertions exist because the wording is
+# theirs to change, not ours, and it has already drifted once (a redesign
+# quietly turned "Regards," into "Warm regards,").
+print("\nCLIENT'S WORDING  (plain-text body, line for line)")
+CLIENT_COPY = {
+    'onboarding': [
+        'Dear [Recipient Name],',
+        'Welcome to [Program Name] – ENpower Skill Lab!',
+        'You have been onboarded as School Admin for [School Name].',
+        'Your login credentials are:',
+        'Login ID: [Email ID]',
+        'One-Time Password: [OTP]',
+        'Please log in using the above credentials and reset your password after '
+        'your first login.',
+        'Regards,',
+        'Team ENpower Skill Lab',
+    ],
+    'announcement': [
+        'Dear [Recipient Name],',
+        'Here’s an important update for [Program Name].',
+        '[Announcement Title]',
+        '[Brief announcement or event details.]',
+        'Program: [Program Name]',
+        'School: [School Name]',
+        'Your Role: School Admin',
+        'For more details, please log in to your ENpower Skill Lab dashboard.',
+        'Regards,',
+        'Team ENpower Skill Lab',
+    ],
+    'password_reset': [
+        'Dear [Recipient Name],',
+        'Your password reset request for [Program Name] – ENpower Skill Lab has '
+        'been received.',
+        'School: [School Name]',
+        'Your Role: School Admin',
+        'Please use the link below to reset your password:',
+        'Reset Password: [Reset Link]',
+        'If you did not request this, please ignore this email.',
+        'Regards,',
+        'Team ENpower Skill Lab',
+    ],
+}
+
+settings.EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
+try:
+    bodies = {}
+    mail.outbox = []
+    emails.send_onboarding(
+        to='t@example.com', name='[Recipient Name]', login_id='[Email ID]',
+        password='[OTP]', role='SCHOOL_ADMIN',
+        school_name='[School Name]', program_name='[Program Name]')
+    bodies['onboarding'] = mail.outbox[0].body
+
+    mail.outbox = []
+    emails.send_announcement(
+        to='t@example.com', name='[Recipient Name]', title='[Announcement Title]',
+        details='[Brief announcement or event details.]', role='SCHOOL_ADMIN',
+        school_name='[School Name]', program_name='[Program Name]')
+    bodies['announcement'] = mail.outbox[0].body
+
+    mail.outbox = []
+    emails.send_password_reset(
+        to='t@example.com', name='[Recipient Name]', reset_link='[Reset Link]',
+        role='SCHOOL_ADMIN', school_name='[School Name]',
+        program_name='[Program Name]')
+    bodies['password_reset'] = mail.outbox[0].body
+
+    for name, lines in CLIENT_COPY.items():
+        body_lines = [l.strip() for l in bodies[name].splitlines() if l.strip()]
+        missing = [l for l in lines if l not in body_lines]
+        check(f'{name}: every line of the client copy is present',
+              not missing, '; '.join(m[:48] for m in missing[:2]))
+
+        # Anything we added on top, so a reviewer can see it rather than
+        # discovering it in a principal's inbox.
+        extra = [l for l in body_lines if l not in lines]
+        if extra:
+            print(f'         (added by us: {" | ".join(e[:60] for e in extra)})')
 finally:
     settings.EMAIL_BACKEND = real_backend
     mail.outbox = []
