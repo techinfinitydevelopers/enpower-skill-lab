@@ -1131,10 +1131,6 @@
                             <span class="material-symbols-outlined">person</span>
                             Profile
                         </a>
-                        <a href="{% url 'parent_change_password' %}" id="nav-change-password">
-                            <span class="material-symbols-outlined">lock</span>
-                            Change Password
-                        </a>
                         <a href="{% url 'parent_logout' %}" id="nav-logout">
                             <span class="material-symbols-outlined">logout</span>
                             Logout
@@ -1213,10 +1209,6 @@
                             <a href="{% url 'parent_profile' %}" class="dropdown-item" id="profileBtn">
                                 <span class="material-symbols-outlined">account_circle</span>
                                 <span>My Profile</span>
-                            </a>
-                            <a href="{% url 'parent_change_password' %}" class="dropdown-item" id="accountSettingsBtn">
-                                <span class="material-symbols-outlined">settings</span>
-                                <span>Account Settings</span>
                             </a>
                             <a href="{% url 'parent_dashboard' %}" class="dropdown-item">
                                 <span class="material-symbols-outlined">dashboard</span>
@@ -1445,7 +1437,6 @@
                 'events.html': 'nav-events',
                 'announcements.html': 'nav-announcements',
                 'profile.html': 'nav-profile',
-                'change-password.html': 'nav-change-password'
             };
 
             const allSidebarLinks = document.querySelectorAll('.sidebar-nav a, .sidebar-dropdown-menu a');
