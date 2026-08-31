@@ -756,3 +756,79 @@ and on the droplet.
 ### Still open
 - **Announcement email** — template ready, still no flow calls it.
 - Toast visibility bug still OPEN.
+
+---
+
+## 2026-08-31 (v4) — Live on Railway, on Postgres
+
+**Commits:** `c97e42c`, `a81312a`. Live at
+**https://enpower-skill-lab-production.up.railway.app**
+
+### Why the build failed
+railpack listed the repo's root files and stopped. There was no dependency
+manifest anywhere -- no `requirements.txt`, `Procfile` or `pyproject.toml` --
+so nothing told it this was a Django project. The droplet only ever worked
+because its venv was built by hand.
+
+### Three things nginx had been hiding
+Each would have broken on any container host:
+
+| | Symptom without the fix | Fix |
+|---|---|---|
+| Static | every stylesheet, script and the email logo 404s | `whitenoise` |
+| Uploads | `static()` returns nothing with DEBUG off, so `/media/` 404s | `SERVE_MEDIA` |
+| TLS | Railway ends TLS at its edge; Django saw every request as insecure | `SECURE_PROXY_SSL_HEADER` |
+
+`SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS`, `DATABASE_URL`,
+`MEDIA_ROOT` and `SQLITE_PATH` all read from the environment now, keeping their
+old values as defaults so the droplet was unaffected.
+
+### Two data defects Postgres caught that SQLite never did
+SQLite does not enforce `varchar` length. Postgres does, and `loaddata` stopped
+on the first row:
+
+- `Pillar pk=20` (KaushalBodh) had the framework's **name** in the legacy
+  `framework` CharField (`max_length=10`): `'CSL Foundation'`, 14 chars. Set to
+  the framework's own prefix `'CSLF'`, matching how the other rows store
+  `'FSL'` / `'CSL+'`. The field is legacy — views use `framework_ref`.
+- `ProgramCoordinator pk=4` (Priya Verma) had a 12-character `ifsc_code`,
+  `'KOTAK0071015'`. An IFSC is 11. Truncated to `'KOTAK007101'`. **Dummy data
+  and now arbitrary — the client should supply the real value.** The row's
+  `bank_name` is "State Bank of India", which a KOTAK code contradicts anyway.
+
+Both were fixed on the droplet (the source of truth) rather than only in the
+dump, so they cannot bite again. Backup taken first:
+`db_backup_before_pg_migration_20260831_1128.sqlite3`.
+
+A whole-dump validator now checks every field against its model's
+`max_length` before loading, instead of discovering violations one
+`loaddata` crash at a time.
+
+### Migration
+- **5083 objects** dumped from the droplet and loaded into Railway Postgres.
+  Counts verified after: 88 users across all six roles, 40 schools, 34
+  students, 4 frameworks, 140 competencies, 52 projects, 102 project reports,
+  2029 score entries.
+- **35 media files (4.7 MB)** onto the `/data` volume. 26 uploads referenced by
+  the database resolve from it; 0 missing.
+- Both transferred as base64 over `railway ssh` stdin. Postgres is not publicly
+  exposed and nothing was staged on a public URL — the dump carries password
+  hashes.
+
+### Verification on Railway
+- All six role dashboards: login and load, no template syntax leaked (20 checks).
+- `verify_email` 67, `verify_password_reset` 47, both green inside the container.
+- SMTP: **587, 465 and 2525 all open** — unlike the droplet, where DigitalOcean
+  blocks all but 2525. All three branded emails sent live (70/70 with sends).
+- `/login/`, `/forgot-password/`, a static file and a media file all 200 over
+  HTTPS.
+
+Droplet re-checked after the data fixes: 67 / 47 / 149 / 64, all green.
+
+### Still open
+- **The two databases now diverge.** Anything entered on the droplet will not
+  appear on Railway and vice versa. Pick one before showing the client.
+- `requirements.txt` pins versions; the droplet venv has some newer ones
+  (`asgiref`, `sqlparse`) that pip resolved there. Harmless, but the two hosts
+  are not byte-identical.
+- Toast visibility bug still OPEN.
