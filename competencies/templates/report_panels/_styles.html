@@ -1,0 +1,96 @@
+{% comment %}
+Styling for the four shared report panels. Kept beside the markup so the three
+dashboards that include them stay identical.
+{% endcomment %}
+<style>
+    .rp-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(460px,1fr)); gap:1.1rem; }
+
+    .rp-panel { background:#fff; border:2px solid #e5e7eb; border-radius:.9rem; overflow:hidden; display:flex; flex-direction:column; }
+    .rp-blue   { border-color:#bfdbfe; }
+    .rp-green  { border-color:#bbf7d0; }
+    .rp-purple { border-color:#ddd6fe; }
+    .rp-orange { border-color:#fed7aa; }
+
+    .rp-head { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem;
+               flex-wrap:wrap; padding:1rem 1.1rem .6rem; }
+    .rp-title { font-size:1.02rem; font-weight:800; color:#1e3a8a; line-height:1.25; }
+    .rp-green  .rp-title { color:#15803d; }
+    .rp-purple .rp-title { color:#6d28d9; }
+    .rp-orange .rp-title { color:#c2410c; }
+    .rp-sub { font-size:.75rem; color:#6b7280; margin-top:.15rem; }
+
+    .rp-note { margin:0 1.1rem .9rem; padding:.5rem .7rem; border-radius:.45rem;
+               font-size:.76rem; color:#374151; background:#f8fafc; border:1px solid #eef2f7; }
+    .rp-blue   .rp-note { background:#eff6ff; border-color:#dbeafe; }
+    .rp-green  .rp-note { background:#f0fdf4; border-color:#dcfce7; }
+    .rp-purple .rp-note { background:#f5f3ff; border-color:#ede9fe; }
+    .rp-orange .rp-note { background:#fff7ed; border-color:#ffedd5; }
+
+    .rp-body { display:flex; gap:1rem; padding:0 1.1rem 1rem; align-items:stretch; flex-wrap:wrap; }
+    .rp-chart-wrap { flex:1 1 260px; min-width:0; }
+
+    /* Bars sit on a baseline; heights arrive as a percentage of the panel max. */
+    .rp-chart { position:relative; display:flex; align-items:flex-end; justify-content:space-around;
+                gap:.4rem; height:210px; padding:22px 4px 0; border-left:1px solid #e5e7eb;
+                border-bottom:1px solid #e5e7eb; }
+    .rp-bar-col { display:flex; flex-direction:column; align-items:center; justify-content:flex-end;
+                  height:100%; flex:1 1 0; min-width:0; }
+    .rp-bar { width:100%; max-width:34px; border-radius:3px 3px 0 0; min-height:3px; }
+    .rp-bar-blue   { background:#3b82f6; }
+    .rp-bar-green  { background:#4ade80; }
+    .rp-bar-purple { background:#a78bfa; }
+    .rp-bar-value { font-size:.68rem; font-weight:700; color:#374151; margin-bottom:3px; white-space:nowrap; }
+    .rp-bar-label { font-size:.62rem; color:#6b7280; margin-top:5px; white-space:nowrap;
+                    overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+
+    .rp-avg-line { position:absolute; left:0; right:0; border-top:2px dashed #16a34a; pointer-events:none; }
+    .rp-avg-line span { position:absolute; right:0; top:-16px; font-size:.62rem; font-weight:700;
+                        color:#15803d; background:#fff; padding:0 4px; }
+
+    .rp-side { flex:0 0 176px; border:1px solid #e5e7eb; border-radius:.6rem; padding:.9rem .8rem; }
+    .rp-side-blue   { background:#eff6ff; border-color:#dbeafe; }
+    .rp-side-green  { background:#f0fdf4; border-color:#dcfce7; }
+    .rp-side-purple { background:#f5f3ff; border-color:#ede9fe; }
+    .rp-side-icon { width:34px; height:34px; border-radius:50%; display:flex; align-items:center;
+                    justify-content:center; margin:0 auto .5rem; background:#fff; }
+    .rp-side-blue   .rp-side-icon { color:#2563eb; }
+    .rp-side-green  .rp-side-icon { color:#16a34a; }
+    .rp-side-purple .rp-side-icon { color:#7c3aed; }
+    .rp-side-icon .material-symbols-outlined { font-size:20px; }
+    .rp-side-label { font-size:.68rem; font-weight:700; color:#4b5563; text-align:center; line-height:1.3; }
+    .rp-side-value { font-size:1.5rem; font-weight:800; text-align:center; margin-top:.15rem; }
+    .rp-side-blue   .rp-side-value { color:#1d4ed8; }
+    .rp-side-green  .rp-side-value { color:#15803d; }
+    .rp-side-purple .rp-side-value { color:#6d28d9; }
+
+    .rp-insights { margin-top:.7rem; padding-top:.6rem; border-top:1px solid rgba(0,0,0,.07); }
+    .rp-insights-title { font-size:.68rem; font-weight:800; color:#374151; margin-bottom:.25rem; }
+    .rp-insights ul { margin:0; padding-left:1rem; }
+    .rp-insights li { font-size:.68rem; color:#4b5563; line-height:1.45; margin-bottom:.2rem; }
+
+    .rp-foot { font-size:.68rem; color:#6b7280; padding:.5rem 1.1rem .8rem; border-top:1px solid #f3f4f6; }
+
+    .rp-scroll { overflow-x:auto; }
+    .rp-table { width:100%; border-collapse:collapse; font-size:.8rem; }
+    .rp-table thead th { background:#f97316; color:#fff; text-align:left; padding:.5rem .8rem;
+                         font-size:.7rem; font-weight:700; letter-spacing:.03em; }
+    .rp-table td { padding:.55rem .8rem; border-bottom:1px solid #f3f4f6; vertical-align:top; }
+    .rp-table tr:last-child td { border-bottom:none; }
+    .rp-grade-cell { font-weight:700; color:#1f2937; white-space:nowrap; }
+    .rp-profile { display:block; font-weight:600; color:#1f2937; }
+    .rp-profile-count { display:block; font-size:.66rem; color:#9ca3af; margin-top:.1rem; }
+
+    .rp-month-form { display:flex; align-items:center; gap:.4rem; }
+    .rp-month-form label { font-size:.7rem; font-weight:700; color:#4b5563; white-space:nowrap; }
+    .rp-month-form select { padding:.3rem .5rem; border:1px solid #d1d5db; border-radius:.4rem;
+                            font-size:.76rem; background:#fff; color:#1f2937; }
+
+    .rp-empty { display:flex; align-items:center; justify-content:center; height:210px;
+                color:#9ca3af; font-size:.82rem; text-align:center; border:1px dashed #e5e7eb;
+                border-radius:.5rem; padding:1rem; }
+
+    @media (max-width:900px) {
+        .rp-grid { grid-template-columns:1fr; }
+        .rp-side { flex:1 1 100%; }
+    }
+</style>

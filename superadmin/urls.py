@@ -1,11 +1,13 @@
 from django.urls import path
 from . import views
 from .bulk_import import download_sample_csv, bulk_import
+from . import reports
 
 
 urlpatterns = [
     
     path('dashboard/', views.dashboard, name='superadmin_dashboard'),
+    path('reports/analytics/', reports.platform_analytics, name='platform_analytics'),
     path('onboard-school/', views.onboard_school, name='onboard_school'),
     path('schools/', views.school_list, name='school_list'),
     path('school/<int:school_id>/', views.view_school, name='view_school'),

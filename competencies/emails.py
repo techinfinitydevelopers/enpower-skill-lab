@@ -1,0 +1,163 @@
+"""
+The three email templates from the changes document.
+
+Recipients are School Admins (principals), Program Coordinators and Thinking
+Coaches. Expected volume is 150-200 emails per year.
+
+  1. Onboarding            welcome message carrying login credentials
+  2. Announcement / event  update notification
+  3. Password reset        reset link with school and role
+
+Wording follows the document. Placeholders are filled from real records rather
+than left in the message, and a missing value is dropped from the email instead
+of being sent as an empty line.
+
+Every send is best-effort: a mail failure is logged and never aborts whatever the
+caller was doing. Onboarding must not fail because a mail server is unreachable.
+"""
+
+import logging
+
+from django.conf import settings
+from django.core.mail import send_mail
+
+logger = logging.getLogger('enpower.email')
+
+ROLE_LABELS = {
+    'SCHOOL_ADMIN': 'School Admin',
+    'THINKING_COACH': 'Thinking Coach',
+    'PROGRAM_COORDINATOR': 'Program Coordinator',
+    'SUPER_ADMIN': 'Super Admin',
+    'STUDENT': 'Student',
+    'PARENT': 'Parent',
+}
+
+SIGN_OFF = 'Regards,\nTeam ENpower Skill Lab'
+
+
+def role_label(role):
+    return ROLE_LABELS.get(role, (role or 'User').replace('_', ' ').title())
+
+
+def _lines(*parts):
+    """Join message parts, dropping any that resolved to nothing.
+
+    A blank school or programme would otherwise send "School:" with nothing
+    after it, which reads worse than omitting the line.
+    """
+    return '\n'.join(p for p in parts if p)
+
+
+def _send(subject, body, to):
+    if not to:
+        return False
+    try:
+        send_mail(subject=subject, message=body,
+                  from_email=settings.DEFAULT_FROM_EMAIL,
+                  recipient_list=[to], fail_silently=False)
+        return True
+    except Exception as e:
+        logger.error('Email FAILED to %s (%s): %s: %s', to, subject, type(e).__name__, e)
+        return False
+
+
+# ── 1. Onboarding ───────────────────────────────────────────────────────
+
+def send_onboarding(to, name, login_id, password, role,
+                    school_name=None, program_name=None):
+    """Welcome message with credentials, sent when an account is created."""
+    programme = program_name or 'ENpower Skill Lab'
+    label = role_label(role)
+
+    where = f' for {school_name}' if school_name else ''
+    body = _lines(
+        f'Dear {name},',
+        '',
+        f'Welcome to {programme} – ENpower Skill Lab!',
+        '',
+        f'You have been onboarded as {label}{where}.',
+        '',
+        'Your login credentials are:',
+        f'Login ID: {login_id}',
+        f'One-Time Password: {password}',
+        '',
+        'Please log in using the above credentials and reset your password '
+        'after your first login.',
+        '',
+        SIGN_OFF,
+    )
+    return _send(f'Welcome to ENpower Skill Lab — {label} Account', body, to)
+
+
+# ── 2. Announcement / event / newsletter ────────────────────────────────
+
+def send_announcement(to, name, title, details, role,
+                      school_name=None, program_name=None):
+    """Update notification for an announcement, event or newsletter."""
+    programme = program_name or 'ENpower Skill Lab'
+
+    body = _lines(
+        f'Dear {name},',
+        '',
+        f'Here’s an important update for {programme}.',
+        '',
+        title or 'Update',
+        details or '',
+        '',
+        f'Program: {programme}',
+        f'School: {school_name}' if school_name else '',
+        f'Your Role: {role_label(role)}',
+        '',
+        'For more details, please log in to your ENpower Skill Lab dashboard.',
+        '',
+        SIGN_OFF,
+    )
+    return _send(title or 'ENpower Skill Lab — Update', body, to)
+
+
+def send_announcement_bulk(announcement, recipients):
+    """Send one announcement to many users. Returns how many were sent.
+
+    Each recipient gets their own school and role in the body, so the message
+    reads correctly whoever opens it.
+    """
+    title = (getattr(announcement, 'event_name', None)
+             or getattr(announcement, 'newsletter_month', None)
+             or getattr(announcement, 'story_student_name', None)
+             or 'Update')
+    details = (getattr(announcement, 'event_description', None)
+               or getattr(announcement, 'story_text', None) or '')
+
+    sent = 0
+    for user, school_name, program_name in recipients:
+        name = user.get_full_name() or user.username
+        if send_announcement(user.email, name, title, details,
+                             getattr(user, 'role', None), school_name, program_name):
+            sent += 1
+    return sent
+
+
+# ── 3. Password reset ───────────────────────────────────────────────────
+
+def send_password_reset(to, name, reset_link, role,
+                        school_name=None, program_name=None):
+    """Confirmation of a reset request, carrying the reset link."""
+    programme = program_name or 'ENpower Skill Lab'
+
+    body = _lines(
+        f'Dear {name},',
+        '',
+        f'Your password reset request for {programme} – ENpower Skill Lab has '
+        f'been received.',
+        '',
+        f'School: {school_name}' if school_name else '',
+        f'Your Role: {role_label(role)}',
+        '',
+        'Please use the link below to reset your password:',
+        f'Reset Password: {reset_link}',
+        '',
+        'If you did not request this, please ignore this email.',
+        '',
+        SIGN_OFF,
+    )
+    return _send('Password Reset — ENpower Skill Lab', body, to)

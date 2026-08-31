@@ -476,6 +476,46 @@ the sidebar now linking to real URLs.
 Not touched: Class Performance is also a dead href="#" but the document did not
 list it.
 
+### Remaining changes-document work completed
+Shared report panels, the two report pages built on them, email templates, and
+the last dead-navigation removals.
+
+**`competencies/report_panels.py`** — the four grade-wise panels from slide 52,
+computed for any set of schools. One module rather than three: Super Admin (all
+schools), Program Coordinator (mapped) and School Admin (one) show the same
+panels over different scopes, and every function takes the school ids so the
+caller owns the scoping and cannot widen it by accident. Bars arrive sized as a
+percentage of the panel maximum so templates draw charts without arithmetic.
+Insights are suppressed when every grade holds the same value, where "highest"
+and "lowest" would both be true of any grade.
+
+**Super Admin — Reports & Analytics** at /super-admin/reports/analytics/, all
+four panels with a school filter. The Settings section (System Settings,
+T&C/Privacy, Billing) was hidden as agreed, Download Reports removed from the
+sidebar, and two dashboard quick actions repointed — "Download Reports" led to
+the student list and "Settings" to the profile page.
+
+**Program Coordinator — Reports** at /coordinator/reports/, three panels scoped
+to mapped schools. Top 3 Skill Profiles is not built for this role at all rather
+than being fetched and hidden: slide 53 marks Skill Passport "n/a" for the
+coordinator. Removed Teacher Performance, the whole Assessments section and
+Download Reports, and deleted the dashboard's Teacher Performance Summary card,
+which showed hardcoded figures ("42 teachers") with fixed bar widths.
+
+**`competencies/emails.py`** — the three templates from the document's Email
+Template tab, wording followed exactly: onboarding with credentials,
+announcement/event/newsletter, and password reset. Placeholders are filled from
+real records, and a missing value drops its line rather than sending "School:"
+with nothing after it. Bulk import's welcome mail now goes through it.
+
+**Coordinator bank details** are no longer required by the importer. The model
+and the onboarding form already treated them as optional — only the two
+bulk-import required-field lists still demanded them.
+
+Verified: 23 assertions on the email templates and the blank-bank-details import,
+plus the report pages checked for every panel, correct scoping, and the absence
+of skill profiles for the coordinator. Suites unchanged at 49 / 63.
+
 ### Still open (unchanged by this pass)
 - Slide 14 teacher views: Class Level, Percentile Competency, Project Level
   Aggregate Comparative, Generate Profile Report — none exist.

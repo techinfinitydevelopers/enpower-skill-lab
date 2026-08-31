@@ -1,0 +1,70 @@
+{% extends 'coordinator/base.html' %}
+{% load static %}
+
+{% block title %}Reports - Program Coordinator{% endblock %}
+
+{% block extra_css %}
+{% include 'report_panels/_styles.html' %}
+<style>
+    .cr-page { width:100%; padding:1.5rem; }
+    .cr-head { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem;
+               flex-wrap:wrap; margin-bottom:1.25rem; }
+    .cr-title { font-size:1.5rem; font-weight:700; color:#1f2937; margin:0; }
+    .cr-sub { color:#6b7280; font-size:.85rem; margin:.25rem 0 0; }
+    .cr-filter { display:flex; flex-direction:column; gap:.25rem; min-width:230px; }
+    .cr-filter label { font-size:.68rem; font-weight:700; letter-spacing:.04em;
+                       text-transform:uppercase; color:#9ca3af; }
+    .cr-filter select { padding:.45rem .6rem; border:1px solid #d1d5db; border-radius:.45rem;
+                        font-size:.85rem; background:#fff; color:#1f2937; }
+    .cr-empty { background:#fff; border:1px solid #e5e7eb; border-radius:.75rem;
+                padding:2.5rem 1.5rem; text-align:center; color:#6b7280; }
+    .cr-empty .material-symbols-outlined { font-size:42px; color:#d1d5db; }
+    @media (max-width:768px) { .cr-page { padding:1rem; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cr-page">
+
+    <div class="cr-head">
+        <div>
+            <h1 class="cr-title">Reports</h1>
+            <p class="cr-sub">{{ scope_label }}</p>
+        </div>
+        {% if schools %}
+        <form method="get" class="cr-filter">
+            <label for="crSchool">School</label>
+            <select name="school" id="crSchool" onchange="this.form.submit()">
+                <option value="">All assigned schools</option>
+                {% for s in schools %}
+                <option value="{{ s.id }}" {% if selected_school and s.id == selected_school.id %}selected{% endif %}>{{ s.school_name }}</option>
+                {% endfor %}
+            </select>
+        </form>
+        {% endif %}
+    </div>
+
+    {% if schools %}
+        {% include 'report_panels/_panels.html' %}
+    {% else %}
+        <div class="cr-empty">
+            <span class="material-symbols-outlined">domain_disabled</span>
+            <p style="margin-top:.5rem;">No schools are assigned to you yet.</p>
+            <p style="margin-top:.25rem;font-size:.8rem;color:#9ca3af;">Reports appear here once the Super Admin assigns schools to your account.</p>
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var link = document.getElementById('nav-consolidated-reports');
+        if (!link) return;
+        link.classList.add('active');
+        var parent = link.closest('.coord-sidebar-dropdown');
+        if (parent) parent.classList.add('active');
+    });
+</script>
+{% endblock %}

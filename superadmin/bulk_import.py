@@ -651,7 +651,6 @@ EXCEL_CONFIG = {
             'current_address', 'city', 'state', 'pincode',
             'id_proof',
             'program_assigned', 'joining_date', 'employment_type',
-            'bank_name', 'branch_name', 'account_number', 'ifsc_code',
         },
     },
 }
@@ -1412,8 +1411,7 @@ def _process_coordinator(row, created_by):
                 'mobile_number', 'official_email',
                 'current_address', 'city', 'state', 'pincode',
                 'id_proof',
-                'program_assigned', 'joining_date', 'employment_type',
-                'bank_name', 'branch_name', 'account_number', 'ifsc_code']
+                'program_assigned', 'joining_date', 'employment_type']
 
     for field in required:
         if not row.get(field):
@@ -1531,23 +1529,19 @@ def _parse_date(value):
     raise ValueError(f'Invalid date format: "{value}". Use YYYY-MM-DD')
 
 
-def _send_welcome_email(email, name, password, role_label, login_id=None):
-    # Send is non-blocking (a mail failure must never abort the import), but we
-    # now LOG failures instead of swallowing them silently, so "email not
-    # arriving" can actually be diagnosed from the server log.
-    try:
-        send_mail(
-            subject=f'Welcome to Enpower Skill Lab — {role_label} Account',
-            message=f'Hello {name},\n\nYour {role_label} account has been created.\n\nLogin: {login_id or email}\nPassword: {password}\n\nPlease change your password after first login.\n\nTeam Enpower Skill Lab',
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[email],
-            fail_silently=False,
-        )
-    except Exception as e:
-        import logging
-        logging.getLogger('enpower.email').error(
-            'Welcome email FAILED for %s (%s): %s: %s',
-            email, role_label, type(e).__name__, e)
+def _send_welcome_email(email, name, password, role_label, login_id=None,
+                        school_name=None, program_name=None):
+    """Onboarding email, using the wording agreed in the changes document.
+
+    Still non-blocking: a mail failure is logged inside the template helper and
+    never aborts an import.
+    """
+    from competencies.emails import send_onboarding
+
+    send_onboarding(
+        to=email, name=name, login_id=login_id or email, password=password,
+        role=role_label, school_name=school_name, program_name=program_name,
+    )
 
 
 ROLE_PROCESSORS = {

@@ -284,26 +284,6 @@
                     Timetable
                 </a>
 
-                <!-- Teacher Performance -->
-                <a href="{% url 'coordinator:coming_soon' %}" class="coord-sidebar-nav-link" id="nav-teacher-performance">
-                    <span class="material-symbols-outlined">person_search</span>
-                    Teacher Performance
-                </a>
-
-                <!-- Assessments -->
-                <div class="coord-sidebar-dropdown">
-                    <a href="#" class="coord-sidebar-dropdown-toggle" id="assessments-dropdown">
-                        <span class="material-symbols-outlined">quiz</span>
-                        Assessments
-                        <span class="material-symbols-outlined coord-dropdown-icon">expand_more</span>
-                    </a>
-                    <div class="coord-sidebar-dropdown-menu">
-                        <a href="{% url 'coordinator:coming_soon' %}" id="nav-assignment-reports"><span class="material-symbols-outlined">assignment</span>Assignment Reports</a>
-                        <a href="{% url 'coordinator:coming_soon' %}" id="nav-studentwise-reports"><span class="material-symbols-outlined">person</span>Studentwise Reports</a>
-                        <a href="{% url 'coordinator:coming_soon' %}" id="nav-gradewise-reports"><span class="material-symbols-outlined">groups</span>Gradewise Reports</a>
-                    </div>
-                </div>
-
                 <!-- Reports -->
                 <div class="coord-sidebar-dropdown">
                     <a href="#" class="coord-sidebar-dropdown-toggle" id="reports-dropdown">
@@ -312,8 +292,7 @@
                         <span class="material-symbols-outlined coord-dropdown-icon">expand_more</span>
                     </a>
                     <div class="coord-sidebar-dropdown-menu">
-                        <a href="{% url 'coordinator:coming_soon' %}" id="nav-consolidated-reports"><span class="material-symbols-outlined">summarize</span>Consolidated Reports</a>
-                        <a href="{% url 'coordinator:coming_soon' %}" id="nav-download-reports"><span class="material-symbols-outlined">download</span>Download Reports</a>
+                        <a href="{% url 'coordinator:coordinator_reports' %}" id="nav-consolidated-reports"><span class="material-symbols-outlined">summarize</span>Consolidated Reports</a>
                     </div>
                 </div>
 

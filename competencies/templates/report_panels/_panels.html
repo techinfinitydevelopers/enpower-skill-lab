@@ -1,0 +1,188 @@
+{% comment %}
+The four report panels from presentation slide 52, drawn from the data
+competencies/report_panels.py produces.
+
+Shared by Super Admin, Program Coordinator and School Admin so the three cannot
+drift apart. The caller supplies `panels`; pass `hide_profiles` to drop the skill
+profile table where the role has no access to Skill Passport data.
+{% endcomment %}
+
+<div class="rp-grid">
+
+    {# 1. Grade-wise student distribution #}
+    <div class="rp-panel rp-blue">
+        <div class="rp-head">
+            <div>
+                <div class="rp-title">Grade-wise Student Distribution</div>
+                <div class="rp-sub">Static — from school onboarding data</div>
+            </div>
+        </div>
+        <div class="rp-note">Total number of students in each grade.</div>
+
+        <div class="rp-body">
+            <div class="rp-chart-wrap">
+                {% if panels.distribution.bars %}
+                <div class="rp-chart">
+                    {% for b in panels.distribution.bars %}
+                    <div class="rp-bar-col">
+                        <div class="rp-bar-value">{{ b.students }}</div>
+                        <div class="rp-bar rp-bar-blue" style="height:{{ b.height }}%;"></div>
+                        <div class="rp-bar-label">Grade {{ b.grade }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="rp-empty">No students recorded yet.</div>
+                {% endif %}
+            </div>
+            <div class="rp-side rp-side-blue">
+                <div class="rp-side-icon"><span class="material-symbols-outlined">group</span></div>
+                <div class="rp-side-label">Total Students</div>
+                <div class="rp-side-value">{{ panels.distribution.total }}</div>
+                {% if panels.distribution.insights %}
+                <div class="rp-insights">
+                    <div class="rp-insights-title">Insights</div>
+                    <ul>{% for i in panels.distribution.insights %}<li>{{ i }}</li>{% endfor %}</ul>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {# 2. Monthly grade-wise attendance #}
+    <div class="rp-panel rp-green">
+        <div class="rp-head">
+            <div>
+                <div class="rp-title">Monthly Grade-wise Attendance</div>
+                <div class="rp-sub">Changes monthly — from attendance records</div>
+            </div>
+            {% if panels.months %}
+            <form method="get" class="rp-month-form">
+                {% for k, v in carry_params.items %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+                <label for="rpMonth">Select Month</label>
+                <select name="month" id="rpMonth" onchange="this.form.submit()">
+                    {% for m in panels.months %}
+                    <option value="{{ m.value }}" {% if m.value == panels.month %}selected{% endif %}>{{ m.label }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+            {% endif %}
+        </div>
+        <div class="rp-note">Average attendance for each grade in the selected month. A student marked late counts as attending.</div>
+
+        <div class="rp-body">
+            <div class="rp-chart-wrap">
+                {% if panels.attendance.bars %}
+                <div class="rp-chart">
+                    {% if panels.attendance.school_average %}
+                    <div class="rp-avg-line" style="bottom:calc({{ panels.attendance.school_average }}% * 0.78 + 30px);">
+                        <span>School Average {{ panels.attendance.school_average }}%</span>
+                    </div>
+                    {% endif %}
+                    {% for b in panels.attendance.bars %}
+                    <div class="rp-bar-col">
+                        <div class="rp-bar-value">{{ b.percent }}%</div>
+                        <div class="rp-bar rp-bar-green" style="height:{{ b.height }}%;"></div>
+                        <div class="rp-bar-label">Grade {{ b.grade }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="rp-empty">No attendance marked{% if panels.month_label %} in {{ panels.month_label }}{% endif %}.</div>
+                {% endif %}
+            </div>
+            <div class="rp-side rp-side-green">
+                <div class="rp-side-icon"><span class="material-symbols-outlined">event_available</span></div>
+                <div class="rp-side-label">School Average Attendance</div>
+                <div class="rp-side-value">{% if panels.attendance.school_average %}{{ panels.attendance.school_average }}%{% else %}&mdash;{% endif %}</div>
+                {% if panels.attendance.insights %}
+                <div class="rp-insights">
+                    <div class="rp-insights-title">Insights</div>
+                    <ul>{% for i in panels.attendance.insights %}<li>{{ i }}</li>{% endfor %}</ul>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="rp-foot">Updates monthly as attendance is marked.</div>
+    </div>
+
+    {# 3. Project completion by grade #}
+    <div class="rp-panel rp-purple">
+        <div class="rp-head">
+            <div>
+                <div class="rp-title">Project Completion &mdash; Grade-wise</div>
+                <div class="rp-sub">Changes periodically</div>
+            </div>
+        </div>
+        <div class="rp-note">Percentage of projects completed by students in each grade.</div>
+
+        <div class="rp-body">
+            <div class="rp-chart-wrap">
+                {% if panels.completion.bars %}
+                <div class="rp-chart">
+                    {% for b in panels.completion.bars %}
+                    <div class="rp-bar-col">
+                        <div class="rp-bar-value">{{ b.percent }}%</div>
+                        <div class="rp-bar rp-bar-purple" style="height:{{ b.height }}%;"></div>
+                        <div class="rp-bar-label">Grade {{ b.grade }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="rp-empty">No projects running for these grades yet.</div>
+                {% endif %}
+            </div>
+            <div class="rp-side rp-side-purple">
+                <div class="rp-side-icon"><span class="material-symbols-outlined">fact_check</span></div>
+                <div class="rp-side-label">Overall Completion</div>
+                <div class="rp-side-value">{% if panels.completion.overall is not None %}{{ panels.completion.overall }}%{% else %}&mdash;{% endif %}</div>
+                {% if panels.completion.insights %}
+                <div class="rp-insights">
+                    <div class="rp-insights-title">Insights</div>
+                    <ul>{% for i in panels.completion.insights %}<li>{{ i }}</li>{% endfor %}</ul>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="rp-foot">Updates as each project cycle completes.</div>
+    </div>
+
+    {# 4. Top 3 skill profiles by grade #}
+    {% if not hide_profiles %}
+    <div class="rp-panel rp-orange">
+        <div class="rp-head">
+            <div>
+                <div class="rp-title">Top 3 Skill Profiles &mdash; Grade-wise</div>
+                <div class="rp-sub">From Skill Passport data</div>
+            </div>
+        </div>
+        <div class="rp-note">The three most prominent skill profiles for students in each grade.</div>
+
+        {% if panels.profiles %}
+        <div class="rp-scroll">
+        <table class="rp-table">
+            <thead><tr><th>Grade</th><th colspan="3">Top 3 Skill Profiles</th></tr></thead>
+            <tbody>
+            {% for row in panels.profiles %}
+            <tr>
+                <td class="rp-grade-cell">Grade {{ row.grade }}</td>
+                {% for p in row.profiles %}
+                <td>
+                    <span class="rp-profile">{{ p.name }}</span>
+                    <span class="rp-profile-count">{{ p.students }} student{{ p.students|pluralize }}</span>
+                </td>
+                {% endfor %}
+                {% for _ in row.pad %}<td></td>{% endfor %}
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        <div class="rp-foot">Updates as Skill Passport assessments are completed.</div>
+        {% else %}
+        <div class="rp-empty" style="margin:1rem 1.1rem;">No skill passport results yet.</div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+</div>

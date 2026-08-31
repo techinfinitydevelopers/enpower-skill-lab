@@ -1,10 +1,12 @@
 from django.urls import path
 from . import views
+from . import reports
 
 app_name = 'coordinator'
 
 urlpatterns = [
     path('dashboard/', views.coordinator_dashboard, name='coordinator_dashboard'),
+    path('reports/', reports.coordinator_reports, name='coordinator_reports'),
     path('school-list/', views.school_list, name='school_list'),
     path('school/<int:school_id>/details/', views.school_detail, name='school_detail'),
     path('assign-coaches/', views.assign_coaches, name='assign_coaches'),
