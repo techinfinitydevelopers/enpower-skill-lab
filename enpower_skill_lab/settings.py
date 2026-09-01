@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -32,15 +34,23 @@ def _env_flag(name, default=False):
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-# The literal below is the historical development key and stays as the default
-# so nothing breaks; set SECRET_KEY in the environment on any real host.
-SECRET_KEY = os.environ.get(
-    'SECRET_KEY',
-    'django-insecure-0=g)t-7njmyr6(5w%c(54$c859@x7z9ymxml-ow%n1o21(tsi2')
-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = _env_flag('DEBUG', True)
+
+# The literal below is the historical development key. It is in git history, so
+# it is worthless as a secret and must never reach a real host — but leaving it
+# as a silent fallback is exactly how it would. With DEBUG off, a missing
+# SECRET_KEY stops the process instead of booting with a published key.
+_DEV_SECRET_KEY = 'django-insecure-0=g)t-7njmyr6(5w%c(54$c859@x7z9ymxml-ow%n1o21(tsi2'
+SECRET_KEY = os.environ.get('SECRET_KEY') or _DEV_SECRET_KEY
+
+if not DEBUG and SECRET_KEY == _DEV_SECRET_KEY:
+    raise ImproperlyConfigured(
+        'SECRET_KEY is not set. The development key is committed to this '
+        'repository and cannot be used with DEBUG off. Generate one with:\n'
+        '  python -c "from django.core.management.utils import '
+        'get_random_secret_key; print(get_random_secret_key())"'
+    )
 
 ALLOWED_HOSTS = [
     '68.183.93.246',
@@ -283,6 +293,34 @@ EMAIL_SUPPRESSED_ROLES = {
 # Public address of the site. Emails leave the server and are opened elsewhere,
 # so any link inside one has to be absolute and has to point at production.
 SITE_URL = os.environ.get('SITE_URL', 'https://enpower.techinfinity.link').rstrip('/')
+
+# ── HTTPS hardening ─────────────────────────────────────────────────────
+# `manage.py check --deploy` flagged all four of these. The session and CSRF
+# cookies were being sent without the Secure flag, which means a single plain
+# HTTP request would put a principal's session cookie on the wire.
+#
+# Tied to DEBUG so a developer on http://127.0.0.1 is not locked out: with
+# DEBUG on these stay off, and anywhere DEBUG is off they come on. SECURE_SSL
+# can override either way.
+_SECURE = _env_flag('SECURE_SSL', not DEBUG)
+
+SECURE_SSL_REDIRECT = _SECURE
+SESSION_COOKIE_SECURE = _SECURE
+CSRF_COOKIE_SECURE = _SECURE
+
+# HSTS tells the browser never to try this host over plain HTTP again. It is
+# remembered for the whole max-age, so it is only safe where HTTPS is certain —
+# Railway manages the certificate and renews it. Subdomains are deliberately
+# excluded: the bare domain is served by GoDaddy's forwarding with its own
+# certificate, and preload is not requested because it is hard to undo.
+SECURE_HSTS_SECONDS = int(os.environ.get('SECURE_HSTS_SECONDS',
+                                        31536000 if _SECURE else 0))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = _env_flag('SECURE_HSTS_INCLUDE_SUBDOMAINS', False)
+SECURE_HSTS_PRELOAD = _env_flag('SECURE_HSTS_PRELOAD', False)
+
+# Django already defaults these sensibly (X_FRAME_OPTIONS=DENY,
+# SECURE_CONTENT_TYPE_NOSNIFF=True, SECURE_REFERRER_POLICY=same-origin,
+# SESSION_COOKIE_HTTPONLY=True), so they are left alone rather than restated.
 
 # How long a password reset link stays valid. Django's default is 3 days,
 # which is long for a link that hands over an account; 24 hours is enough for

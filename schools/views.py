@@ -1,6 +1,4 @@
-from django.shortcuts import render
-from django.http import HttpResponse
-
-# Create your views here.
-def school_home(request):
-    return HttpResponse("Hello from school")
+# The models in this app are used through the role dashboards; there are
+# no views of its own. The scaffold view that shipped here was publicly
+# reachable at /schools/ and served a placeholder string, so it is gone
+# along with its route.
