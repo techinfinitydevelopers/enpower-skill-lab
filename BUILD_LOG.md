@@ -832,3 +832,66 @@ Droplet re-checked after the data fixes: 67 / 47 / 149 / 64, all green.
   (`asgiref`, `sqlparse`) that pip resolved there. Harmless, but the two hosts
   are not byte-identical.
 - Toast visibility bug still OPEN.
+
+---
+
+## 2026-09-01 — Live on www.enpowerskilllab.com; error pages; empty-system fixes
+
+**Commits:** `783b2c0`, `2aa9dc7`, `12abf73`, `8b02249`.
+Live at **https://www.enpowerskilllab.com**
+
+### Domain
+`www` CNAMEs to Railway with a Let's Encrypt certificate. The bare domain
+redirects there via GoDaddy Forwarding.
+
+**The bare domain cannot host the app.** Railway's own docs: *"When adding a
+root or apex domain ... Railway supports CNAME Flattening and dynamic ALIAS
+records."* GoDaddy has neither, and Railway publishes no static inbound IP, so
+an A record is not an option either. GoDaddy's forwarding only carries the root
+path, which is why `enpowerskilllab.com/login/` returns 404 while
+`enpowerskilllab.com` works. **The only real fix is moving DNS to a provider
+with CNAME flattening (Cloudflare); the domain itself can stay at GoDaddy.**
+
+A droplet-based nginx redirect was built and tested (it does preserve the path
+via `$request_uri`) then abandoned — the droplet is being scrapped.
+
+Adding a domain also means `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS` **and**
+`SITE_URL`. Without the first two Django answered 400; without the third the
+emails would still link to the old host.
+
+### Email DNS
+SPF was missing, then added as `include:spf.zeptomail.in` — **a domain that
+does not exist**, which is worse than no SPF because it produces a PermError.
+Corrected to `v=spf1 include:zeptomail.in ~all`, which resolves. DKIM, DMARC
+and `bounce-zem` were untouched throughout.
+
+### Three things that only break on an empty system
+The client's instance is a fresh install, which is the state least likely to
+have been exercised:
+
+- **`/` was unrouted.** Both hosts answered 404 at the site root — exactly
+  where the apex redirect lands a visitor. `/` now goes to the dashboard for a
+  signed-in user and to the login page otherwise, off one `ROLE_DASHBOARDS`
+  table shared with the login view.
+- **No error pages.** With DEBUG off, 404 was Django's 179-byte default.
+  404/403/400/500 are now branded, standalone (no extends, no context
+  processors), and `500.html` hardcodes the logo path rather than calling the
+  static tag while reporting that something is already broken.
+- **Profiles & Competencies 404'd.** `get_object_or_404(Profile, number=...)`
+  meant the page for configuring profiles was unreachable on a system with
+  none. Unknown numbers now fall back to the first profile; with no profiles
+  the page renders an empty state, and the POST branch is guarded against the
+  `.set()` it would otherwise call on nothing.
+
+### Verification
+Local: 69 / 47 / 49 / 63, all green.
+Railway: email 69/69, plus 72/72 with three live sends carrying the new domain.
+The other two suites fail only on missing fixtures — the database is empty by
+design. Live: apex, www, login, forgot-password, static and a branded 404 all
+answer correctly.
+
+### Still open
+- **The bare domain drops paths.** Needs Cloudflare.
+- The droplet still runs `DEBUG=True`, so it shows Django's technical error
+  pages rather than the branded ones. It is being scrapped.
+- Toast visibility bug still OPEN.
