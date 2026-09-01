@@ -11,6 +11,7 @@ It does NOT prove CSS/JS behaviour; that still needs a real browser.
 Run with:  python verify_pages.py
 """
 
+import atexit
 import os
 import re
 from html import unescape
@@ -72,11 +73,20 @@ def login_as(user):
     return (c if ok else None)
 
 
+# Registered with atexit rather than called at the end. A crash part-way
+# through used to leave a real account on the audit password -- which is
+# exactly what happened when this suite hit a missing `git` binary inside
+# the container and died before the restore line. atexit still runs when
+# an exception propagates out.
 def restore_passwords():
     for pk, pw_hash in _ORIGINAL_HASHES.items():
         User.objects.filter(pk=pk).update(password=pw_hash)
     if _ORIGINAL_HASHES:
         print(f'\n  restored original passwords for {len(_ORIGINAL_HASHES)} user(s)')
+        _ORIGINAL_HASHES.clear()
+
+
+atexit.register(restore_passwords)
 
 
 # Pages whose visible text still contains template syntax. `{# ... #}` is a

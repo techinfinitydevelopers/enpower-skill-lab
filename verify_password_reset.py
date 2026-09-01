@@ -9,6 +9,7 @@ recipient would read it out of their inbox. Every password this touches is put
 back before the script exits.
 """
 
+import atexit
 import os
 import re
 import sys
@@ -34,6 +35,23 @@ from accounts.password_reset import RESET_ALLOWED_ROLES   # noqa: E402
 
 PASS, FAIL = [], []
 restore = {}          # pk -> original password hash
+
+
+def _restore_passwords():
+    if not restore:
+        return
+    for pk, password in list(restore.items()):
+        User.objects.filter(pk=pk).update(password=password)
+    print(f'\n  restored original passwords for {len(restore)} user(s)')
+    restore.clear()
+
+
+# Registered with atexit rather than called at the end. A crash part-way
+# through used to leave a real account on the audit password -- which is
+# exactly what happened when this suite hit a missing `git` binary inside
+# the container and died before the restore line. atexit still runs when
+# an exception propagates out.
+atexit.register(_restore_passwords)
 
 
 def check(label, ok, detail=''):
@@ -160,9 +178,7 @@ check('reset links expire', bool(getattr(settings, 'PASSWORD_RESET_TIMEOUT', Non
       f'{getattr(settings, "PASSWORD_RESET_TIMEOUT", 0) / 3600:.0f} hours')
 
 # ── put every password back ─────────────────────────────────────────────
-for pk, password in restore.items():
-    User.objects.filter(pk=pk).update(password=password)
-print(f'\n  restored original passwords for {len(restore)} user(s)')
+_restore_passwords()
 
 print('\n' + '=' * 60)
 print(f'PASS {len(PASS)}   FAIL {len(FAIL)}')

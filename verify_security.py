@@ -16,6 +16,7 @@ Four things, none of which show up in a normal page test:
 Read-only. Passwords it changes to log in are restored before it exits.
 """
 
+import atexit
 import os
 import re
 import subprocess
@@ -45,6 +46,23 @@ U = get_user_model()
 PASS, FAIL, WARN = [], [], []
 restore = {}
 TEST_PASSWORD = 'SecAudit!2026x'
+
+
+def _restore_passwords():
+    if not restore:
+        return
+    for pk, password in list(restore.items()):
+        U.objects.filter(pk=pk).update(password=password)
+    print(f'\n  restored original passwords for {len(restore)} user(s)')
+    restore.clear()
+
+
+# Registered with atexit rather than called at the end. A crash part-way
+# through used to leave a real account on the audit password -- which is
+# exactly what happened when this suite hit a missing `git` binary inside
+# the container and died before the restore line. atexit still runs when
+# an exception propagates out.
+atexit.register(_restore_passwords)
 
 
 def check(label, ok, detail=''):
@@ -290,9 +308,7 @@ except FileNotFoundError:
     warn('.env tracking not checked', 'no git in this environment')
 
 # ── restore ─────────────────────────────────────────────────────────────
-for pk, password in restore.items():
-    U.objects.filter(pk=pk).update(password=password)
-print(f'\n  restored original passwords for {len(restore)} user(s)')
+_restore_passwords()
 
 print('\n' + '=' * 62)
 print(f'PASS {len(PASS)}   FAIL {len(FAIL)}   WARN {len(WARN)}')
