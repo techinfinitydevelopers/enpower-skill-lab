@@ -34,15 +34,11 @@ from django.conf import settings                          # noqa: E402
 settings.ALLOWED_HOSTS = list(settings.ALLOWED_HOSTS) + ['testserver']
 
 from django.contrib.auth import get_user_model            # noqa: E402
-from django.test import Client                            # noqa: E402
+from verify_client import HttpsClient as Client                            # noqa: E402
 from django.urls import get_resolver                      # noqa: E402
 
 U = get_user_model()
 
-# Every request below passes secure=True. With SECURE_SSL_REDIRECT on, a plain
-# HTTP request from the test client is answered with a 301 before the view runs
-# -- which would make an authorisation test pass without ever reaching the
-# authorisation code.
 PASS, FAIL, WARN = [], [], []
 restore = {}
 TEST_PASSWORD = 'SecAudit!2026x'
@@ -172,7 +168,7 @@ if victim:
     locked_at = None
     for i in range(1, throttle.MAX_FAILURES + 3):
         r = c.post('/login/', {'role': 'SUPER_ADMIN', 'username': victim.username,
-                               'password': f'wrong-{i}'}, follow=True, secure=True)
+                               'password': f'wrong-{i}'}, follow=True)
         if 'Too many failed sign-in attempts' in r.content.decode():
             locked_at = i
             break
@@ -199,7 +195,7 @@ anon = Client()
 leaked = []
 for role, role_urls in urls.items():
     for url in role_urls:
-        r = anon.get(url, secure=True)
+        r = anon.get(url)
         if not blocked(r):
             leaked.append(f'{url} ({r.status_code})')
 check('no role page is readable without logging in', not leaked,
@@ -221,7 +217,7 @@ for actor in clients:
         if owner == actor:
             continue
         for url in role_urls:
-            r = clients[actor].get(url, secure=True)
+            r = clients[actor].get(url)
             if not blocked(r):
                 breaches.append(f'{url} ({r.status_code})')
     check(f'{actor} cannot reach another role\'s pages', not breaches,
@@ -230,7 +226,7 @@ for actor in clients:
 # each role can still use its own area
 for actor, c in clients.items():
     own = urls.get(actor, [])
-    ok = sum(1 for u in own if c.get(u, follow=True, secure=True).status_code == 200)
+    ok = sum(1 for u in own if c.get(u, follow=True).status_code == 200)
     check(f'{actor} can still use its own pages', ok > 0, f'{ok}/{len(own)} load')
 
 # ── 4. Source-level checks ──────────────────────────────────────────────

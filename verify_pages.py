@@ -27,7 +27,7 @@ from django.conf import settings
 if 'testserver' not in settings.ALLOWED_HOSTS:
     settings.ALLOWED_HOSTS = list(settings.ALLOWED_HOSTS) + ['testserver']
 
-from django.test import Client
+from verify_client import HttpsClient as Client
 from accounts.models import User
 from student.models import Student
 from competencies.models import ProjectReport, Project

@@ -26,7 +26,7 @@ settings.EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
 
 from django.contrib.auth.tokens import default_token_generator   # noqa: E402
 from django.core import mail                              # noqa: E402
-from django.test import Client                            # noqa: E402
+from verify_client import HttpsClient as Client                            # noqa: E402
 from django.utils.encoding import force_bytes             # noqa: E402
 from django.utils.http import urlsafe_base64_encode       # noqa: E402
 
