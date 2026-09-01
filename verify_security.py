@@ -221,17 +221,34 @@ for path in Path(settings.BASE_DIR).rglob('*.py'):
             raw_sql.append(f'{path.relative_to(settings.BASE_DIR).as_posix()}:{n}')
 check('no raw SQL', not raw_sql, '; '.join(raw_sql[:3]))
 
-secrets_out = subprocess.run(
-    ['git', 'grep', '-nE', r'(EMAIL_HOST_PASSWORD|Zoho-enczapikey|SECRET_KEY\s*=\s*.django-insecure)',
-     '--', '*.py'], capture_output=True, text=True, cwd=settings.BASE_DIR).stdout
-offending = [l for l in secrets_out.splitlines()
-             if 'settings.py' not in l and 'verify_' not in l]
-check('no credentials committed outside settings defaults', not offending,
+# Walk the tree rather than shelling out to `git grep`: this suite is also run
+# inside the deployed container, which has the source but no git binary.
+SECRET_PATTERNS = re.compile(
+    r'(Zoho-enczapikey|EMAIL_HOST_PASSWORD\s*=\s*[\'"][^\'"]{8,}|'
+    r'SECRET_KEY\s*=\s*[\'"]django-insecure)')
+offending = []
+for path in Path(settings.BASE_DIR).rglob('*.py'):
+    if any(part in SKIP for part in path.parts) or path.name.startswith('verify_'):
+        continue
+    rel = path.relative_to(settings.BASE_DIR).as_posix()
+    # settings.py holds the development key on purpose, guarded by the
+    # ImproperlyConfigured raise above.
+    if rel.endswith('settings.py'):
+        continue
+    src = path.read_text(encoding='utf-8', errors='ignore')
+    for n, line in enumerate(src.splitlines(), 1):
+        if SECRET_PATTERNS.search(line):
+            offending.append(f'{rel}:{n}')
+check('no credentials hardcoded in the source', not offending,
       '; '.join(offending[:2]))
 
-env_tracked = subprocess.run(['git', 'ls-files', '.env'],
-                             capture_output=True, text=True, cwd=settings.BASE_DIR).stdout
-check('.env is not tracked by git', not env_tracked.strip())
+# Repo hygiene, only meaningful where the repository actually is.
+try:
+    env_tracked = subprocess.run(['git', 'ls-files', '.env'], capture_output=True,
+                                 text=True, cwd=settings.BASE_DIR).stdout
+    check('.env is not tracked by git', not env_tracked.strip())
+except FileNotFoundError:
+    warn('.env tracking not checked', 'no git in this environment')
 
 # ── restore ─────────────────────────────────────────────────────────────
 for pk, password in restore.items():
