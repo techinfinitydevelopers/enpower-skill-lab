@@ -964,3 +964,55 @@ cookie carrying `Secure`.
 - The droplet runs `DEBUG=True`, so none of the above applies there. It is
   being scrapped.
 - Toast visibility bug still OPEN.
+
+---
+
+## 2026-09-01 (later still) - A new system could not be set up at all
+
+**Commits:** `62a2e4b`, `4fdb955`. Both found by the client trying to onboard
+their first school.
+
+### The deadlock
+School onboarding required an SRM **and** a Thinking Coach. The Thinking Coach
+form requires a school to assign the coach to. On a system with no data there
+was therefore no order that worked: no school without a coach, no coach without
+a school. Nothing could be created.
+
+Both fields are now optional, defaulting to "Assign later". They are staff
+assignments, and staff are onboarded *into* a school, so asking for them while
+creating the school was backwards. The view already skipped them when empty
+(`if srm_id:`) and the model already allowed null on both -- **the only thing
+blocking was the HTML `required` attribute**.
+
+### The framework wipe, found while testing the above
+Onboarding assigned the FSL lookup result unconditionally:
+
+    if sp == 'fsl':
+        school.framework_ref = FW.objects.filter(name='FSL').first()
+
+The two CSL branches next to it both ended in `or school.framework_ref`. This
+one did not. So on any system without a framework named *exactly* `FSL` -- a
+fresh install where the client has named theirs anything else -- the framework
+chosen in the dropdown was silently replaced with `None`. The school saved, with
+no framework.
+
+The edit view carried the same bug, so editing any unrelated field on such a
+school wiped its framework as a side effect.
+
+Both now share one `FRAMEWORK_FOR_SKILL_PROGRAM` table and only overwrite when
+the lookup resolves.
+
+### Verification
+Against Railway's genuinely empty database, with zero coaches and zero
+coordinators: a school is created with both staff fields null, keeps the
+framework it was given, appears as an option on the coach form -- the step that
+used to be unreachable -- and an edit leaves the framework alone. Locally, where
+FSL does exist, `skillProgram=fsl` still resolves to FSL as before.
+
+Suites unchanged: 69 / 47 / 49 / 63 / 31.
+
+### Worth revisiting
+The school form has **two** overlapping dropdowns: `frameworkType` picks a
+framework and `skillProgram` then overrides it. That is why the bug was
+invisible -- the explicit choice is discarded whenever the programme resolves.
+One of the two should probably go.
