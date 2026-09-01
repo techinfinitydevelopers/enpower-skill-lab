@@ -895,3 +895,72 @@ answer correctly.
 - The droplet still runs `DEBUG=True`, so it shows Django's technical error
   pages rather than the branded ones. It is being scrapped.
 - Toast visibility bug still OPEN.
+
+---
+
+## 2026-09-01 (later) - Security audit before go-live
+
+**Commits:** `40df0ff`, `592844f`, `ed0e9a5`, `d827556`.
+
+`verify_security.py` is new and runs on both hosts: Django's deployment
+checklist, the security settings, brute force, anonymous access to every role
+URL, cross-role access with every role logged in and pointed at every other
+role's pages, and source-level checks for undecorated views, raw SQL and
+committed credentials.
+
+### What it found
+
+**Cookies without the Secure flag.** `check --deploy` flagged four settings.
+The session and CSRF cookies were being sent without `Secure`, so a single
+plain HTTP request would have put a principal's session cookie on the wire.
+`SECURE_SSL_REDIRECT`, `SESSION_COOKIE_SECURE`, `CSRF_COOKIE_SECURE` and
+`SECURE_HSTS_SECONDS` are on, tied to DEBUG so local development still works.
+HSTS deliberately excludes subdomains (the bare domain is served by GoDaddy)
+and does not request preload.
+
+**SECRET_KEY fell back silently.** The development key is in git history. With
+DEBUG off, a missing `SECRET_KEY` now raises `ImproperlyConfigured` instead of
+booting with a published key.
+
+**A publicly reachable scaffold view.** `schools/views.py` still held
+`school_home`, returning `Hello from school`, wired at `/schools/` with no
+authentication. It answered 200 to anyone. Gone, with its route.
+
+**No brute-force protection.** Ten wrong passwords in a row were all accepted
+with no delay. Ten failures in fifteen minutes now lock that username and IP.
+Attempts live in the database, not the cache: the cache backend is per-process,
+so with three gunicorn workers a cache counter would allow roughly three times
+the intended guesses. Locking is per (username, IP) so nobody can lock a
+principal out of their own account from elsewhere, and the check runs before
+`authenticate()` so a locked pair costs no hashing and leaks no timing.
+
+### Two flaws in the audit itself
+
+**The audit was testing the redirect, not the app.** With
+`SECURE_SSL_REDIRECT` on, the test client's plain HTTP requests were answered
+with a 301 before any view ran, so cross-role checks passed without reaching
+the authorisation code. `verify_client.HttpsClient` now defaults
+`secure=True`. The own-pages counts moved from 36/37, 21/31 and 9/11 to a full
+pass, and `verify_password_reset` on Railway went from 4/14 back to 11/14.
+
+**A crashed suite left a live account on the audit password.** When
+`verify_security.py` hit the missing `git` binary in the container it died
+before its restore line, and the Super Admin could not sign in until it was
+reset by hand. All three suites that change passwords now restore from
+`atexit`. Proved by making a stand-in suite raise that exact error and checking
+the hash came back.
+
+### Result
+Local, DEBUG on and off: 69 / 47 / 49 / 63 / 31, all green either way.
+Railway: email 69/69, security 19/19. The 16 remaining failures there are all
+missing fixtures — no students, reports or staff yet — not code.
+Live headers confirmed: HSTS, `X-Frame-Options: DENY`, nosniff, and a CSRF
+cookie carrying `Secure`.
+
+### Still open
+- The bare domain drops paths; needs Cloudflare.
+- Django admin is reachable at `/admin/`, protected by its own login. Moving it
+  to an unguessable path was not done.
+- The droplet runs `DEBUG=True`, so none of the above applies there. It is
+  being scrapped.
+- Toast visibility bug still OPEN.
