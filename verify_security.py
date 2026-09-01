@@ -188,6 +188,41 @@ if victim:
 else:
     warn('no account to test the login lock with')
 
+# ── 1c. The admin ───────────────────────────────────────────────────────
+# Django's admin ships its own login view, so the lock in accounts/views.py
+# did not cover it: /admin/login/ accepted unlimited wrong passwords while ten
+# locked the front door onto the same accounts.
+print('\nADMIN')
+admin_url = '/' + getattr(settings, 'ADMIN_URL', 'admin/')
+print(f'  mounted at {admin_url}')
+
+check('the admin is not on the default /admin/ path',
+      admin_url != '/admin/', admin_url)
+if admin_url != '/admin/':
+    check('/admin/ is not served', Client().get('/admin/').status_code == 404)
+
+check('the admin requires a login',
+      Client().get(admin_url).status_code in (301, 302, 403),
+      f'HTTP {Client().get(admin_url).status_code}')
+
+target = U.objects.filter(is_superuser=True, is_active=True).first()
+if target:
+    LoginAttempt.objects.filter(username=target.username).delete()
+    ac = Client()
+    admin_locked = None
+    for i in range(1, throttle.MAX_FAILURES + 3):
+        r = ac.post(f'{admin_url}login/',
+                    {'username': target.username, 'password': f'wrong-{i}',
+                     'next': admin_url}, follow=True)
+        if 'Too many failed sign-in attempts' in r.content.decode(errors='ignore'):
+            admin_locked = i
+            break
+    check('the admin login is throttled too', admin_locked is not None,
+          f'locked at attempt {admin_locked}')
+    LoginAttempt.objects.filter(username=target.username).delete()
+else:
+    warn('no superuser to test the admin lock with')
+
 # ── 2. Anonymous access ─────────────────────────────────────────────────
 print('\nANONYMOUS ACCESS  (no session at all)')
 urls = collectable_urls()

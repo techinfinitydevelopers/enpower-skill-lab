@@ -328,5 +328,11 @@ SECURE_HSTS_PRELOAD = _env_flag('SECURE_HSTS_PRELOAD', False)
 # one. The token also dies on first use, or if the user logs in meanwhile.
 PASSWORD_RESET_TIMEOUT = int(os.environ.get('PASSWORD_RESET_TIMEOUT', 60 * 60 * 24))
 
+# Where Django's admin is mounted. Bots scan /admin/ constantly, so on a real
+# host this is set to something unguessable. The admin's own login is also
+# throttled (accounts/admin_login.py) -- moving the path alone would only slow
+# a scanner down, not stop a targeted attempt.
+ADMIN_URL = os.environ.get('ADMIN_URL', 'admin/').strip('/') + '/'
+
 # Auth
 LOGIN_URL = '/login/'

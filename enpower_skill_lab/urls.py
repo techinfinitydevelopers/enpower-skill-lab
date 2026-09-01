@@ -15,6 +15,8 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
+
+from accounts import admin_login
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
@@ -23,7 +25,10 @@ from django.urls import re_path
 
 urlpatterns = [
     
-    path('admin/', admin.site.urls),
+    # The throttled login must come before admin.site.urls so it wins the
+    # match; it delegates to Django's own view after applying the lock.
+    path(f'{settings.ADMIN_URL}login/', admin_login.throttled_admin_login),
+    path(settings.ADMIN_URL, admin.site.urls),
     path('', include('accounts.urls')),
     # path('competencies/', include('competencies.urls')),
     # path('assessments/', include('assessments.urls')),
