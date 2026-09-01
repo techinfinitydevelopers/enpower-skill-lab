@@ -121,18 +121,11 @@ const validators = {
             return '';
         }
     },
-    srmId: {
-        validate: (value) => {
-            if (!value) return 'Please assign a School Relationship Manager';
-            return '';
-        }
-    },
-    trainerId: {
-        validate: (value) => {
-            if (!value) return 'Please assign a Trainer (Thinking Coach)';
-            return '';
-        }
-    },
+    // srmId and trainerId are deliberately absent. Both are staff
+    // assignments, and a Thinking Coach's own form requires a school to
+    // assign them to — so demanding them here made the first school
+    // impossible to create on a system with no staff yet. They are set from
+    // Edit School once the people exist.
     // Step 6: Fees & Commercial (no required validators — all optional)
     // Step 8: Emergency Information
     emergencyContactPerson: {

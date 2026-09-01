@@ -392,7 +392,7 @@
                         {% endcomment %}
                         <label>School Relationship Manager (SRM)</label>
                         <select name="srmId" id="srmId">
-                            <option value="" selected>Assign later</option>
+                            <option value="" selected></option>
                             {% for pc in program_coordinators %}
                             <option value="{{ pc.user.id }}">{{ pc.full_name }} ({{ pc.employee_id|default:"—" }})</option>
                             {% endfor %}
@@ -402,7 +402,7 @@
                     <div class="form-group">
                         <label>Trainer Assigned (Thinking Coach)</label>
                         <select name="trainerId" id="trainerId">
-                            <option value="" selected>Assign later</option>
+                            <option value="" selected></option>
                             {% for tc in thinking_coaches %}
                             <option value="{{ tc.user.id }}">{{ tc.full_name }} ({{ tc.employee_id|default:"—" }})</option>
                             {% endfor %}
