@@ -37,6 +37,11 @@ from django.test import Client                            # noqa: E402
 from django.urls import get_resolver                      # noqa: E402
 
 U = get_user_model()
+
+# Every request below passes secure=True. With SECURE_SSL_REDIRECT on, a plain
+# HTTP request from the test client is answered with a 301 before the view runs
+# -- which would make an authorisation test pass without ever reaching the
+# authorisation code.
 PASS, FAIL, WARN = [], [], []
 restore = {}
 TEST_PASSWORD = 'SecAudit!2026x'
@@ -135,6 +140,40 @@ check('SECRET_KEY is not the committed development key',
 check('password validators are configured',
       len(getattr(settings, 'AUTH_PASSWORD_VALIDATORS', [])) >= 4)
 
+# ── 1b. Brute force ─────────────────────────────────────────────────────
+# Ten wrong passwords used to be accepted in a row with no delay, which is
+# enough to walk a dictionary against a known school email address.
+print('\nBRUTE FORCE')
+from accounts import throttle                              # noqa: E402
+from accounts.models import LoginAttempt                    # noqa: E402
+
+victim = U.objects.filter(role='SUPER_ADMIN', is_active=True).first()
+if victim:
+    LoginAttempt.objects.filter(username=victim.username).delete()
+    c = Client()
+    locked_at = None
+    for i in range(1, throttle.MAX_FAILURES + 3):
+        r = c.post('/login/', {'role': 'SUPER_ADMIN', 'username': victim.username,
+                               'password': f'wrong-{i}'}, follow=True, secure=True)
+        if 'Too many failed sign-in attempts' in r.content.decode():
+            locked_at = i
+            break
+    check('repeated wrong passwords lock the account',
+          locked_at is not None, f'locked at attempt {locked_at}')
+    check('the lock arrives at the configured limit',
+          locked_at is not None and locked_at <= throttle.MAX_FAILURES + 1,
+          f'limit={throttle.MAX_FAILURES}, locked at {locked_at}')
+
+    # Locking must be per (username, IP), or anyone could lock a principal out
+    # of their own account just by guessing at their address.
+    other = U.objects.filter(is_active=True).exclude(pk=victim.pk).first()
+    if other:
+        check('another account is unaffected by the lock',
+              not throttle.is_locked(other.username, '127.0.0.1'))
+    LoginAttempt.objects.filter(username=victim.username).delete()
+else:
+    warn('no account to test the login lock with')
+
 # ── 2. Anonymous access ─────────────────────────────────────────────────
 print('\nANONYMOUS ACCESS  (no session at all)')
 urls = collectable_urls()
@@ -142,7 +181,7 @@ anon = Client()
 leaked = []
 for role, role_urls in urls.items():
     for url in role_urls:
-        r = anon.get(url)
+        r = anon.get(url, secure=True)
         if not blocked(r):
             leaked.append(f'{url} ({r.status_code})')
 check('no role page is readable without logging in', not leaked,
@@ -164,7 +203,7 @@ for actor in clients:
         if owner == actor:
             continue
         for url in role_urls:
-            r = clients[actor].get(url)
+            r = clients[actor].get(url, secure=True)
             if not blocked(r):
                 breaches.append(f'{url} ({r.status_code})')
     check(f'{actor} cannot reach another role\'s pages', not breaches,
@@ -173,7 +212,7 @@ for actor in clients:
 # each role can still use its own area
 for actor, c in clients.items():
     own = urls.get(actor, [])
-    ok = sum(1 for u in own if c.get(u, follow=True).status_code == 200)
+    ok = sum(1 for u in own if c.get(u, follow=True, secure=True).status_code == 200)
     check(f'{actor} can still use its own pages', ok > 0, f'{ok}/{len(own)} load')
 
 # ── 4. Source-level checks ──────────────────────────────────────────────

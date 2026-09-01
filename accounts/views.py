@@ -2,6 +2,8 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login
 from django.shortcuts import redirect, render
 
+from . import throttle
+
 # Where each role lands after signing in. Kept as one table because two places
 # need it: the login view, and `home` below.
 ROLE_DASHBOARDS = {
@@ -35,13 +37,28 @@ def login_view(request):
         username = request.POST.get("username")
         password = request.POST.get("password")
 
+        ip = throttle.client_ip(request)
+
+        # Checked before authenticate(), so a locked pair costs no password
+        # hashing and gets no timing signal about whether the user exists.
+        if throttle.is_locked(username, ip):
+            messages.error(
+                request,
+                f"Too many failed sign-in attempts. Please try again in "
+                f"{throttle.minutes_remaining(username, ip)} minutes, or use "
+                f"Forgot Password.")
+            return redirect('login')
+
         user = authenticate(request, username=username, password=password)
 
         if user is not None:
             if user.role != role:
+                # The password was right, so this is the account's owner
+                # picking the wrong role from the dropdown -- not an attack.
                 messages.error(request, "Invalid role for this account.")
                 return redirect('login')
 
+            throttle.clear(username, ip)
             login(request, user)
 
             target = ROLE_DASHBOARDS.get(role)
@@ -53,7 +70,15 @@ def login_view(request):
             return redirect('login')
 
         else:
-            messages.error(request, "Invalid credentials")
+            throttle.record_failure(username, ip)
+            left = throttle.MAX_FAILURES - throttle.recent_failures(username, ip)
+            if 0 < left <= 3:
+                messages.error(
+                    request,
+                    f"Invalid credentials. {left} attempt(s) left before this "
+                    f"account is locked for a while.")
+            else:
+                messages.error(request, "Invalid credentials")
             return redirect('login')
 
     return render(request, 'accounts/login.html')
