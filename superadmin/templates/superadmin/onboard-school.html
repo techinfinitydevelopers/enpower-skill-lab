@@ -381,9 +381,18 @@
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>School Relationship Manager (SRM) <span class="required">*</span></label>
-                        <select name="srmId" id="srmId" required>
-                            <option value="" disabled selected>Select SRM</option>
+                        {% comment %}
+                        Not required. Both of these are staff assignments, and
+                        staff are onboarded into a school -- a Thinking Coach's
+                        own form requires a school to assign them to. Demanding
+                        them here made the very first school impossible to
+                        create: no school without a coach, no coach without a
+                        school. They can be set from Edit School once the people
+                        exist. The view and the model already accept neither.
+                        {% endcomment %}
+                        <label>School Relationship Manager (SRM)</label>
+                        <select name="srmId" id="srmId">
+                            <option value="" selected>Assign later</option>
                             {% for pc in program_coordinators %}
                             <option value="{{ pc.user.id }}">{{ pc.full_name }} ({{ pc.employee_id|default:"—" }})</option>
                             {% endfor %}
@@ -391,9 +400,9 @@
                         <span class="error-message" id="srmIdError"></span>
                     </div>
                     <div class="form-group">
-                        <label>Trainer Assigned (Thinking Coach) <span class="required">*</span></label>
-                        <select name="trainerId" id="trainerId" required>
-                            <option value="" disabled selected>Select Trainer</option>
+                        <label>Trainer Assigned (Thinking Coach)</label>
+                        <select name="trainerId" id="trainerId">
+                            <option value="" selected>Assign later</option>
                             {% for tc in thinking_coaches %}
                             <option value="{{ tc.user.id }}">{{ tc.full_name }} ({{ tc.employee_id|default:"—" }})</option>
                             {% endfor %}
