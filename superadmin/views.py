@@ -29,6 +29,18 @@ def _school_name(profile):
     return getattr(school, 'school_name', None) if school else None
 
 
+# Which framework a skill-programme choice implies. Used by both school
+# onboarding and school editing, which had drifted apart -- one of the two
+# branches was missing its fallback.
+FRAMEWORK_FOR_SKILL_PROGRAM = {
+    'fsl':               'FSL',
+    'csl_plus_pc':       'CSL+',
+    'csl_plus_tc':       'CSL+',
+    'csl_foundation_pc': 'CSL Foundation',
+    'csl_foundation':    'CSL Foundation',
+}
+
+
 def is_superadmin(user):
     return user.is_authenticated and user.role == "SUPER_ADMIN"
 
@@ -213,14 +225,17 @@ def onboard_school(request):
             school.skill_program = data.get('skillProgram') or None
             school.program_academic_year = data.get('programAcademicYear') or None
 
-            # Auto-set framework_ref based on skill_program selection
+            # The skill programme implies a framework, so it refines what the
+            # frameworkType dropdown already set. It must never *clear* it: the
+            # 'fsl' branch used to assign the lookup result unconditionally, so
+            # on any system without a framework named exactly 'FSL' the
+            # selection the user made was silently replaced with None.
             sp = school.skill_program
-            if sp == 'fsl':
-                school.framework_ref = FW.objects.filter(name='FSL').first()
-            elif sp in ('csl_plus_pc', 'csl_plus_tc'):
-                school.framework_ref = FW.objects.filter(name='CSL+').first() or school.framework_ref
-            elif sp in ('csl_foundation_pc', 'csl_foundation'):
-                school.framework_ref = FW.objects.filter(name='CSL Foundation').first() or school.framework_ref
+            if sp in FRAMEWORK_FOR_SKILL_PROGRAM:
+                derived = FW.objects.filter(
+                    name=FRAMEWORK_FOR_SKILL_PROGRAM[sp]).first()
+                if derived is not None:
+                    school.framework_ref = derived
 
             srm_id = data.get('srmId')
             if srm_id:
@@ -434,15 +449,17 @@ def edit_school(request, school_id):
             school.skill_program = data.get('skill_program') or None
             school.program_academic_year = data.get('program_academic_year') or None
 
-            # Auto-set framework_ref from skill_program
+            # Same rule as onboarding: the skill programme refines the school's
+            # framework but must never clear it. Editing any other field on a
+            # school whose framework is not named exactly 'FSL' used to wipe
+            # the framework as a side effect.
             from competencies.models import Framework as FW
             sp = school.skill_program
-            if sp == 'fsl':
-                school.framework_ref = FW.objects.filter(name='FSL').first()
-            elif sp in ('csl_plus_pc', 'csl_plus_tc'):
-                school.framework_ref = FW.objects.filter(name='CSL+').first() or school.framework_ref
-            elif sp in ('csl_foundation_pc', 'csl_foundation'):
-                school.framework_ref = FW.objects.filter(name='CSL Foundation').first() or school.framework_ref
+            if sp in FRAMEWORK_FOR_SKILL_PROGRAM:
+                derived = FW.objects.filter(
+                    name=FRAMEWORK_FOR_SKILL_PROGRAM[sp]).first()
+                if derived is not None:
+                    school.framework_ref = derived
 
             srm_id = data.get('srm_id')
             if srm_id:
