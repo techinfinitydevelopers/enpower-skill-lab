@@ -2954,9 +2954,20 @@ def profiles_competencies(request):
         active_id = 1
 
     profiles       = Profile.objects.prefetch_related('primary_competencies', 'secondary_competencies').all()
-    active_profile = get_object_or_404(Profile, number=active_id)
+
+    # A fresh install has no profiles yet, and get_object_or_404 turned that
+    # into a 404 on a page the Super Admin is meant to use to create them.
+    # An unknown ?profile= number falls back to the first profile rather than
+    # 404ing, which is what a stale bookmark or an edited URL produces.
+    active_profile = profiles.filter(number=active_id).first() or profiles.first()
+    if active_profile is not None:
+        active_id = active_profile.number
     pillars        = Pillar.objects.prefetch_related('sub_pillars__competencies').filter(is_kb=False, framework_ref__is_fixed=True)
     all_comps      = Competency.objects.select_related('sub_pillar__pillar').filter(status='Active', sub_pillar__pillar__is_kb=False, sub_pillar__pillar__framework_ref__is_fixed=True).order_by('sub_pillar__sp_number', 'code')
+
+    if request.method == 'POST' and active_profile is None:
+        messages.error(request, 'There are no skill profiles to edit yet.')
+        return redirect(request.path)
 
     if request.method == 'POST':
         action = request.POST.get('action')

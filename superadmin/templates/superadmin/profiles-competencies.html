@@ -368,6 +368,27 @@
     <!-- ══ MAIN CONTENT ══ -->
     <main class="pc-main">
 
+        {% if not active_profile %}
+        {% comment %}
+        A fresh install has no profiles. Everything below reads
+        active_profile.something, which would render as a page of blanks, so
+        show what is actually going on instead.
+        {% endcomment %}
+        <div style="max-width:520px;margin:80px auto;text-align:center;padding:40px 32px;
+                    background:#fff;border:1px solid #ece7f2;border-radius:16px;">
+            <span class="material-symbols-outlined"
+                  style="font-size:44px;color:#c0b4cc;">badge</span>
+            <h1 style="font-size:19px;font-weight:600;color:#1f1a24;margin:14px 0 8px;">
+                No skill profiles yet
+            </h1>
+            <p style="font-size:14px;line-height:23px;color:#6c6377;margin:0;">
+                Skill profiles are the career matches a student&rsquo;s scores are mapped
+                to. Once profiles exist, this page is where their primary and secondary
+                competencies are configured.
+            </p>
+        </div>
+        {% else %}
+
         <!-- Header -->
         <div class="pc-header-row">
             <div class="pc-header-left">
@@ -565,6 +586,8 @@
                 Learning Pillars
             </a>
         </div>
+
+    {% endif %}
 
     </main>
 </div>
