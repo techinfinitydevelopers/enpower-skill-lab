@@ -12,3 +12,23 @@ staticfiles/
 staticfiles/*
 # Railway data dumps — real user data, never commit
 railway_backup_*.json.gz
+
+# Final droplet archive — real data and secrets, never commit
+droplet_final_backup/
+
+# ── Never commit, never deploy ───────────────────────────────────────────
+# Everything below carries either real user data or credentials. The repo is
+# what Railway deploys from, so anything tracked here reaches the server and
+# GitHub. Patterns are deliberately broad -- a backup named something nobody
+# anticipated is exactly the one that leaks.
+*.env
+!.env.example
+*.tgz
+*.tar.gz
+*.zip
+*.dump
+*_backup*
+*backup_*
+backups/
+*.pem
+*.key
