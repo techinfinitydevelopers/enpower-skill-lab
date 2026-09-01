@@ -1016,3 +1016,43 @@ The school form has **two** overlapping dropdowns: `frameworkType` picks a
 framework and `skillProgram` then overrides it. That is why the bug was
 invisible -- the explicit choice is discarded whenever the programme resolves.
 One of the two should probably go.
+
+---
+
+## 2026-09-01 (later) - The admin was a second, unthrottled door
+
+**Commit:** `1d87030`. Live on both hosts.
+
+The lockout added earlier guarded the platform's own login form. Django's admin
+ships its own login view, so `/admin/login/` was a **second door onto the same
+accounts with no limit at all**. Measured rather than assumed: fifteen wrong
+passwords, zero recorded, no lock -- while ten locked the front door.
+
+`accounts/admin_login.py` wraps Django's view. It is registered at the admin's
+login path *before* `admin.site.urls` so it wins the match, applies the same
+(username, IP) lock, then delegates. The session is used as the success signal,
+since the admin re-renders the form on failure and redirects on success.
+
+`ADMIN_URL` also makes the mount point configurable, set to a non-obvious path
+on both hosts. That stops the constant scanning of `/admin/`; on its own it
+would only slow a scanner down, which is why the throttle is the part that
+matters.
+
+### Verified
+At the default path and a moved one: the lock arrives at attempt 11, failures
+are recorded, the right password is refused while locked, a successful login
+clears the counter, the admin still works normally, and with `ADMIN_URL` set
+`/admin/` returns 404. Live on both hosts: `/admin/` and `/admin/login/` are
+404, the new path serves, and both the platform login and the admin login
+still work end to end. verify_security is now 35 checks.
+
+### Also this session
+The client could not get past step 5 of school onboarding even after the two
+fields were made optional in the template -- the validators in
+`static/js/superadmin/onboard-school.js` still refused it. That file was not
+checked the first time. Both validators removed.
+
+Railway was wiped a second time at the client's request: the platform is theirs
+to populate. One Super Admin remains; everything else -- schools, staff,
+frameworks, uploads -- is gone, backed up to
+`railway_backup_before_wipe2_20260901.json.gz` first.
