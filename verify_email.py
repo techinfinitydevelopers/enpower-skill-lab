@@ -211,12 +211,14 @@ CLIENT_COPY = {
 settings.EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
 try:
     bodies = {}
+    bodies_html = {}
     mail.outbox = []
     emails.send_onboarding(
         to='t@example.com', name='[Recipient Name]', login_id='[Email ID]',
         password='[OTP]', role='SCHOOL_ADMIN',
         school_name='[School Name]', program_name='[Program Name]')
     bodies['onboarding'] = mail.outbox[0].body
+    bodies_html['onboarding'] = mail.outbox[0].alternatives[0][0]
 
     mail.outbox = []
     emails.send_announcement(
@@ -224,6 +226,7 @@ try:
         details='[Brief announcement or event details.]', role='SCHOOL_ADMIN',
         school_name='[School Name]', program_name='[Program Name]')
     bodies['announcement'] = mail.outbox[0].body
+    bodies_html['announcement'] = mail.outbox[0].alternatives[0][0]
 
     mail.outbox = []
     emails.send_password_reset(
@@ -231,6 +234,7 @@ try:
         role='SCHOOL_ADMIN', school_name='[School Name]',
         program_name='[Program Name]')
     bodies['password_reset'] = mail.outbox[0].body
+    bodies_html['password_reset'] = mail.outbox[0].alternatives[0][0]
 
     for name, lines in CLIENT_COPY.items():
         body_lines = [l.strip() for l in bodies[name].splitlines() if l.strip()]
@@ -243,6 +247,13 @@ try:
         extra = [l for l in body_lines if l not in lines]
         if extra:
             print(f'         (added by us: {" | ".join(e[:60] for e in extra)})')
+
+        # The HTML is a second copy of the same message and had already drifted
+        # once: the text said 'Regards,' while the footer still said 'Warm
+        # regards,'. Both come from the client's document, so both must match.
+        html = bodies_html[name]
+        check(f'{name}: HTML sign-off matches the text',
+              'Warm regards' not in html and 'Regards,' in html)
 finally:
     settings.EMAIL_BACKEND = real_backend
     mail.outbox = []
