@@ -15,7 +15,14 @@
             <h1 class="h4 mb-0 fw-bold text-dark">School List</h1>
             <div class="d-flex flex-wrap gap-2 align-items-center justify-content-start justify-content-lg-end">
 
-                <button class="btn-gradient btn-download">
+                <a href="{% url 'export_list' key='coordinator-schools' %}"
+           class="btn-gradient text-decoration-none"
+           title="Download this list as Excel">
+          <span class="material-symbols-outlined">file_download</span>
+          Export
+        </a>
+
+        <button class="btn-gradient btn-download">
                     <span class="material-symbols-outlined">download</span>
                     Download Sample CSV
                 </button>

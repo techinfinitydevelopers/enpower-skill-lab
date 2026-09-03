@@ -15,6 +15,13 @@
     <header style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">
       <h1 style="font-size: 1.5rem; font-weight: 700; margin: 0; color: #1d1d1f;">School List</h1>
       <div style="display: flex; gap: 0.75rem;">
+        <a href="{% url 'export_list' key='schools' %}"
+           class="btn-gradient text-decoration-none"
+           title="Download this list as Excel">
+          <span class="material-symbols-outlined">file_download</span>
+          Export
+        </a>
+
         <button class="btn-gradient btn-download">
           <span class="material-symbols-outlined">download</span>
           Download Sample Excel

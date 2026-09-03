@@ -17,6 +17,8 @@ Including another URLconf
 from django.contrib import admin
 
 from accounts import admin_login
+
+from . import exports
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
@@ -30,6 +32,11 @@ urlpatterns = [
     path(f'{settings.ADMIN_URL}login/', admin_login.throttled_admin_login),
     path(settings.ADMIN_URL, admin.site.urls),
     path('', include('accounts.urls')),
+
+    # Excel export for the list screens. One view, one registry -- see
+    # enpower_skill_lab/exports.py. Role and scoping are decided from the
+    # signed-in user, not from the key in the URL.
+    path('exports/<str:key>/', exports.export_list, name='export_list'),
     # path('competencies/', include('competencies.urls')),
     # path('assessments/', include('assessments.urls')),
     # path('lms/', include('lms.urls')),

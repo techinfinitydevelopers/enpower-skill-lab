@@ -14,7 +14,14 @@
     <div class="page-header">
         <h1>Parent List</h1>
         <div class="header-actions">
-            <a href="/super-admin/bulk-import/parent/sample-csv/" class="btn-gradient btn-download" style="text-decoration: none;">
+            <a href="{% url 'export_list' key='parents' %}"
+           class="btn-gradient text-decoration-none"
+           title="Download this list as Excel">
+          <span class="material-symbols-outlined">file_download</span>
+          Export
+        </a>
+
+        <a href="/super-admin/bulk-import/parent/sample-csv/" class="btn-gradient btn-download" style="text-decoration: none;">
                 <span class="material-symbols-outlined">download</span>
                 Download Sample Excel
             </a>

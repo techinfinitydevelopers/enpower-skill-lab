@@ -14,7 +14,14 @@
     <div class="sa-page-header">
         <h1>Parent List - {{ school.school_name }}</h1>
         <div class="sa-header-actions">
-            <button class="sa-btn-gradient sa-btn-download">
+            <a href="{% url 'export_list' key='my-parents' %}"
+           class="sa-btn-gradient text-decoration-none"
+           title="Download this list as Excel">
+          <span class="material-symbols-outlined">file_download</span>
+          Export
+        </a>
+
+        <button class="sa-btn-gradient sa-btn-download">
                 <span class="material-symbols-outlined">download</span>
                 Download Sample CSV
             </button>

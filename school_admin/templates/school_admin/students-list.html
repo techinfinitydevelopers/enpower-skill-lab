@@ -15,7 +15,14 @@
         <header class="page-header mb-4 d-flex flex-column flex-lg-row align-items-start align-items-lg-center justify-content-between gap-3">
             <h1 class="h4 mb-0 fw-bold text-dark">Student List - {{ school.school_name }}</h1>
             <div class="d-flex flex-wrap gap-2 align-items-center justify-content-start justify-content-lg-end">
-                <button class="btn-gradient btn-download" onclick="downloadSampleCSV()">
+                <a href="{% url 'export_list' key='my-students' %}"
+           class="btn-gradient text-decoration-none"
+           title="Download this list as Excel">
+          <span class="material-symbols-outlined">file_download</span>
+          Export
+        </a>
+
+        <button class="btn-gradient btn-download" onclick="downloadSampleCSV()">
                     <span class="material-symbols-outlined">download</span>
                     Download Sample CSV
                 </button>
