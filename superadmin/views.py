@@ -2706,8 +2706,11 @@ def learning_pillars(request):
     else:
         active_fw_obj = Framework.objects.filter(name=fw_param).first()
     if not active_fw_obj:
-        active_fw_obj = Framework.objects.filter(is_fixed=True).first()
-    is_csl = not active_fw_obj.is_fixed if active_fw_obj else False
+        active_fw_obj = (Framework.objects.filter(has_profiling=True).first()
+                         or Framework.objects.order_by('order').first())
+    # "CSL-style" here means score-only: no profiling. It is a property of the
+    # framework, not of whether its pillars happen to be editable.
+    is_csl = not active_fw_obj.has_profiling if active_fw_obj else False
     active_fw = active_fw_obj.name if active_fw_obj else 'FSL'
 
     # Active sub-pillar
@@ -2889,7 +2892,10 @@ def learning_pillars(request):
                 messages.error(request, f'Prefix "{fw_prefix}" already in use.')
             else:
                 max_order = Framework.objects.aggregate(models.Max('order'))['order__max'] or 0
-                new_fw = Framework.objects.create(name=fw_name, prefix=fw_prefix, is_fixed=False, order=max_order + 1)
+                new_fw = Framework.objects.create(
+                    name=fw_name, prefix=fw_prefix, is_fixed=False,
+                    has_profiling=bool(request.POST.get('has_profiling')),
+                    order=max_order + 1)
                 messages.success(request, f'Framework "{fw_name}" created!')
                 return redirect(f"{request.path}?fw={new_fw.id}")
 
@@ -2979,8 +2985,11 @@ def profiles_competencies(request):
     active_profile = profiles.filter(number=active_id).first() or profiles.first()
     if active_profile is not None:
         active_id = active_profile.number
-    pillars        = Pillar.objects.prefetch_related('sub_pillars__competencies').filter(is_kb=False, framework_ref__is_fixed=True)
-    all_comps      = Competency.objects.select_related('sub_pillar__pillar').filter(status='Active', sub_pillar__pillar__is_kb=False, sub_pillar__pillar__framework_ref__is_fixed=True).order_by('sub_pillar__sp_number', 'code')
+    # Profiles map onto the competencies of whichever framework runs profiling.
+    # This used to filter on is_fixed=True, which left the page empty (and so
+    # the mapping unbuildable) as soon as no framework was marked fixed.
+    pillars        = Pillar.objects.prefetch_related('sub_pillars__competencies').filter(is_kb=False, framework_ref__has_profiling=True)
+    all_comps      = Competency.objects.select_related('sub_pillar__pillar').filter(status='Active', sub_pillar__pillar__is_kb=False, sub_pillar__pillar__framework_ref__has_profiling=True).order_by('sub_pillar__sp_number', 'code')
 
     if request.method == 'POST' and active_profile is None:
         messages.error(request, 'There are no skill profiles to edit yet.')
@@ -3038,7 +3047,9 @@ def project_assessment(request):
 
     # Filter pillars/competencies by active project's framework (default FSL)
     from competencies.models import Framework
-    active_fw_obj = active_project.framework_ref if active_project else Framework.objects.filter(is_fixed=True).first()
+    active_fw_obj = active_project.framework_ref if active_project else (
+        Framework.objects.filter(has_profiling=True).first()
+        or Framework.objects.order_by('order').first())
     if not active_fw_obj:
         active_fw_obj = Framework.objects.first()
     pillars   = Pillar.objects.prefetch_related('sub_pillars__competencies').filter(framework_ref=active_fw_obj)
@@ -3347,7 +3358,10 @@ def manage_frameworks(request):
                 messages.error(request, f'Prefix "{prefix}" already in use.')
             else:
                 max_order = Framework.objects.aggregate(models.Max('order'))['order__max'] or 0
-                Framework.objects.create(name=name, prefix=prefix, is_fixed=False, order=max_order + 1)
+                Framework.objects.create(
+                    name=name, prefix=prefix, is_fixed=False,
+                    has_profiling=bool(request.POST.get('has_profiling')),
+                    order=max_order + 1)
                 messages.success(request, f'Framework "{name}" created! Go to Learning Pillars to add pillars.')
 
         elif action == 'edit':
@@ -3367,6 +3381,7 @@ def manage_frameworks(request):
                 else:
                     fw.name = name
                     fw.prefix = prefix
+                    fw.has_profiling = bool(request.POST.get('has_profiling'))
                     fw.save()
                     messages.success(request, f'Framework updated to "{name}".')
 

@@ -33,12 +33,16 @@
 .mf-info { flex: 1; min-width: 0; }
 .mf-name { font-size: 1rem; font-weight: 700; color: #1d1d1f; margin: 0; }
 .mf-meta { font-size: 0.8rem; color: #9ca3af; margin: 2px 0 0; display: flex; gap: 12px; flex-wrap: wrap; }
+.mf-check { display:flex; align-items:center; gap:8px; margin:10px 0 4px; font-size:0.85rem; color:#374151; cursor:pointer; }
+.mf-check input { width:16px; height:16px; accent-color:#5A1F6E; cursor:pointer; }
 .mf-badge {
     display: inline-block; padding: 2px 10px; border-radius: 20px;
     font-size: 0.7rem; font-weight: 600;
 }
 .mf-badge-fixed { background: #f0fdf4; color: #15803d; }
 .mf-badge-editable { background: #eef2ff; color: #6366f1; }
+.mf-badge-profiling { background: #fdf4ff; color: #a21caf; }
+.mf-badge-scoreonly { background: #f8fafc; color: #64748b; }
 
 .mf-actions { display: flex; gap: 6px; flex-shrink: 0; }
 .mf-act {
@@ -111,6 +115,9 @@
                     <span class="mf-badge {% if fw.is_fixed %}mf-badge-fixed{% else %}mf-badge-editable{% endif %}">
                         {% if fw.is_fixed %}Fixed{% else %}Editable{% endif %}
                     </span>
+                    <span class="mf-badge {% if fw.has_profiling %}mf-badge-profiling{% else %}mf-badge-scoreonly{% endif %}">
+                        {% if fw.has_profiling %}Profiling On{% else %}Score Only{% endif %}
+                    </span>
                 </p>
                 <div class="mf-meta">
                     <span>Prefix: <strong>{{ fw.prefix }}</strong></span>
@@ -120,7 +127,7 @@
             </div>
             <div class="mf-actions">
                 {% if not fw.is_fixed %}
-                <button class="mf-act" onclick="openEditModal({{ fw.id }}, '{{ fw.name|escapejs }}', '{{ fw.prefix|escapejs }}')">Edit</button>
+                <button class="mf-act" onclick="openEditModal({{ fw.id }}, '{{ fw.name|escapejs }}', '{{ fw.prefix|escapejs }}', {{ fw.has_profiling|yesno:'true,false' }})">Edit</button>
                 <button class="mf-act mf-act-import" onclick="openImportModal({{ fw.id }}, '{{ fw.name|escapejs }}')">Import Pillars</button>
                 <form method="post" style="display:contents;" onsubmit="return confirm('Delete &quot;{{ fw.name|escapejs }}&quot;? All its pillars, sub-pillars, and competencies will be deleted.');">
                     {% csrf_token %}
@@ -154,6 +161,11 @@
             <input type="text" name="name" placeholder="Framework Name (e.g. ABC)" required class="mf-input">
             <input type="text" name="prefix" placeholder="Code Prefix (e.g. ABC-SP)" required class="mf-input">
             <p class="mf-hint">Prefix is used in competency codes. E.g. prefix "ABC-SP" gives codes like ABC-SP1.C1, ABC-SP2.C1</p>
+            <label class="mf-check">
+                <input type="checkbox" name="has_profiling">
+                <span>Enable Skill Profiling &amp; Passport</span>
+            </label>
+            <p class="mf-hint">Leave off for score-only frameworks (CSL+ style): marks are recorded, but no profile mapping or Skill Passport is generated.</p>
             <div class="mf-modal-actions">
                 <button type="button" class="mf-modal-btn mf-modal-cancel" onclick="closeModal('createModal')">Cancel</button>
                 <button type="submit" class="mf-modal-btn mf-modal-save">Create</button>
@@ -172,6 +184,11 @@
             <input type="hidden" name="fw_id" id="editFwId">
             <input type="text" name="name" id="editFwName" placeholder="Framework Name" required class="mf-input">
             <input type="text" name="prefix" id="editFwPrefix" placeholder="Code Prefix" required class="mf-input">
+            <label class="mf-check">
+                <input type="checkbox" name="has_profiling" id="editFwProfiling">
+                <span>Enable Skill Profiling &amp; Passport</span>
+            </label>
+            <p class="mf-hint">Leave off for score-only frameworks (CSL+ style): marks are recorded, but no profile mapping or Skill Passport is generated.</p>
             <div class="mf-modal-actions">
                 <button type="button" class="mf-modal-btn mf-modal-cancel" onclick="closeModal('editModal')">Cancel</button>
                 <button type="submit" class="mf-modal-btn mf-modal-save">Save</button>
@@ -214,10 +231,11 @@ document.querySelectorAll('.mf-overlay').forEach(ov => {
     ov.addEventListener('click', e => { if (e.target === ov) ov.classList.remove('show'); });
 });
 
-function openEditModal(id, name, prefix) {
+function openEditModal(id, name, prefix, hasProfiling) {
     document.getElementById('editFwId').value = id;
     document.getElementById('editFwName').value = name;
     document.getElementById('editFwPrefix').value = prefix;
+    document.getElementById('editFwProfiling').checked = !!hasProfiling;
     openModal('editModal');
 }
 

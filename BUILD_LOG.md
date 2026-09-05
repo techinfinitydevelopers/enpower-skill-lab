@@ -1056,3 +1056,77 @@ Railway was wiped a second time at the client's request: the platform is theirs
 to populate. One Super Admin remains; everything else -- schools, staff,
 frameworks, uploads -- is gone, backed up to
 `railway_backup_before_wipe2_20260901.json.gz` first.
+
+---
+
+## 2026-09-05 — Profiling had a switch nobody could reach
+
+### The report
+The client set up FSL under Academics > Learning Pillars and the page called it
+"CSL+ Custom Framework -- No Profiling". Scores, profiling and reports all came
+out as if FSL were a score-only framework.
+
+### What was actually wrong
+`Framework.is_fixed` carried two unrelated meanings: "pillars are read-only"
+and "profiling runs". Manage Frameworks always creates with `is_fixed=False`
+(`superadmin/views.py`), so any framework the client makes is editable -- and
+was therefore silently score-only. After the 1 Sep wipe the client rebuilt all
+three frameworks by hand, so production had:
+
+    id | name           | prefix       | is_fixed
+     1 | FSL            | Skills       | f
+     2 | CSL +          | KB + DT + EM | f
+     3 | CSL Foundation | KB           | f
+
+Nothing had `is_fixed=true`, so profiling was off platform-wide, not just on
+FSL. The seeded FSL (prefix `SP`, `is_fixed=true`) no longer exists.
+
+The same overload broke the page that would have fixed it: Profiles &
+Competencies filtered pillars on `framework_ref__is_fixed=True`, which matched
+nothing, so it rendered empty and the client could not build the profile
+mapping at all. Production still holds 0 profiles and 0 primary/secondary
+links.
+
+### The change
+`Framework.has_profiling` is now the profiling switch; `is_fixed` means only
+"pillars are read-only" and is never written by this change.
+
+- `competencies/models.py` -- new `has_profiling` field.
+- `competencies/migrations/0026_framework_has_profiling.py` -- copies
+  `is_fixed` into `has_profiling` (so behaviour is unchanged for every existing
+  row), then enables it for FSL by name.
+- `competencies/engine.py` -- `profiling_enabled()` and the annual-passport
+  gate read `has_profiling`.
+- `superadmin/views.py` -- `is_csl` derives from `has_profiling`; Profiles &
+  Competencies and the project-page default select on `has_profiling` with an
+  ordering fallback instead of `is_fixed=True`; both framework-create paths and
+  the edit path persist the new flag.
+- `manage-frameworks.html` -- "Enable Skill Profiling & Passport" checkbox on
+  create and edit, a Profiling On / Score Only badge, and the edit modal now
+  receives the current value.
+- `learning-pillars.html` -- the hardcoded "CSL+ Custom Framework" / "FSL
+  neoRiSE Framework" strings and the "CSL+ -- No Profiling" note now print the
+  active framework's own name.
+
+### Verified
+Against a SQLite copy of production's three rows: the migration leaves
+`is_fixed` untouched and sets `has_profiling` to true for FSL only. The engine
+gate returns True for FSL, False for CSL+, True for a project with no framework
+(unchanged legacy behaviour). Sub-pillar codes still render `Skills-SP1` --
+the `code` property reads `is_fixed`, which was not touched. Learning Pillars
+at `?fw=1/2/3`, Profiles & Competencies, Manage Frameworks and Custom Framework
+all return 200. fw=1 no longer says CSL+ and carries no "No Profiling" note;
+fw=2 still does, under its own name. Profiles & Competencies went from 0
+pillars to 6. Creating a framework with the checkbox ticked stores
+`has_profiling=true` with `is_fixed=false`; editing without it stores false.
+
+Nothing could regress on live data: production has 0 projects and 0 profiles,
+so no report or score is being calculated yet.
+
+### Still open
+`Profile` has no `framework_ref` -- the 15 profiles are global, so two
+frameworks with profiling on would share one profile set. Not a problem while
+only FSL profiles, but a framework needing its own profiles will require that
+field. Separately, `manage_frameworks`'s `import_pillars` copies pillars and
+sub-pillars but not competencies. And production still needs its 15 profiles
+and their competency mapping entered before profiling produces output.

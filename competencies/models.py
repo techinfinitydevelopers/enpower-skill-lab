@@ -7,6 +7,11 @@ class Framework(models.Model):
     name      = models.CharField(max_length=100, unique=True)  # e.g. "FSL", "CSL+"
     prefix    = models.CharField(max_length=20, unique=True)   # e.g. "SP", "CSL-SP", "ABC-SP"
     is_fixed  = models.BooleanField(default=False, help_text='Fixed frameworks have read-only pillars (e.g. FSL)')
+    # Whether the skill-profiling / passport engine runs for this framework.
+    # Kept separate from is_fixed: a framework can stay editable and still
+    # carry profiling (that overload is what disabled profiling everywhere
+    # once every framework was recreated through Manage Frameworks).
+    has_profiling = models.BooleanField(default=False, help_text='Run profile mapping and Skill Passport for this framework')
     order     = models.PositiveSmallIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 

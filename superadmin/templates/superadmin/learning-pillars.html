@@ -719,7 +719,7 @@
         <div class="lp-sidebar-head">
             <div>
                 <p class="label">Learning Pillars</p>
-                <p class="sub">{% if is_csl %}CSL+ Custom Framework{% else %}FSL neoRiSE Framework{% endif %}</p>
+                <p class="sub">{{ active_fw_obj.name|default:"Framework" }}{% if is_csl %} &middot; Score Only{% else %} &middot; Skill Passport{% endif %}</p>
             </div>
             <button class="lp-sidebar-toggle" onclick="toggleLpSidebar()" title="Collapse panel">
                 <span class="material-symbols-outlined tog-icon">chevron_left</span>
@@ -916,12 +916,12 @@
                     </div>
                     <h1 class="lp-title">
                         {{ sub_pillar.code }}: {{ sub_pillar.name }}
-                        {% if is_kb_active %}<span class="lp-kb-badge">KB · Score Only</span>{% elif is_csl %}<span class="lp-kb-badge" style="background:#eef2ff;color:#6366f1;border-color:#6366f130;">CSL+ · Score Only</span>{% endif %}
+                        {% if is_kb_active %}<span class="lp-kb-badge">KB · Score Only</span>{% elif is_csl %}<span class="lp-kb-badge" style="background:#eef2ff;color:#6366f1;border-color:#6366f130;">{{ active_fw_obj.name }} &middot; Score Only</span>{% endif %}
                     </h1>
                     <p class="lp-subtitle">
                         {{ sub_pillar.pillar.name }} &nbsp;·&nbsp;
                         {{ competencies.count }} competenc{{ competencies.count|pluralize:"y,ies" }}
-                        {% if is_kb_active %} &nbsp;·&nbsp; <em style="color:#dc2626;font-size:0.78rem;">Not included in Skill Passport</em>{% elif is_csl %} &nbsp;·&nbsp; <em style="color:#6366f1;font-size:0.78rem;">CSL+ Framework — No Profiling</em>{% endif %}
+                        {% if is_kb_active %} &nbsp;·&nbsp; <em style="color:#dc2626;font-size:0.78rem;">Not included in Skill Passport</em>{% elif is_csl %} &nbsp;&middot;&nbsp; <em style="color:#6366f1;font-size:0.78rem;">{{ active_fw_obj.name }} &mdash; No Profiling</em>{% endif %}
                     </p>
                 </div>
             </div>

@@ -266,3 +266,36 @@ Example: Shiv Vani / Riddhima Guruji / grade 6A / born 22 Feb / AY 2026 →
 - Migration `0023` (announcement help_text) is the only DB migration; ID work is code-only.
 - Verified (rolled-back shell test): slide example matches exactly, login via ID/ID authenticates,
   collision inserts `-2-`, parent shares the child's base.
+
+---
+
+## [2026-09-05] Framework flags — `is_fixed` vs `has_profiling`
+
+- `Framework.is_fixed` (competencies/models.py:9) means ONLY "pillars are read-only".
+  It is also read by `SubPillar.code` (competencies/models.py:98-107) to pick the code
+  scheme (`SP{n}` for fixed, `{prefix}{n}` otherwise) — changing it renames existing
+  sub-pillar codes, so never flip it as a fix.
+- `Framework.has_profiling` (added migration 0026) is the profiling/passport switch.
+  Read by `competencies/engine.py:profiling_enabled()` and the annual-passport gate
+  (~line 741), and by `superadmin/views.py` for `is_csl`, the Profiles & Competencies
+  pillar/competency source, and the project-page default framework.
+- Before this, both meanings sat on `is_fixed`. `manage_frameworks` and the
+  learning-pillars framework-create both write `is_fixed=False`, so every
+  client-created framework was silently score-only.
+
+### Production state (checked 2026-09-05, Railway Postgres)
+Frameworks: FSL(id=1, prefix `Skills`), CSL +(id=2), CSL Foundation(id=3) — all
+`is_fixed=false`. FSL has 7 pillars / 9 sub-pillars / 15 competencies / 3 schools.
+CSL+ and CSL Foundation are empty shells with 2 and 1 schools.
+**0 projects, 0 profiles, 0 profile↔competency links platform-wide.**
+The seeded FSL (prefix `SP`, `is_fixed=true`) is gone — client rebuilt all three by
+hand after the 2026-09-01 Railway wipe. So profiling produces nothing until the 15
+profiles and their primary/secondary competency mapping are entered.
+
+### Railway DB access
+`DATABASE_URL` uses `postgres.railway.internal` — private, does not resolve from a
+laptop, and there is no `DATABASE_PUBLIC_URL` (TCP proxy off). Query production via
+Railway dashboard → Postgres → **Console** tab, then `psql $DATABASE_URL`. The
+Console opens a shell, not a SQL prompt.
+
+See [[framework-profiling-flag]].

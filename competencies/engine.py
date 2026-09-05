@@ -100,15 +100,16 @@ def profiling_enabled(project):
     """Whether profile/career matching applies to this project.
 
     Spec slide 20: "Profile mapping disabled in CSL+/ other projects", and
-    slide 33: "Skill passport stage disabled in CSL+". Only the fixed framework
-    (FSL) carries the 15-profile mapping, so profiling runs there and nowhere
-    else. A project with no framework is treated as FSL, matching how legacy
-    projects are handled elsewhere.
+    slide 33: "Skill passport stage disabled in CSL+". Each framework carries
+    its own `has_profiling` switch, set by the Super Admin — it used to be
+    read off `is_fixed`, which silently turned profiling off for any framework
+    made editable. A project with no framework is treated as FSL, matching how
+    legacy projects are handled elsewhere.
     """
     fw = getattr(project, 'framework_ref', None) if project else None
     if fw is None:
         return True
-    return bool(getattr(fw, 'is_fixed', False))
+    return bool(getattr(fw, 'has_profiling', False))
 
 
 def get_competency_scores_for_project(student, project, include_kb=True):
@@ -738,7 +739,7 @@ def generate_annual_passport(student):
     # behaviour of showing profiles.
     school    = getattr(student, 'school', None)
     framework = getattr(school, 'framework_ref', None) if school else None
-    if framework is None or framework.is_fixed:
+    if framework is None or framework.has_profiling:
         profile_results  = run_profiling_engine(competency_scores)
         top_3            = profile_results[:TOP_PROFILES_COUNT]
         common_strengths = get_common_strengths(top_3, competency_scores)
