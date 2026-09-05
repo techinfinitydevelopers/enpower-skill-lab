@@ -344,7 +344,7 @@
         <div class="pc-sidebar-head">
             <div>
                 <p class="label">Skill Profiles</p>
-                <p class="sub">15 profiles · Select to configure</p>
+                <p class="sub">{{ profiles.count }} profile{{ profiles.count|pluralize }}{% if profiles %} &middot; Select to configure{% endif %}</p>
             </div>
             <button class="pc-toggle-btn" onclick="togglePcSidebar()" title="Collapse panel">
                 <span class="material-symbols-outlined pc-tog-icon">chevron_left</span>

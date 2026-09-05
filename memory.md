@@ -299,3 +299,33 @@ Railway dashboard → Postgres → **Console** tab, then `psql $DATABASE_URL`. T
 Console opens a shell, not a SQL prompt.
 
 See [[framework-profiling-flag]].
+
+### Framework CRUD lives in two places (2026-09-05)
+- **Gear icon on Learning Pillars** → `fwManageModal` (learning-pillars.html:736, 1099+).
+  This is the UI the client actually uses. Its create/edit forms send only name and
+  prefix — **no `has_profiling` checkbox**, so anything made here is score-only. Its
+  `edit_framework` handler (superadmin/views.py:2902-2915) does not touch
+  `has_profiling`, so renaming FSL there will not switch profiling off.
+- **Standalone page** `/super-admin/skill-passport/manage-frameworks/` — nothing links
+  to it (superadmin/urls.py:70); reachable by URL only. Kept deliberately as an
+  internal/dev tool. This is the only place with the "Enable Skill Profiling &
+  Passport" checkbox and the Profiling On / Score Only badges. To give a new
+  framework profiling, edit it from here.
+
+### [2026-09-05] Skill profiles — production has none, and no UI creates them
+`superadmin/views.py:profiles_competencies` handles only `save_profile` (the
+primary/secondary mapping) and `rename_profile`. There is **no create or delete
+action**, so with 0 profiles in the DB the page sits on its empty state and the
+Super Admin cannot get past it. Adding that UI is deliberately deferred.
+
+`seed_profiles.py` cannot fill the gap: its 15 profiles map to the original
+neoRiSE codes (`SP11.C3`, `SP8.C2`, ...), while the client's hand-built FSL has
+9 sub-pillars and 15 competencies under `Skills-SP*` codes. Running it would
+create 15 profiles with zero usable mappings.
+
+Competency codes were frozen as `17 Skills-SP1.C1` because the framework's
+`prefix` was `17 Skills` when they were created; `SubPillar.code` is a derived
+property so it updated to `Skills-SP1`, but `Competency.code` is a stored
+CharField (competencies/models.py:118) and did not. Client fixed the existing
+rows by SQL on 2026-09-05. **The underlying bug remains: editing a framework's
+prefix does not regenerate its competency codes.**
