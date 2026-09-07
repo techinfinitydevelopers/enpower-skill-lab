@@ -3,7 +3,7 @@
 ## Project
 Django-based EdTech platform for skill training labs using the **neoRiSE Competency Framework (Skill Passport)**.
 
-- **Live URL:** enpower.techinfinity.link
+- **Live URL:** www.enpowerskilllab.com (older droplet address enpower.techinfinity.link still resolves)
 - **DB:** SQLite (dev)
 - **Email:** Mailtrap (sandbox)
 - **Auth model:** `accounts.User` with role-based access

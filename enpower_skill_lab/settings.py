@@ -54,6 +54,10 @@ if not DEBUG and SECRET_KEY == _DEV_SECRET_KEY:
 
 ALLOWED_HOSTS = [
     '68.183.93.246',
+    # Production. The techinfinity.link pair is the older droplet address and
+    # still resolves, so both stay listed.
+    'enpowerskilllab.com',
+    'www.enpowerskilllab.com',
     'enpower.techinfinity.link',
     'www.enpower.techinfinity.link',
     'localhost',
@@ -72,6 +76,8 @@ ALLOWED_HOSTS += [h.strip() for h in os.environ.get('ALLOWED_HOSTS', '').split('
 # Django 4+ checks the Origin header on any HTTPS POST against this list, so a
 # form on a domain missing from it fails CSRF with no useful error.
 CSRF_TRUSTED_ORIGINS = [
+    'https://enpowerskilllab.com',
+    'https://www.enpowerskilllab.com',
     'https://enpower.techinfinity.link',
     'https://www.enpower.techinfinity.link',
 ]
@@ -292,7 +298,7 @@ EMAIL_SUPPRESSED_ROLES = {
 
 # Public address of the site. Emails leave the server and are opened elsewhere,
 # so any link inside one has to be absolute and has to point at production.
-SITE_URL = os.environ.get('SITE_URL', 'https://enpower.techinfinity.link').rstrip('/')
+SITE_URL = os.environ.get('SITE_URL', 'https://www.enpowerskilllab.com').rstrip('/')
 
 # ── HTTPS hardening ─────────────────────────────────────────────────────
 # `manage.py check --deploy` flagged all four of these. The session and CSRF
