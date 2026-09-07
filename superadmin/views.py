@@ -1105,10 +1105,10 @@ def onboard_student(request):
             User = get_user_model()
             email = student.school_email
             
-            # Check if user already exists
-            if email and User.objects.filter(email=email).exists():
-                messages.error(request, f'A user with email {email} already exists.')
-                return redirect('onboard_student')
+            # school_email is the school's own address, shared by every student
+            # there, so it is not checked for uniqueness. A student logs in with
+            # the structured reg ID below, not an address, and password reset is
+            # restricted to School Admin, Thinking Coach and Program Coordinator.
             # Structured onboarding ID (e.g. SV-RG-6A-222-26-stu) = login username
             # = initial password (changeable after first login).
             from accounts.onboarding_ids import student_id_for

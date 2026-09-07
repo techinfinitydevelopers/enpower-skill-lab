@@ -113,7 +113,11 @@ class Student(models.Model):
 
     # C. Contact Details
     student_mobile = models.CharField(max_length=15, blank=True, null=True)
-    school_email = models.EmailField(unique=True)
+    # The school's own address, so every student at a school shares it. It was
+    # unique, which made a real class list impossible to import: the first row
+    # took the address and every row after it was rejected. Identity lives on
+    # skill_lab_reg_id, which is unique and is also the login.
+    school_email = models.EmailField()
     personal_email = models.EmailField(blank=True, null=True)
     address = models.TextField(blank=True, null=True)
 

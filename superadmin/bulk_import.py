@@ -626,7 +626,7 @@ EXCEL_CONFIG = {
             'education_level': 'Education Level',
             'id_proof': 'ID Proof',
             'student_names': 'Student Names (Reference Only)',
-            'student_emails': 'Student School Emails (for Linking)',
+            'student_emails': 'Student Reg ID, GR Number or Email (for Linking)',
             'secondary_full_name': 'Secondary Guardian Name',
             'secondary_relation': 'Secondary Relation',
             'secondary_mobile': 'Secondary Mobile',
@@ -1421,8 +1421,13 @@ def _process_student(row, created_by):
     email = row['school_email']
     gr_number = (row.get('gr_number') or '').strip() or None
 
-    if email and User.objects.filter(email=email).exists():
-        raise ValueError(f'Email "{email}" already exists')
+    # school_email is the school's own address, so every student at a school
+    # shares it - the client's 74-row import failed 73 rows on the second
+    # student onwards. Nothing needs it to be unique: a student logs in with
+    # the structured reg ID, not an address, Django does not index User.email
+    # as unique, and password reset is restricted to School Admin, Thinking
+    # Coach and Program Coordinator, so a shared address cannot be used to
+    # reach a student account.
 
     # Only a supplied GR number can clash; blanks are stored as NULL and many
     # NULLs are allowed.
@@ -1605,7 +1610,21 @@ def _process_parent(row, created_by):
     if student_emails_str:
         emails = [e.strip() for e in student_emails_str.split(',') if e.strip()]
         for semail in emails:
-            st = Student.objects.filter(school_email=semail).first()
+            # school_email is the school's shared address, so it identifies a
+            # student only when exactly one holds it. .first() used to attach
+            # the parent to whichever student happened to come back first,
+            # which is a silent mis-link. A registration ID or GR number is
+            # accepted here for that reason, and an ambiguous address is
+            # reported rather than guessed at.
+            st = (Student.objects.filter(skill_lab_reg_id__iexact=semail).first()
+                  or Student.objects.filter(gr_number__iexact=semail).first())
+            if st is None:
+                matches = list(Student.objects.filter(school_email__iexact=semail)[:2])
+                if len(matches) > 1:
+                    raise ValueError(
+                        f'"{semail}" belongs to more than one student. Use the '
+                        f"student's registration ID or GR number instead.")
+                st = matches[0] if matches else None
             if st:
                 linked_students.append(st)
 

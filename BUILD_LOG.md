@@ -1256,3 +1256,41 @@ unchanged. Test rows deleted.
 Not our bug, worth telling the client: row 6 of their file failed with
 `date_of_birth is required`, which is a genuinely empty cell in the
 spreadsheet, not a format problem.
+
+
+## 2026-09-07 - One school email, many students
+
+With the date fix in, the client's import got one row further and then failed
+73 of 74 with `Email "shivvani@gmail-com" already exists`. The address is the
+school's own, shared by every student there - which is the normal case, not a
+mistake in their sheet.
+
+Three things were treating it as an identity:
+
+**`student/models.py`** - `school_email` was `unique=True`. That is the one
+that could not be worked around: the first row took the address and the
+database rejected every row after it. Migration
+`student/0003_alter_student_school_email` drops the constraint. Identity stays
+on `skill_lab_reg_id`, which is unique and is also the login.
+
+**`superadmin/bulk_import.py`** and **`superadmin/views.py`** - both the bulk
+importer and the single Add Student form rejected a row whose address already
+belonged to a user. Nothing needed that: a student logs in with the structured
+reg ID, Django does not index `User.email` as unique, and password reset is
+restricted to School Admin, Thinking Coach and Program Coordinator, so a shared
+address cannot be used to reach a student account.
+
+**Parent linking**, which the shared address quietly broke: `_process_parent`
+resolved each entry in `student_emails` with
+`Student.objects.filter(school_email=...).first()`, so with one address across
+a class it would have attached the parent to whichever student came back
+first. It now accepts a registration ID or GR number, and an address held by
+more than one student is reported instead of guessed at. The sample's column
+header says so.
+
+Verified: five students sharing `shivvani@gmail.com` all import, each with its
+own login (`BI-RM-8A-235-25-stu`, `BI-DK-...`, and so on). Two siblings on one
+address then link correctly to a parent by reg ID and by GR number, while the
+shared address itself fails with "belongs to more than one student. Use the
+student's registration ID or GR number instead." The date-cell fix and the
+school round trip both still pass. All test rows deleted.
