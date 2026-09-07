@@ -1,12 +1,19 @@
 """
-Seed the 15 profile -> competency mappings (deck slide 3).
+Seed the 8 skill profiles the client confirmed.
 
-Slide 3: "There are 15 profiles. Each profile is mapped to a max of 2-3 primary
-competency and 2 secondary competency."
+Migration 0027 already puts these 8 in place, so a fresh database does not need
+this script; it exists to put the list back after the profiles have been edited
+or wiped by hand.
 
-Without these mappings the profiling engine can never unlock a profile, so the
-Skill Passport renders with no career matches at all. Mappings point at FSL
-competencies — profiling only runs for FSL (engine.profiling_enabled).
+Only the names are seeded. The earlier version of this file also wrote a
+competency mapping for each of 15 placeholder profiles - those mappings were
+invented to give the profiling engine something to work with and do not apply
+to the confirmed names, so they are gone. Until the Super Admin maps each
+profile on Skill Passport > Profiles & Competencies, the profiling engine can
+unlock nothing and the Skill Passport shows no career matches.
+
+Profiling only runs for FSL (engine.profiling_enabled), so these are the FSL
+profiles; the model has no per-framework profile split.
 
 Run with:  python seed_profiles.py
 """
@@ -18,69 +25,51 @@ if not os.environ.get('DJANGO_SETTINGS_MODULE'):
     os.environ['DJANGO_SETTINGS_MODULE'] = 'enpower_skill_lab.settings'
     django.setup()
 
-from competencies.models import Profile, Competency
+from competencies.models import Profile
 
-# (number, name, [primary codes], [secondary codes])
-#
-# Related profiles deliberately SHARE a primary competency — the deck's own
-# worked example (slide 21/22) has SP1.C3 running through several profiles, and
-# step 5 asks for the "common strengths" across a student's top matches. With
-# fully disjoint primaries there is nothing for that step to report.
-# Profiles are grouped in threes because a project is built around one trio.
 PROFILES = [
-    # trio 1 — shares SP11.C3 (Research/Design) and SP9.C2 (Design/Creative)
-    (1,  'Research Scholar',        ['SP11.C3', 'SP8.C2',  'SP4.C3'],  ['SP6.C2',  'SP17.C1']),
-    (2,  'Design Thinker',          ['SP11.C3', 'SP9.C2',  'SP12.C3'], ['SP10.C2', 'SP13.C2']),
-    (3,  'Creative Maker',          ['SP9.C2',  'SP12.C2', 'SP7.C2'],  ['SP6.C3',  'SP17.C2']),
-    # trio 2 — shares SP11.C4 (Analyst/Communicator) and SP3.C3 (Communicator/Environment)
-    (4,  'Critical Analyst',        ['SP11.C4', 'SP8.C3',  'SP5.C3'],  ['SP4.C2',  'SP7.C3']),
-    (5,  'Global Communicator',     ['SP11.C4', 'SP4.C4',  'SP3.C3'],  ['SP10.C3', 'SP6.C2']),
-    (6,  'Environmental Champion',  ['SP3.C3',  'SP16.C3', 'SP12.C1'], ['SP11.C1', 'SP10.C1']),
-    # trio 3 — shares SP14.C2 (Steward/Entrepreneur) and SP2.C4 (Well-Being/Entrepreneur)
-    (7,  'Financial Steward',       ['SP14.C2', 'SP15.C3', 'SP5.C4'],  ['SP11.C2', 'SP2.C3']),
-    (8,  'Well-Being Navigator',    ['SP2.C4',  'SP1.C3',  'SP13.C4'], ['SP3.C1',  'SP10.C2']),
-    (9,  'Entrepreneur',            ['SP14.C2', 'SP2.C4',  'SP15.C2'], ['SP10.C4', 'SP11.C3']),
-    # trio 4 — shares SP7.C3 (Digital/Community) and SP6.C4 (Digital/Data)
-    (10, 'Digital Navigator',       ['SP7.C3',  'SP6.C4',  'SP17.C3'], ['SP8.C1',  'SP9.C1']),
-    (11, 'Community Builder',       ['SP7.C3',  'SP10.C4', 'SP13.C1'], ['SP4.C1',  'SP16.C1']),
-    (12, 'Data Storyteller',        ['SP6.C4',  'SP8.C4',  'SP5.C2'],  ['SP6.C1',  'SP11.C4']),
-    # trio 5 — shares SP11.C3 (Systems/Reflective) and SP7.C4 (Systems/Tech)
-    (13, 'Systems Thinker',         ['SP11.C3', 'SP7.C4',  'SP16.C2'], ['SP8.C2',  'SP12.C3']),
-    (14, 'Reflective Learner',      ['SP11.C3', 'SP1.C4',  'SP2.C2'],  ['SP13.C3', 'SP4.C4']),
-    (15, 'Tech Innovator',          ['SP7.C4',  'SP17.C4', 'SP9.C4'],  ['SP12.C2', 'SP6.C3']),
+    (1, 'Tech Explorer'),
+    (2, 'Data Detective'),
+    (3, 'Young Entrepreneur'),
+    (4, 'Creative Innovator'),
+    (5, 'Skilled Maker'),
+    (6, 'Digital Navigator'),
+    (7, 'Community Builder'),
+    (8, 'Confident Communicator'),
 ]
 
 
 def run():
-    by_code = {c.code: c for c in Competency.objects.all()}
-    missing = set()
+    print('Seeding the 8 skill profiles')
 
-    print('Seeding 15 profile mappings')
-    # Numbers are unique, so a stale profile sitting on a number we want would
-    # block update_or_create. Clear the table and rebuild it deterministically.
-    Profile.objects.all().delete()
+    # number is unique, so a profile already sitting on 1-8 is renamed rather
+    # than inserted alongside. Whatever mapping it carries is left alone.
+    for number, name in PROFILES:
+        profile, created = Profile.objects.update_or_create(
+            number=number, defaults={'name': name})
+        print(f"  {'created' if created else 'updated'}  {number}. {name}")
 
-    for number, name, primary, secondary in PROFILES:
-        p_objs = [by_code[c] for c in primary   if c in by_code]
-        s_objs = [by_code[c] for c in secondary if c in by_code]
-        missing.update(c for c in primary + secondary if c not in by_code)
+    stale = Profile.objects.exclude(number__in=[n for n, _ in PROFILES])
+    if stale.exists():
+        print('\nRemoving profiles beyond the confirmed 8:')
+        for profile in stale:
+            print(f"  removed  {profile.number}. {profile.name}")
+        stale.delete()
 
-        profile = Profile.objects.create(number=number, name=name)
-        profile.primary_competencies.set(p_objs)
-        profile.secondary_competencies.set(s_objs)
+    print('\nMapping check')
+    unmapped = 0
+    for p in Profile.objects.prefetch_related('primary_competencies',
+                                              'secondary_competencies'):
+        np = p.primary_competencies.count()
+        ns = p.secondary_competencies.count()
+        if np < 2:
+            unmapped += 1
+        print(f'  {p.number}. {p.name:24} primary={np} secondary={ns}')
 
-    if missing:
-        print(f'  WARNING: competency codes not found: {sorted(missing)}')
-
-    print('\nVerification')
-    ok = 0
-    for p in Profile.objects.prefetch_related('primary_competencies', 'secondary_competencies'):
-        np, ns = p.primary_competencies.count(), p.secondary_competencies.count()
-        good = 2 <= np <= 3 and ns == 2
-        ok += good
-        print(f'  {"OK " if good else "BAD"} {p.number:2}. {p.name:24} primary={np} secondary={ns}  '
-              f'{[c.code for c in p.primary_competencies.all()]}')
-    print(f'\n  {ok}/{Profile.objects.count()} profiles correctly mapped (2-3 primary, 2 secondary)')
+    if unmapped:
+        print(f'\n  {unmapped} profile(s) have fewer than 2 primary '
+              f'competencies and can never unlock. Map them on '
+              f'Skill Passport > Profiles & Competencies.')
 
 
 if __name__ == '__main__':

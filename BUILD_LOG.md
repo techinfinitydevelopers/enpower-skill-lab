@@ -1130,3 +1130,41 @@ only FSL profiles, but a framework needing its own profiles will require that
 field. Separately, `manage_frameworks`'s `import_pillars` copies pillars and
 sub-pillars but not competencies. And production still needs its 15 profiles
 and their competency mapping entered before profiling produces output.
+
+
+## 2026-09-07 - The 15 placeholder profiles replaced with the client's 8
+
+The client confirmed the skill-profile list, so the 15 invented names are gone:
+
+1. Tech Explorer  2. Data Detective  3. Young Entrepreneur  4. Creative Innovator
+5. Skilled Maker  6. Digital Navigator  7. Community Builder  8. Confident Communicator
+
+("Digital Nagivator" in the message was read as Digital Navigator.)
+
+**`competencies/migrations/0027_seed_eight_profiles.py`** - renames profiles 1-8
+in place and deletes 9-15, so a fresh database comes up with the confirmed list
+instead of migration 0004's placeholders. Nothing holds a foreign key to
+`Profile` (a report keeps its matches in `ProjectReport.top_3_profiles` as
+JSON), so dropping the extras cannot orphan anything.
+
+**`seed_profiles.py`** - rewritten. It used to delete the table and rebuild 15
+profiles with an invented competency mapping; it now upserts the 8 names,
+removes anything past number 8, and reports how many profiles cannot unlock.
+The invented mappings are not carried over - they belonged to the old names.
+
+**`competencies/models.py`** - the `Profile` docstring said "15 student skill
+profiles" and the `number` field carried a `1-15` comment. Neither was true and
+no code depends on the count.
+
+Verified: migration applied clean on the dev database, `python seed_profiles.py`
+is idempotent, 8 profiles present in the right order. No code hardcodes 15 -
+`engine.py`, `superadmin/views.py`, `teacher/views.py` and `student/views.py`
+all query `Profile.objects` without a count or range.
+
+### Needs doing before profiling produces anything
+The 8 profiles have **no competency mapping on the server**. The engine needs
+at least 2 primary competencies per profile to unlock one, so the Skill
+Passport will show no career matches until each profile is mapped on
+Skill Passport > Profiles & Competencies. The dev database shows 3 primary /
+2 secondary per profile only because the old mappings stayed attached to the
+renamed rows - those are the discarded 15-profile mappings and mean nothing.

@@ -131,8 +131,12 @@ class Competency(models.Model):
 
 
 class Profile(models.Model):
-    """15 student skill profiles of the neoRiSE Skill Passport."""
-    number = models.PositiveSmallIntegerField(unique=True)   # 1–15
+    """The student skill profiles of the neoRiSE Skill Passport.
+
+    The client confirmed 8; the count is not fixed in code, so adding or
+    removing one only means adding or removing a row.
+    """
+    number = models.PositiveSmallIntegerField(unique=True)
     name   = models.CharField(max_length=100)
     primary_competencies   = models.ManyToManyField(
         Competency, related_name='primary_profiles',   blank=True)
