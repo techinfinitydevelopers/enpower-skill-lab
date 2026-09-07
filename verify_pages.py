@@ -94,6 +94,22 @@ atexit.register(restore_passwords)
 # renders as text on the page. This has slipped through three times, so every
 # fetched page is now checked automatically.
 LEAKED = []
+DUMMY_SEEN = []
+
+# Invented copy that shipped inside templates instead of coming from a record.
+# The Super Admin header carried a hardcoded badge of 4 and four of these --
+# student notifications, on an admin screen, on a system with no data. Every
+# page fetched below is checked, so the next one is caught on any screen
+# rather than only where someone thought to look.
+DUMMY_TEXT = (
+    'Mathematics homework due by Friday',
+    'Your Science test results are available',
+    'History exam scheduled for next Monday',
+    'Perfect Attendance badge',
+    'Delhi Public School',
+    'Lorem ipsum',
+    'John Doe',
+)
 
 
 def fetch(client, url):
@@ -103,6 +119,9 @@ def fetch(client, url):
         if marker in body:
             LEAKED.append((url, marker, body[max(0, body.find(marker) - 40):body.find(marker) + 80]))
             break
+    for phrase in DUMMY_TEXT:
+        if phrase in body:
+            DUMMY_SEEN.append((url, phrase))
     return r.status_code, body, r.redirect_chain
 
 
@@ -286,6 +305,12 @@ def run():
           '; '.join(f'{u} has {m}' for u, m, _ in LEAKED))
     for u, m, ctx in LEAKED:
         print(f'     {u}  ->  {m}\n     ...{ctx.strip()}...')
+
+    check('no invented placeholder text on any page rendered above',
+          not DUMMY_SEEN,
+          '; '.join(f'{u}: {p!r}' for u, p in DUMMY_SEEN[:3]))
+    for u, phrase in DUMMY_SEEN:
+        print(f'     {u}  ->  {phrase!r}')
 
     restore_passwords()
 
