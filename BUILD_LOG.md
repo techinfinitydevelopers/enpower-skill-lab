@@ -1168,3 +1168,55 @@ Passport will show no career matches until each profile is mapped on
 Skill Passport > Profiles & Competencies. The dev database shows 3 primary /
 2 secondary per profile only because the old mappings stayed attached to the
 renamed rows - those are the discarded 15-profile mappings and mean nothing.
+
+
+## 2026-09-07 - School bulk import finished
+
+`SAMPLE_DATA['school']` and `EXCEL_CONFIG['school']` were already written but
+nothing was wired to them, so Download Sample on the School List answered
+"Invalid role" and there was no way to import schools in bulk. The rest is now
+in place.
+
+**`superadmin/bulk_import.py`**
+- `_process_school()` creates the school from a row and is registered in
+  `ROLE_PROCESSORS` / `ROLE_LABELS`. No user account, no email - a school is
+  not a login, and its School Admin imports separately, which is what keeps
+  the two imports from having to be ordered.
+- `_choice()` matches a choice column against the model's own choices and
+  accepts either the stored value ("cbse") or the label ("CBSE"). SQLite does
+  not enforce `choices`, so without this an unrecognised value saved fine and
+  then rendered as a blank cell everywhere.
+- `_digits()` length-checks phones and PIN codes. Model validators only run
+  under `full_clean()`, which a bulk create never calls.
+- `_drop_excel_decimal()` undoes openpyxl handing back a General-formatted
+  number as "9876500101.0", which would otherwise fail the length check.
+- Framework is matched on the folded name (`CSL +` == `CSL+`), then the skill
+  programme refines it - the same order the onboarding form uses, so a row
+  naming FSL beside a CSL programme lands on the programme's framework rather
+  than the two disagreeing.
+- Duplicate `school_code` or `school_name` is rejected with a readable reason
+  instead of surfacing an IntegrityError.
+- `_generate_excel()` now fills the `framework` dropdown from the live
+  Frameworks, and no longer turns the School sample's `school_name` column
+  into a dropdown of existing schools - on this sheet that column is the name
+  of the school being created, not a pointer at one.
+- `_get_display_name()` reports the school name; a school row carries no
+  `full_name`, so every result line used to read "Row".
+
+**`superadmin/templates/superadmin/school-list.html`** - the two dead buttons
+now point at the sample and open the bulk import modal, matching the other
+lists.
+
+**`superadmin/templates/superadmin/bulk-upload.html` + `views.py`** - a Schools
+card, first in the grid, with its own count.
+
+Verified against the dev database: the sample downloads (6 dropdowns, required
+columns starred), uploads back clean (2 schools created, framework derived as
+FSL and CSL+ respectively), and a second upload of the same file fails both
+rows with "School code ... already exists". A hand-built CSV of bad rows was
+rejected one reason at a time - bad board, 3-digit phone, 4-digit PIN, blank
+city, unknown framework - while "State Board"/"Trust" labels and a
+"9000000009.0" phone imported correctly. `/super-admin/schools/` and
+`/super-admin/bulk-upload/` both return 200 with the modal and sample link
+present. Test rows were deleted; the database is back to its 8 schools.
+Not verified in a browser: the modal opening and the upload flow rendering.

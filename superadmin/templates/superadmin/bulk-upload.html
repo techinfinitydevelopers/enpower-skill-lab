@@ -86,6 +86,7 @@
         color: #fff;
     }
 
+    .role-icon.school { background: linear-gradient(135deg, #5A2D82, #4C1D95); }
     .role-icon.school-admin { background: linear-gradient(135deg, #F59E0B, #D97706); }
     .role-icon.teacher { background: linear-gradient(135deg, #7E22CE, #6B21A8); }
     .role-icon.student { background: linear-gradient(135deg, #0EA5E9, #0284C7); }
@@ -168,6 +169,37 @@
 
     <!-- Roles Grid -->
     <div class="roles-grid">
+        <!-- School — first, because every other role needs a school to point at -->
+        <div class="role-card">
+            <div class="role-card-header">
+                <div class="role-icon school">
+                    <span class="material-symbols-outlined">apartment</span>
+                </div>
+                <div class="role-info">
+                    <h3>Schools</h3>
+                    <p class="role-count">{{ total_schools }} onboarded</p>
+                </div>
+            </div>
+            <div class="role-card-body">
+                <div class="role-actions">
+                    <div class="btn-row">
+                        <a href="{% url 'download_sample_csv' role='school' %}" class="btn-action btn-download">
+                            <span class="material-symbols-outlined">download</span>
+                            Sample Excel
+                        </a>
+                        <button class="btn-action btn-upload" onclick="openBulkImport('school', 'School')">
+                            <span class="material-symbols-outlined">upload_file</span>
+                            Bulk Import
+                        </button>
+                    </div>
+                    <a href="{% url 'school_list' %}" class="btn-action btn-view">
+                        <span class="material-symbols-outlined">visibility</span>
+                        View All Schools
+                    </a>
+                </div>
+            </div>
+        </div>
+
         <!-- School Admin -->
         <div class="role-card">
             <div class="role-card-header">

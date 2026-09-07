@@ -176,6 +176,7 @@ def bulk_upload_page(request):
     from coordinator.models import ProgramCoordinator
 
     context = {
+        'total_schools': School.objects.count(),
         'total_school_admins': SchoolAdmin.objects.count(),
         'total_teachers': Teacher.objects.count(),
         'total_students': Student.objects.count(),

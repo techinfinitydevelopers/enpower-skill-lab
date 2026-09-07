@@ -62,6 +62,35 @@ def _opt_bool(val, default=True):
 # ============================================================
 
 SAMPLE_DATA = {
+    # Schools had no entry at all, so the Download Sample button on the School
+    # List answered "Invalid role" and there was no way to import schools in
+    # bulk. Columns are the ones the onboarding form marks required, plus the
+    # few optional ones worth having in a spreadsheet.
+    'school': {
+        'headers': [
+            'school_name', 'school_code', 'board', 'school_type', 'medium',
+            'school_email', 'school_phone', 'website', 'year_established',
+            'principal_name', 'principal_email', 'principal_phone',
+            'branch_address', 'city', 'state', 'pincode',
+            'framework', 'skill_program', 'program_academic_year',
+            'emergency_contact_person', 'emergency_phone', 'total_students',
+        ],
+        'rows': [
+            ['Greenwood International School', 'SCH-10001', 'cbse', 'private',
+             'english', 'office@greenwood.example.com', '9876500101',
+             'https://greenwood.example.com', '1998',
+             'Meera Joshi', 'principal@greenwood.example.com', '9876500102',
+             '12 Hill Road, Bandra', 'Mumbai', 'Maharashtra', '400050',
+             'FSL', 'fsl', '2026-27', 'Anil Kumar', '9876500103', '820'],
+            ['Sunrise Public School', 'SCH-10002', 'icse', 'trust',
+             'bilingual', 'info@sunrise.example.com', '9876500201',
+             '', '2005',
+             'Rakesh Nair', 'principal@sunrise.example.com', '9876500202',
+             '5 Lake View, Kothrud', 'Pune', 'Maharashtra', '411038',
+             'CSL+', 'csl_plus_pc', '2026-27', 'Sunita Rao', '9876500203', '540'],
+        ],
+    },
+
     'school_admin': {
         'headers': [
             'full_name', 'email', 'phone', 'gender', 'school_name',
@@ -303,6 +332,7 @@ SAMPLE_DATA = {
 }
 
 ROLE_LABELS = {
+    'school': 'School',
     'school_admin': 'School Admin',
     'teacher': 'Teacher',
     'student': 'Student',
@@ -316,6 +346,50 @@ ROLE_LABELS = {
 # ============================================================
 
 EXCEL_CONFIG = {
+    'school': {
+        'sheet_title': 'School Import',
+        'header_map': {
+            'school_name': 'School Name',
+            'school_code': 'School Code / UDISE',
+            'board': 'Board',
+            'school_type': 'School Type',
+            'medium': 'Medium',
+            'school_email': 'School Email',
+            'school_phone': 'School Phone',
+            'website': 'Website',
+            'year_established': 'Year Established',
+            'principal_name': 'Principal Name',
+            'principal_email': 'Principal Email',
+            'principal_phone': 'Principal Phone',
+            'branch_address': 'Branch Address',
+            'city': 'City',
+            'state': 'State',
+            'pincode': 'PIN Code',
+            'framework': 'Skill Framework',
+            'skill_program': 'Skill Program (ESL Product)',
+            'program_academic_year': 'Program Academic Year',
+            'emergency_contact_person': 'Emergency Contact Person',
+            'emergency_phone': 'Emergency Phone',
+            'total_students': 'Number of Students',
+        },
+        'dropdowns': {
+            'board': ['cbse', 'icse', 'ib', 'state', 'igcse'],
+            'school_type': ['private', 'government', 'trust', 'aided'],
+            'medium': ['english', 'hindi', 'marathi', 'regional', 'bilingual'],
+            'skill_program': ['fsl', 'csl_plus_pc', 'csl_plus_tc',
+                              'csl_foundation_pc', 'csl_foundation'],
+            'program_academic_year': ['2025-26', '2026-27', '2027-28'],
+            # 'framework' is filled from the live Frameworks at download time,
+            # the same way 'school_name' is for the other roles.
+        },
+        'required_fields': {
+            'school_name', 'school_code', 'board', 'school_type', 'medium',
+            'school_email', 'school_phone', 'principal_name',
+            'principal_email', 'principal_phone', 'branch_address', 'city',
+            'state', 'pincode', 'emergency_contact_person', 'emergency_phone',
+        },
+    },
+
     'school_admin': {
         'sheet_title': 'School Admin Import',
         'header_map': {
@@ -699,7 +773,10 @@ def _generate_excel(role):
     school_names = _live_school_names()
     sample_schools = _schools_without_admin() if role == 'school_admin' else school_names
     sample_schools = sample_schools or school_names
-    if 'school_name' in headers_raw and school_names:
+    # The School sample's school_name column is the name of the school being
+    # created, not a pointer at an existing one, so it must not be turned into
+    # a dropdown of the schools already on the system.
+    if role != 'school' and 'school_name' in headers_raw and school_names:
         dropdowns['school_name'] = school_names
         col = headers_raw.index('school_name')
         # Give each sample row a different school where possible — a school can
@@ -719,6 +796,28 @@ def _generate_excel(role):
                 for r_i, row in enumerate(rows)
             ],
         }
+
+    # Frameworks are created by the client through Manage Frameworks, so the
+    # sample offers whatever exists rather than a hardcoded list that would
+    # reject on import.
+    if 'framework' in headers_raw:
+        from competencies.models import Framework
+        framework_names = [
+            (n or '').strip()
+            for n in Framework.objects.order_by('name').values_list('name', flat=True)
+            if (n or '').strip()
+        ]
+        if framework_names:
+            dropdowns['framework'] = framework_names
+            col = headers_raw.index('framework')
+            data = {
+                **data,
+                'rows': [
+                    [framework_names[r_i % len(framework_names)] if i == col else v
+                     for i, v in enumerate(row)]
+                    for r_i, row in enumerate(data['rows'])
+                ],
+            }
 
     wb = Workbook()
     ws = wb.active
@@ -932,12 +1031,167 @@ def bulk_import(request, role):
 def _get_display_name(row, role):
     if role == 'student':
         return f"{row.get('first_name', '')} {row.get('last_name', '')}".strip()
+    if role == 'school':
+        # A school row carries no full_name, so without this every result line
+        # read 'Row'.
+        return row.get('school_name') or row.get('school_code') or 'Row'
     return row.get('full_name', row.get('email', 'Row'))
 
 
 # ============================================================
 # PER-ROLE PROCESSORS
 # ============================================================
+
+def _choice(row, field, choices, required=True):
+    """Read a choice column, matched against the model's own choice values.
+
+    SQLite does not enforce `choices`, so an unrecognised value would be saved
+    and then render as a blank cell everywhere. Matching here means the row is
+    rejected with a readable reason instead. Both the stored value ('cbse') and
+    the label the user sees ('CBSE') are accepted, since a spreadsheet filled
+    in by hand tends to carry the label.
+    """
+    raw = (row.get(field) or '').strip()
+    if not raw:
+        if required:
+            raise ValueError(f'{field} is required')
+        return None
+
+    folded = raw.lower()
+    for value, label in choices:
+        if folded == str(value).lower() or folded == str(label).lower():
+            return value
+
+    allowed = ', '.join(str(v) for v, _ in choices)
+    raise ValueError(f'{field} "{raw}" is not valid (allowed: {allowed})')
+
+
+def _drop_excel_decimal(raw):
+    """Undo Excel's habit of handing back a whole number as '9876500101.0'.
+
+    A phone or PIN typed into a General cell comes through openpyxl as a
+    number, and the trailing '.0' would either fail a length check or be
+    stored as part of the value.
+    """
+    text = str(raw or '').strip()
+    if text.endswith('.0') and text[:-2].replace('-', '').isdigit():
+        return text[:-2]
+    return text
+
+
+def _digits(row, field, length, required=True):
+    """A phone or PIN column, checked for length before it reaches the model.
+
+    The model's validators only run under full_clean(), which a bulk create
+    never calls, so a 3-digit phone would otherwise import silently.
+    """
+    raw = _drop_excel_decimal(row.get(field))
+    if not raw:
+        if required:
+            raise ValueError(f'{field} is required')
+        return None
+
+    cleaned = ''.join(c for c in raw if c.isdigit())
+    if len(cleaned) != length:
+        raise ValueError(f'{field} "{raw}" must be {length} digits')
+    return cleaned
+
+
+def _process_school(row, created_by):
+    """Create one school from a spreadsheet row.
+
+    Mirrors the onboarding form's handling of the fields it shares: the
+    framework column sets framework_ref, and the skill programme then refines
+    it, so a row naming FSL alongside a CSL programme ends up on the framework
+    the programme implies rather than the two disagreeing.
+
+    No user account is created and no email is sent - a school is not a login.
+    Its School Admin is imported separately, which is also what stops the two
+    imports from having to be ordered.
+    """
+    from competencies.models import Framework
+    from superadmin.views import (framework_for_skill_program,
+                                  _normalise_framework_name)
+
+    school_name = (row.get('school_name') or '').strip()
+    school_code = (row.get('school_code') or '').strip()
+
+    if not school_name:
+        raise ValueError('school_name is required')
+    if not school_code:
+        raise ValueError('school_code is required')
+
+    # school_code is unique, so the IntegrityError would otherwise surface as
+    # a database message the Super Admin cannot act on.
+    if School.objects.filter(school_code__iexact=school_code).exists():
+        raise ValueError(f'School code "{school_code}" already exists')
+    if School.objects.filter(school_name__iexact=school_name).exists():
+        raise ValueError(f'School "{school_name}" already exists')
+
+    email = (row.get('school_email') or '').strip()
+    principal_name = (row.get('principal_name') or '').strip()
+    principal_email = (row.get('principal_email') or '').strip()
+    address = (row.get('branch_address') or '').strip()
+    city = (row.get('city') or '').strip()
+    state = (row.get('state') or '').strip()
+    emergency_person = (row.get('emergency_contact_person') or '').strip()
+
+    for label, value in (('school_email', email),
+                         ('principal_name', principal_name),
+                         ('principal_email', principal_email),
+                         ('branch_address', address),
+                         ('city', city),
+                         ('state', state),
+                         ('emergency_contact_person', emergency_person)):
+        if not value:
+            raise ValueError(f'{label} is required')
+
+    school = School(
+        school_name=school_name,
+        school_code=school_code,
+        board=_choice(row, 'board', School.BOARD_CHOICES),
+        school_type=_choice(row, 'school_type', School.SCHOOL_TYPE_CHOICES),
+        medium=_choice(row, 'medium', School.MEDIUM_CHOICES),
+        school_email=email,
+        school_phone=_digits(row, 'school_phone', 10),
+        website=_opt(row.get('website')),
+        year_established=_opt_int(_drop_excel_decimal(row.get('year_established')),
+                                  default=None),
+        principal_name=principal_name,
+        principal_email=principal_email,
+        principal_phone=_digits(row, 'principal_phone', 10),
+        branch_address=address,
+        city=city,
+        state=state,
+        pincode=_digits(row, 'pincode', 6),
+        skill_program=_choice(row, 'skill_program',
+                              School.SKILL_PROGRAM_CHOICES, required=False),
+        program_academic_year=_opt(row.get('program_academic_year')),
+        emergency_contact_person=emergency_person,
+        emergency_phone=_digits(row, 'emergency_phone', 10),
+        total_students=_opt_int(_drop_excel_decimal(row.get('total_students')),
+                                default=None),
+    )
+
+    # Matched on the folded name for the same reason the onboarding form does:
+    # the names are whatever the client typed, so 'CSL +' and 'CSL+' have to
+    # reach the same framework.
+    framework_name = (row.get('framework') or '').strip()
+    if framework_name:
+        target = _normalise_framework_name(framework_name)
+        match = next(
+            (f for f in Framework.objects.all()
+             if _normalise_framework_name(f.name) == target), None)
+        if match is None:
+            raise ValueError(f'Framework "{framework_name}" not found')
+        school.framework_ref = match
+
+    derived = framework_for_skill_program(school.skill_program)
+    if derived is not None:
+        school.framework_ref = derived
+
+    school.save()
+
 
 def _process_school_admin(row, created_by):
     from school_admin.models import SchoolAdmin
@@ -1544,6 +1798,7 @@ def _send_welcome_email(email, name, password, role_label, login_id=None,
 
 
 ROLE_PROCESSORS = {
+    'school': _process_school,
     'school_admin': _process_school_admin,
     'teacher': _process_teacher,
     'student': _process_student,
