@@ -41,6 +41,39 @@ FRAMEWORK_FOR_SKILL_PROGRAM = {
 }
 
 
+def _normalise_framework_name(name):
+    """Fold a framework name so spelling differences stop mattering.
+
+    Frameworks are created by the client through Manage Frameworks, so the
+    names in the database are whatever they typed. Live data had 'CSL +' while
+    this table says 'CSL+', which meant the lookup below silently found
+    nothing: a school could be saved with Skill Framework = FSL and Skill
+    Program = CSL Plus, and nothing reconciled the two. Since FSL has
+    profiling on, that school would have received profile mapping it should
+    not have.
+    """
+    return ''.join((name or '').split()).lower()
+
+
+def framework_for_skill_program(skill_program):
+    """The Framework a skill-programme choice implies, or None.
+
+    Matched on the folded name rather than the exact string, so a rename to
+    'CSL Plus' or 'csl+' keeps working.
+    """
+    from competencies.models import Framework
+
+    wanted = FRAMEWORK_FOR_SKILL_PROGRAM.get(skill_program)
+    if not wanted:
+        return None
+
+    target = _normalise_framework_name(wanted)
+    for framework in Framework.objects.all():
+        if _normalise_framework_name(framework.name) == target:
+            return framework
+    return None
+
+
 def is_superadmin(user):
     return user.is_authenticated and user.role == "SUPER_ADMIN"
 
@@ -231,11 +264,9 @@ def onboard_school(request):
             # on any system without a framework named exactly 'FSL' the
             # selection the user made was silently replaced with None.
             sp = school.skill_program
-            if sp in FRAMEWORK_FOR_SKILL_PROGRAM:
-                derived = FW.objects.filter(
-                    name=FRAMEWORK_FOR_SKILL_PROGRAM[sp]).first()
-                if derived is not None:
-                    school.framework_ref = derived
+            derived = framework_for_skill_program(sp)
+            if derived is not None:
+                school.framework_ref = derived
 
             srm_id = data.get('srmId')
             if srm_id:
@@ -455,11 +486,9 @@ def edit_school(request, school_id):
             # the framework as a side effect.
             from competencies.models import Framework as FW
             sp = school.skill_program
-            if sp in FRAMEWORK_FOR_SKILL_PROGRAM:
-                derived = FW.objects.filter(
-                    name=FRAMEWORK_FOR_SKILL_PROGRAM[sp]).first()
-                if derived is not None:
-                    school.framework_ref = derived
+            derived = framework_for_skill_program(sp)
+            if derived is not None:
+                school.framework_ref = derived
 
             srm_id = data.get('srm_id')
             if srm_id:
