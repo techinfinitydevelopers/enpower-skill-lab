@@ -7,7 +7,7 @@ import io
 import json
 import secrets
 import string
-from datetime import datetime
+from datetime import date, datetime
 
 from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -48,6 +48,38 @@ def _opt_int(val, default=0):
         except ValueError:
             return default
     return default
+
+
+def _cell_text(value):
+    """One Excel cell as the text the row processors expect.
+
+    openpyxl hands back typed values, and str() on them produces text no
+    processor can read:
+
+      * a date cell becomes a datetime, so str() gives '2013-05-23 00:00:00'
+        and _parse_date rejected it — the client's 74-row student import failed
+        every row on a date the spreadsheet itself showed as 23-05-2013, and no
+        amount of reformatting the column in Excel could have helped, because
+        the cell was already a proper date.
+      * a General number cell becomes a float, so a phone or GR number arrives
+        as '9876543210.0'.
+    """
+    if value is None:
+        return ''
+
+    if isinstance(value, datetime):
+        # A date-only cell still carries a midnight time component.
+        if (value.hour, value.minute, value.second, value.microsecond) == (0, 0, 0, 0):
+            return value.date().isoformat()
+        return value.isoformat(sep=' ')
+
+    if isinstance(value, date):
+        return value.isoformat()
+
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+
+    return str(value).strip()
 
 
 def _opt_bool(val, default=True):
@@ -982,7 +1014,8 @@ def bulk_import(request, role):
                 row_dict = {}
                 for idx, field in enumerate(field_row):
                     if field:
-                        row_dict[field] = str(row[idx]).strip() if idx < len(row) and row[idx] is not None else ''
+                        value = row[idx] if idx < len(row) else None
+                        row_dict[field] = _cell_text(value)
                 rows.append(row_dict)
         else:
             decoded = csv_file.read().decode('utf-8-sig')
@@ -1771,14 +1804,32 @@ def _process_coordinator(row, created_by):
 # ============================================================
 
 def _parse_date(value):
-    if not value or not value.strip():
+    # A CSV exported from Excel carries the same midnight time component an
+    # .xlsx cell does, and a caller may hand this a real date object, so
+    # neither should reach the format loop as an unreadable string.
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+
+    if not value or not str(value).strip():
         return None
-    value = value.strip()
-    for fmt in ('%Y-%m-%d', '%d-%m-%Y', '%d/%m/%Y', '%Y/%m/%d'):
-        try:
-            return datetime.strptime(value, fmt).date()
-        except ValueError:
-            continue
+    value = str(value).strip()
+
+    # Drop a trailing time of day: '2013-05-23 00:00:00' is the date cell the
+    # client's spreadsheet showed as 23-05-2013.
+    head = value.split(' ')[0] if ' ' in value else value
+    if 'T' in head:
+        head = head.split('T')[0]
+
+    for candidate in (value, head):
+        for fmt in ('%Y-%m-%d', '%d-%m-%Y', '%d/%m/%Y', '%Y/%m/%d',
+                    '%d.%m.%Y', '%d %b %Y', '%d %B %Y'):
+            try:
+                return datetime.strptime(candidate, fmt).date()
+            except ValueError:
+                continue
+
     raise ValueError(f'Invalid date format: "{value}". Use YYYY-MM-DD')
 
 

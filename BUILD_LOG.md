@@ -1220,3 +1220,39 @@ city, unknown framework - while "State Board"/"Trust" labels and a
 `/super-admin/bulk-upload/` both return 200 with the modal and sample link
 present. Test rows were deleted; the database is back to its 8 schools.
 Not verified in a browser: the modal opening and the upload flow rendering.
+
+
+## 2026-09-07 - Excel date cells broke every bulk import row
+
+The client's 74-row student import failed all 74 rows with
+`Invalid date format: "2013-05-23 00:00:00". Use YYYY-MM-DD`, and reformatting
+the column in Excel could not have helped: the cell was already a proper date.
+
+Cause: `bulk_import()` read every .xlsx cell with `str(cell)`. openpyxl returns
+a real `datetime` for a date cell, so `str()` produced
+`'2013-05-23 00:00:00'` - which matched none of the four formats `_parse_date`
+accepted. The same `str()` turned a General-formatted number into
+`'9876543210.0'`, so phone and GR-number columns were arriving with a decimal
+tail.
+
+**`_cell_text()`** now converts a cell before it becomes a row value: a
+midnight datetime becomes an ISO date, a whole-number float becomes an integer
+string, everything else is stripped text. It runs for every role, so teacher,
+parent, coordinator and school date columns are covered too, not just student.
+
+**`_parse_date()`** was widened as well, since a CSV exported from Excel
+carries the same midnight time: it accepts a date/datetime object, strips a
+trailing time of day, and adds `DD.MM.YYYY`, `DD Mon YYYY` and `DD Month YYYY`
+to the formats it understands. An unparseable value still raises the same
+message.
+
+Verified: `_cell_text` and `_parse_date` checked against the typed values
+openpyxl actually returns, then end to end - the student sample with
+`date_of_birth` and `enrollment_date` rewritten as real datetime cells and
+`emergency_mobile` as a float now imports, and the student is stored with
+`date(2013, 5, 23)` on both date fields. The school round trip still passes
+unchanged. Test rows deleted.
+
+Not our bug, worth telling the client: row 6 of their file failed with
+`date_of_birth is required`, which is a genuinely empty cell in the
+spreadsheet, not a format problem.
