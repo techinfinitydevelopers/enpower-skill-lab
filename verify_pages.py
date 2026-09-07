@@ -95,6 +95,7 @@ atexit.register(restore_passwords)
 # fetched page is now checked automatically.
 LEAKED = []
 DUMMY_SEEN = []
+BADLY_NESTED = []
 
 # Invented copy that shipped inside templates instead of coming from a record.
 # The Super Admin header carried a hardcoded badge of 4 and four of these --
@@ -122,6 +123,13 @@ def fetch(client, url):
     for phrase in DUMMY_TEXT:
         if phrase in body:
             DUMMY_SEEN.append((url, phrase))
+    # Nesting is checked on the raw markup, not the stripped text: an extra
+    # </div> closes a wrapper early and moves the whole page, while every
+    # other check here still passes.
+    from verify_html import problems_in
+    raw = r.content.decode('utf-8', 'replace')
+    for problem in problems_in(raw):
+        BADLY_NESTED.append((url, problem))
     return r.status_code, body, r.redirect_chain
 
 
@@ -311,6 +319,11 @@ def run():
           '; '.join(f'{u}: {p!r}' for u, p in DUMMY_SEEN[:3]))
     for u, phrase in DUMMY_SEEN:
         print(f'     {u}  ->  {phrase!r}')
+
+    check('every page rendered above is properly nested', not BADLY_NESTED,
+          '; '.join(f'{u}: {p}' for u, p in BADLY_NESTED[:2]))
+    for u, problem in BADLY_NESTED:
+        print(f'     {u}  ->  {problem}')
 
     restore_passwords()
 
