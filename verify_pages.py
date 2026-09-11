@@ -301,7 +301,7 @@ def run():
     else:
         for url, needle in [
             ('/super-admin/skill-passport/learning-pillars/',      'Learning Pillars'),
-            ('/super-admin/skill-passport/profiles-competencies/', 'Research Scholar'),
+            ('/super-admin/skill-passport/profiles-competencies/', 'Tech Explorer'),
             ('/super-admin/skill-passport/project-assessment/',    'Oral/Portfolio'),
         ]:
             code, body, _ = fetch(client, url)
