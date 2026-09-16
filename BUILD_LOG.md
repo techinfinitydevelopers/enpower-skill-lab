@@ -2,6 +2,62 @@
 
 Chronological record of completed tasks (per org policy: log after each completed task).
 
+## 2026-09-16 — Audited bulk import and export end to end (commit 795a81f)
+
+Asked whether import/export "all works perfectly", the suites said yes but
+only covered part of it. Two blind spots found and closed.
+
+**Blind spot 1 — bulk import had six roles and the suite tested one.**
+`school`, `school_admin`, `teacher`, `student`, `parent`, `coordinator` —
+only `school_admin` was exercised. Five importers could have been broken
+with every check green.
+
+Probed all six end to end (download the sample workbook, make the
+identifying columns unique, upload it back through the streaming endpoint).
+**All six work.** Two apparent failures on the first run were the probe’s
+fault, not the importer’s:
+
+- `school_admin`: two sample rows pointed at the same school — "School
+  already has an active admin" is the rule working
+- `coordinator`: the probe left `pan_number` alone so it collided —
+  "PAN already registered to another coordinator" is the rule working
+
+Both were reported with the spreadsheet row number and a readable reason,
+which is exactly what was asked for earlier. Now permanent in the suite,
+plus a duplicate-upload case that produces a real failure message
+(`row 3: GR Number "..." already exists`).
+
+**Blind spot 2 — exports never checked that any rows came out.** Headers
+were compared against the list screen and scoping was checked for leaks,
+but an export writing the right columns and zero rows passed everything.
+Each of the ten now compares its row count against its own queryset —
+equality, not "> 0", because a School Admin whose school has no students
+correctly exports nothing.
+
+Three scoped exports came back empty on the first probe
+(`my-students`, `my-parents`, `class-students`). **Data, not code** — the
+School Admin and Coach picked happened to sit at schools with 0 students.
+Re-run against accounts whose schools have students: 1/1, 1/1 and 5/5 rows,
+zero cross-school leakage.
+
+Also widened both suites’ cleanups (the import one only removed school
+admins) and dropped the dot from its marker — fine in an email, not in a
+username or school code. Proved by running the suite twice back to back and
+checking for leftovers: none.
+
+**Verified:** `verify_bulk_import` 25 → **54/54**, `verify_exports` 75 →
+**85/85**. Regression: bulk-delete 109/109, timetable 54/54, pages 65/65,
+email 72/72, password-reset 47/47, HTML clean.
+
+Live smoke check: all 10 export endpoints return 403 to an anonymous
+caller (refusal, not 404), all 6 sample-CSV routes 302 to login and all 6
+upload-stream routes 403.
+
+**Caveat worth keeping:** every suite runs against the local SQLite dev DB.
+The code is identical to what is deployed, but production data is not, so
+"all six roles import" is proven about the importers, not about any
+particular spreadsheet the client uploads.
+
 ## 2026-09-16 — Timetable for the Super Admin (commit b9bb698)
 
 The five timetable views belonged to the Program Coordinator, scoped to
