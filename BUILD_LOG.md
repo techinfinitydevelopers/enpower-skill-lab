@@ -2,6 +2,55 @@
 
 Chronological record of completed tasks (per org policy: log after each completed task).
 
+## 2026-09-16 — Cleared the last two failing checks (commit 333d003)
+
+`verify_reports` had sat at 47/2 for a while. I had twice called those two
+"pre-existing, stale seed expectations" without checking. They were neither
+stale nor an engine fault — **the seeder was asking for an outcome the rules
+forbid.**
+
+`seed_projects.py` gives each student a target profile per project and
+scores that profile's competencies highest, so the top career match is
+predictable. It picked the target by `student.id % 3` from the trio, never
+checking whether the project assesses enough of that profile for it to
+count.
+
+The engine unlocks a profile only once **≥2 of its primary competencies**
+are assessed. "Community Kitchen" assesses **1** of Tech Explorer's three,
+so Tech Explorer could never be anyone's top match there however the scores
+were biased. Diya and Myra were seeded with it anyway; the engine correctly
+returned something else; the suite called that a failure. **It had been
+reporting correct behaviour as broken.**
+
+`reachable_profiles()` now narrows the trio to members the project can
+actually produce, and both seeder and checker go through it — they already
+shared `profile_triplet`, and drifting apart on the next rule is exactly how
+this happened. `target_for()` shared for the same reason.
+
+Re-seeded the local dev DB (backed up first; all 32 projects were plainly
+seeder-generated, nothing hand-made lost). **verify_reports 49/49 for the
+first time.**
+
+**Nothing here touched production.** `seed_projects.py` deletes and rebuilds
+every project and is a dev fixture only — it must never be pointed at
+Railway.
+
+**Two wrong guesses I made along the way, worth not repeating:**
+
+- I twice asserted these were stale expectations from the 15→8 profile
+  change, without looking. They were not.
+- I then guessed the 8 profiles had no competency mapping, saw 3 primary +
+  2 secondary in the dev DB, and called the memory note stale. **The note
+  was right and I was wrong**: it says those numbers exist only because the
+  discarded 15-profile mappings stayed attached to the renamed rows, and to
+  ignore them. Read the note before contradicting it.
+
+**Full state, all suites green:** reports 49, pages 65, exports 85,
+bulk-import 54, bulk-delete 109, timetable 54, email 72, password-reset 47,
+HTML clean. `verify_security` 26/8 — all eight are local dev settings;
+checked live and the real posture is correct (HSTS `max-age=31536000`,
+http→https 301, `/admin/` returns 404 because it is moved).
+
 ## 2026-09-16 — Audited bulk import and export end to end (commit 795a81f)
 
 Asked whether import/export "all works perfectly", the suites said yes but
