@@ -6,6 +6,7 @@
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
 <link rel="stylesheet" href="{% static 'css/superadmin/teacher-list.css' %}">
+<link rel="stylesheet" href="{% static 'css/common/bulk-delete.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -41,6 +42,7 @@
         <table id="teacherTable" class="display teacher-table" style="width:100%">
             <thead>
                 <tr>
+                    <th scope="col" class="bd-cell"><input type="checkbox" class="bd-all" title="Select every row on this page"></th>
                     <th>Teacher ID</th>
                     <th>Name</th>
                     <th>Designation</th>
@@ -52,6 +54,7 @@
             <tbody>
                 {% for teacher in teachers %}
                 <tr>
+                    <td class="bd-cell"><input type="checkbox" class="bd-row" data-id="{{ teacher.id }}" aria-label="Select this row"></td>
                     <td>{{ teacher.employee_id }}</td>
                     <td>
                         <div class="teacher-name-cell">
@@ -93,7 +96,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="6" class="empty-state">
+                    <td colspan="7" class="empty-state">
                         <span class="material-symbols-outlined">person_off</span>
                         <p>No teachers found. <a href="{% url 'onboard_teacher' %}">Add a new teacher</a></p>
                     </td>
@@ -112,4 +115,8 @@
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 <script src="{% static 'js/superadmin/teacher-list.js' %}"></script>
+<script src="{% static 'js/common/bulk-delete.js' %}"></script>
+<script>
+  initBulkDelete({ key: 'teachers', table: '#teacherTable' });
+</script>
 {% endblock %}

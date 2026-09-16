@@ -6,6 +6,7 @@
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
 <link rel="stylesheet" href="{% static 'css/superadmin/parent-list.css' %}">
+<link rel="stylesheet" href="{% static 'css/common/bulk-delete.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -41,6 +42,7 @@
         <table id="parentTable" class="display parent-table" style="width:100%">
             <thead>
                 <tr>
+                    <th scope="col" class="bd-cell"><input type="checkbox" class="bd-all" title="Select every row on this page"></th>
                     <th>Parent ID</th>
                     <th>Name</th>
                     <th>Contact</th>
@@ -53,6 +55,7 @@
             <tbody>
                 {% for parent in parents %}
                 <tr>
+                    <td class="bd-cell"><input type="checkbox" class="bd-row" data-id="{{ parent.id }}" aria-label="Select this row"></td>
                     <td>{{ parent.parent_id }}</td>
                     <td>
                         <div class="parent-name-cell">
@@ -91,7 +94,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="7" class="empty-state">
+                    <td colspan="8" class="empty-state">
                         <span class="material-symbols-outlined">person_off</span>
                         <p>No parents found. <a href="{% url 'onboard_parent' %}">Add a new parent</a></p>
                     </td>
@@ -127,7 +130,7 @@
                     lengthMenu: [[5, 10, 25, 50, 100], [5, 10, 25, 50, 100]],
                     order: [[1, 'asc']],
                     columnDefs: [
-                        { orderable: false, targets: 6 }
+                        { orderable: false, targets: [0, 7] }
                     ],
                     language: {
                         search: 'Search parents:',
@@ -146,5 +149,9 @@
             }
         }
     });
+</script>
+<script src="{% static 'js/common/bulk-delete.js' %}"></script>
+<script>
+  initBulkDelete({ key: 'parents', table: '#parentTable' });
 </script>
 {% endblock %}

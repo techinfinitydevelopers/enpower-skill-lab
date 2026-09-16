@@ -10,7 +10,7 @@ $(function () {
         lengthMenu: [5, 10, 25, 50],
         order: [[1, 'asc']],
         columnDefs: [
-            { orderable: false, targets: [4, 8] }
+            { orderable: false, targets: [0, 5, 9] }
         ],
         language: {
             search: 'Search coordinators:',

@@ -7,7 +7,7 @@ $(function () {
     lengthMenu: [5, 10, 25, 50],
     order: [[1, 'asc']],
     columnDefs: [
-      { orderable: false, targets: 5 }  // Actions column not sortable
+      { orderable: false, targets: [0, 6] }  // Actions column not sortable
     ],
     language: {
       search: 'Search admins:',

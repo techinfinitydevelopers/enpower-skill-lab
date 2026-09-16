@@ -6,6 +6,7 @@
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
 <link rel="stylesheet" href="{% static 'css/superadmin/school-admin-list.css' %}">
+<link rel="stylesheet" href="{% static 'css/common/bulk-delete.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -43,6 +44,7 @@
           <table id="adminTable" class="table mb-0 align-middle">
             <thead>
               <tr>
+                  <th scope="col" class="bd-cell"><input type="checkbox" class="bd-all" title="Select every row on this page"></th>
                 <th scope="col">ADMIN ID</th>
                 <th scope="col">NAME</th>
                 <th scope="col">SCHOOL</th>
@@ -54,6 +56,7 @@
             <tbody>
               {% for admin in school_admins %}
               <tr>
+                  <td class="bd-cell"><input type="checkbox" class="bd-row" data-id="{{ admin.id }}" aria-label="Select this row"></td>
                 <td class="text-muted text-monospace">{{ admin.id }}</td>
                 <td class="fw-semibold">
                   <div class="d-flex align-items-center gap-3">
@@ -97,7 +100,7 @@
               </tr>
               {% empty %}
               <tr>
-                <td colspan="6" class="text-center text-muted py-5">
+                <td colspan="7" class="text-center text-muted py-5">
                   <span class="material-symbols-outlined" style="font-size: 48px; line-height: 1; display: inline-block; width: 48px; height: 48px; opacity: 0.3;">admin_panel_settings</span>
                   <p class="mt-2">No school admins found. Add your first admin to get started!</p>
                 </td>
@@ -120,4 +123,8 @@
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 <script src="{% static 'js/superadmin/school-admin-list.js' %}"></script>
+<script src="{% static 'js/common/bulk-delete.js' %}"></script>
+<script>
+  initBulkDelete({ key: 'school-admins', table: '#adminTable' });
+</script>
 {% endblock %}

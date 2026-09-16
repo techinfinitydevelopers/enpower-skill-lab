@@ -18,7 +18,7 @@ from django.contrib import admin
 
 from accounts import admin_login
 
-from . import exports
+from . import bulk_delete, exports
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
@@ -37,6 +37,14 @@ urlpatterns = [
     # enpower_skill_lab/exports.py. Role and scoping are decided from the
     # signed-in user, not from the key in the URL.
     path('exports/<str:key>/', exports.export_list, name='export_list'),
+
+    # Select rows on a list and delete them together. The preview says what
+    # the selection takes with it before anything goes -- see
+    # enpower_skill_lab/bulk_delete.py.
+    path('bulk-delete/<str:key>/preview/', bulk_delete.preview,
+         name='bulk_delete_preview'),
+    path('bulk-delete/<str:key>/', bulk_delete.bulk_delete,
+         name='bulk_delete'),
     # path('competencies/', include('competencies.urls')),
     # path('assessments/', include('assessments.urls')),
     # path('lms/', include('lms.urls')),

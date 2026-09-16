@@ -34,7 +34,28 @@
       "Bash(git add *)",
       "Bash(git commit -m '@ *)",
       "Bash(git commit *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(ssh *)",
+      "Bash(cd *)",
+      "Bash(curl -s -D - -o /dev/null -m 20 \"https://enpower.techinfinity.link/static/css/common/toast.css\")",
+      "Bash(PYTHONIOENCODING=utf-8 ./venv/Scripts/python.exe \"C:/Users/kunal/AppData/Local/Temp/claude/C--Users-kunal-Desktop-Enpower-Skill-Lab/aa82f826-ec1a-449f-b5e6-754d42a1ec1c/scratchpad/state.py\")",
+      "Bash(PYTHONPATH=\"/c/Users/kunal/Desktop/Enpower Skill Lab\" PYTHONIOENCODING=utf-8 ./venv/Scripts/python.exe seed_frameworks.py)",
+      "Bash(PYTHONPATH=\"/c/Users/kunal/Desktop/Enpower Skill Lab\" PYTHONIOENCODING=utf-8 ./venv/Scripts/python.exe seed_profiles.py)",
+      "Bash(PYTHONIOENCODING=utf-8 ./venv/Scripts/python.exe -c ' *)",
+      "Bash(PYTHONPATH=\"/c/Users/kunal/Desktop/Enpower Skill Lab\" PYTHONIOENCODING=utf-8 ./venv/Scripts/python.exe verify_reports.py)",
+      "Bash(PYTHONIOENCODING=utf-8 ./venv/Scripts/python.exe manage.py check)",
+      "Bash(PYTHONPATH=\"/c/Users/kunal/Desktop/Enpower Skill Lab\" PYTHONIOENCODING=utf-8 ./venv/Scripts/python.exe -)",
+      "Bash(PYTHONIOENCODING=utf-8 ./venv/Scripts/python.exe -)",
+      "Bash(PYTHONIOENCODING=utf-8 ./venv/Scripts/python.exe manage.py makemigrations student)",
+      "Bash(PYTHONIOENCODING=utf-8 ./venv/Scripts/python.exe manage.py migrate student)",
+      "Bash(PYTHONPATH='/c/Users/kunal/Desktop/Enpower Skill Lab' PYTHONIOENCODING=utf-8 ./venv/Scripts/python.exe -c ' *)",
+      "Bash(export PYTHONPATH=\"/c/Users/kunal/Desktop/Enpower Skill Lab\" PYTHONIOENCODING=utf-8)",
+      "Bash(./venv/Scripts/python.exe verify_reports.py)",
+      "Bash(./venv/Scripts/python.exe verify_pages.py)",
+      "Bash(PYTHONPATH=\"/c/Users/kunal/Desktop/Enpower Skill Lab\" ./venv/Scripts/python.exe \"C:/Users/kunal/AppData/Local/Temp/claude/C--Users-kunal-Desktop-Enpower-Skill-Lab/aa82f826-ec1a-449f-b5e6-754d42a1ec1c/scratchpad/test_school_admin_pages.py\")",
+      "Bash(./venv/Scripts/python.exe -c ' *)",
+      "Bash(grep -iE \"\\\\.\\(png|jpg|jpeg|svg|webp\\)$\")",
+      "Bash(PYTHONIOENCODING=utf-8 ./venv/Scripts/python.exe verify_email.py)"
     ]
   }
 }

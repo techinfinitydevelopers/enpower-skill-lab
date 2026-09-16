@@ -22,7 +22,7 @@ $(document).ready(function() {
                 lengthMenu: [[5, 10, 25, 50, 100], [5, 10, 25, 50, 100]],
                 order: [[1, 'asc']],
                 columnDefs: [
-                    { orderable: false, targets: 5 }
+                    { orderable: false, targets: [0, 6] }
                 ],
                 language: {
                     search: 'Search teachers:',

@@ -1,0 +1,215 @@
+/* Select-and-delete on the list screens.
+   Shared by every list, so nothing here is scoped to one page's markup. */
+
+/* ── the checkbox column ─────────────────────────────────────────────── */
+.bd-cell {
+    width: 44px;
+    text-align: center;
+    padding-right: 0 !important;
+}
+
+.bd-cell input[type="checkbox"] {
+    width: 17px;
+    height: 17px;
+    cursor: pointer;
+    accent-color: #5B1F6F;
+    vertical-align: middle;
+}
+
+tr.bd-picked > td {
+    background: #F6EDFA !important;
+}
+
+/* ── the bar that appears once rows are ticked ───────────────────────── */
+.bd-bar {
+    position: fixed;
+    left: 50%;
+    bottom: 26px;
+    transform: translate(-50%, 140%);
+    z-index: 1080;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 11px 16px;
+    border-radius: 12px;
+    background: #2B0B36;
+    color: #fff;
+    box-shadow: 0 10px 32px rgba(0, 0, 0, .3);
+    font-size: 14px;
+    opacity: 0;
+    pointer-events: none;
+    transition: transform .18s ease, opacity .18s ease;
+}
+
+.bd-bar.bd-visible {
+    transform: translate(-50%, 0);
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.bd-count {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.bd-clear {
+    background: none;
+    border: none;
+    color: #D9BCE6;
+    text-decoration: underline;
+    cursor: pointer;
+    font-size: 13px;
+    padding: 0;
+}
+
+.bd-clear:hover {
+    color: #fff;
+}
+
+.bd-delete {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 14px;
+    background: linear-gradient(90deg, #DC2626, #B91C1C);
+    color: #fff;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.bd-delete:hover {
+    background: linear-gradient(90deg, #B91C1C, #991B1B);
+}
+
+.bd-delete .material-symbols-outlined {
+    font-size: 19px;
+}
+
+/* ── the confirmation ────────────────────────────────────────────────── */
+.bd-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1090;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(17, 6, 22, .55);
+}
+
+.bd-modal.bd-open {
+    display: flex;
+}
+
+.bd-dialog {
+    width: 100%;
+    max-width: 480px;
+    max-height: 86vh;
+    overflow-y: auto;
+    background: #fff;
+    border-radius: 14px;
+    padding: 24px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, .3);
+}
+
+.bd-dialog h3 {
+    margin: 0 0 14px;
+    font-size: 19px;
+    font-weight: 700;
+    color: #1F2937;
+}
+
+.bd-names,
+.bd-impact,
+.bd-failures {
+    margin: 0 0 14px;
+    padding-left: 20px;
+    font-size: 14px;
+    color: #374151;
+}
+
+.bd-names li,
+.bd-impact li,
+.bd-failures li {
+    margin-bottom: 3px;
+}
+
+.bd-more {
+    list-style: none;
+    margin-left: -20px;
+    color: #6B7280;
+    font-style: italic;
+}
+
+.bd-warn-head {
+    margin: 0 0 6px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #B91C1C;
+}
+
+.bd-impact b {
+    color: #B91C1C;
+}
+
+.bd-final {
+    margin: 0;
+    padding: 9px 12px;
+    border-radius: 8px;
+    background: #FEF2F2;
+    color: #991B1B;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.bd-loading,
+.bd-error,
+.bd-result {
+    font-size: 14px;
+    color: #374151;
+    margin: 0 0 12px;
+}
+
+.bd-error {
+    color: #B91C1C;
+}
+
+.bd-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.bd-cancel,
+.bd-confirm {
+    border-radius: 8px;
+    padding: 9px 18px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.bd-cancel {
+    border: 1px solid #D1D5DB;
+    background: #fff;
+    color: #374151;
+}
+
+.bd-confirm {
+    border: none;
+    background: #DC2626;
+    color: #fff;
+}
+
+.bd-confirm:hover:not(:disabled) {
+    background: #B91C1C;
+}
+
+.bd-confirm:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+}

@@ -8,6 +8,10 @@ from django.db.models import Q
 from django.contrib.auth import get_user_model, logout
 from django.contrib.auth.hashers import make_password
 from competencies.emails import send_notice, send_onboarding
+# Shared with the select-and-delete endpoint so a row goes the same way
+# whether it is removed one at a time or in a batch.
+from enpower_skill_lab.bulk_delete import (delete_school_and_its_people,
+                                           delete_with_user)
 from django.conf import settings
 from django.utils import timezone
 from schools.models import School
@@ -568,7 +572,9 @@ def delete_school(request, school_id):
     school_name = school.school_name
     
     try:
-        school.delete()
+        # Students and coaches are SET_NULL: deleting the school alone would
+        # leave them with no school, off every list and still able to sign in.
+        delete_school_and_its_people(school)
         messages.success(request, f'School "{school_name}" deleted successfully!')
     except Exception as e:
         messages.error(request, f'Error deleting school: {str(e)}')
@@ -1506,7 +1512,9 @@ def delete_teacher(request, teacher_id):
     teacher_name = teacher.full_name
     
     try:
-        teacher.delete()
+        # The FK is SET_NULL, so deleting the profile alone would leave a
+        # login that still works with nothing behind it.
+        delete_with_user(teacher)
         messages.success(request, f'Teacher "{teacher_name}" deleted successfully!')
     except Exception as e:
         messages.error(request, f'Error deleting teacher: {str(e)}')
@@ -1524,7 +1532,9 @@ def delete_student(request, student_id):
     student_name = f"{student.first_name} {student.last_name}"
     
     try:
-        student.delete()
+        # The FK is SET_NULL, so deleting the profile alone would leave a
+        # login that still works with nothing behind it.
+        delete_with_user(student)
         messages.success(request, f'Student "{student_name}" deleted successfully!')
     except Exception as e:
         messages.error(request, f'Error deleting student: {str(e)}')
@@ -1820,7 +1830,9 @@ def delete_parent(request, parent_id):
     parent_name = parent.full_name
     
     try:
-        parent.delete()
+        # The FK is SET_NULL, so deleting the profile alone would leave a
+        # login that still works with nothing behind it.
+        delete_with_user(parent)
         messages.success(request, f'Parent "{parent_name}" deleted successfully!')
     except Exception as e:
         messages.error(request, f'Error deleting parent: {str(e)}')

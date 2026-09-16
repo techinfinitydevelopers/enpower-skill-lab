@@ -19,7 +19,7 @@ function initializeDataTable() {
             lengthMenu: [5, 10, 25, 50],
             order: [[1, 'asc']],
             columnDefs: [
-                { orderable: false, targets: -1 } // Disable sorting on last column (Actions)
+                { orderable: false, targets: [0, -1] } // Disable sorting on last column (Actions)
             ],
             language: {
                 search: 'Search students:',
