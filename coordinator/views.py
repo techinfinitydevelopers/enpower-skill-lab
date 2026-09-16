@@ -29,6 +29,57 @@ def _coordinator_schools(request):
     return School.objects.filter(srm=request.user)
 
 
+def is_timetable_manager(user):
+    """Coordinator or Super Admin.
+
+    The five timetable views serve both. A coordinator manages the
+    schools assigned to them; a Super Admin manages all of them.
+    """
+    return (user.is_authenticated
+            and getattr(user, 'role', None) in ('PROGRAM_COORDINATOR',
+                                                'SUPER_ADMIN'))
+
+
+def _timetable_schools(request):
+    """Schools whose timetables this user may reach.
+
+    Read from the signed-in user, never from the URL that got here: the
+    Super Admin routes and the coordinator routes run the same code, so
+    the path must not be what decides how much is visible.
+    """
+    if getattr(request.user, 'role', None) == 'SUPER_ADMIN':
+        return School.objects.all()
+    return _coordinator_schools(request)
+
+
+def _timetable_chrome(request):
+    """The base template and URL names these pages render themselves with.
+
+    One set of templates for both roles; only the sidebar around them and
+    the names of their own links differ.
+    """
+    if getattr(request.user, 'role', None) == 'SUPER_ADMIN':
+        prefix, base = 'superadmin_', 'superadmin/base.html'
+        role_label, scope_label = 'Super Admin', 'every school'
+        schools_label = 'Schools'
+    else:
+        prefix, base = 'coordinator:', 'coordinator/base.html'
+        role_label, scope_label = 'Program Coordinator', 'your assigned schools'
+        schools_label = 'Assigned Schools'
+    return {
+        'base_template': base,
+        'role_label': role_label,
+        'scope_label': scope_label,
+        'schools_label': schools_label,
+        'urls': {name: f'{prefix}timetable_{name}'
+                 for name in ('list', 'upload', 'detail', 'edit', 'delete')},
+    }
+
+
+def _tt_url(request, name):
+    """The name of one of these pages' own routes, for this role."""
+    return _timetable_chrome(request)['urls'][name]
+
 def is_coordinator(user):
     """Check if user is a program coordinator"""
     return user.is_authenticated and hasattr(user, 'role') and user.role == 'PROGRAM_COORDINATOR'
@@ -242,10 +293,10 @@ def _fmt_time(t):
 
 
 @login_required
-@user_passes_test(is_coordinator)
+@user_passes_test(is_timetable_manager)
 def timetable_list(request):
     """List timetables for the SRM's assigned schools, flattened to one row per slot."""
-    assigned_schools = _coordinator_schools(request)
+    assigned_schools = _timetable_schools(request)
     school_ids = assigned_schools.values_list('id', flat=True)
     timetables = (
         Timetable.objects
@@ -272,6 +323,7 @@ def timetable_list(request):
                 else:
                     timings = '—'
                 rows.append({
+                    'school': tt.school.school_name,
                     'program': tt.program,
                     'grade': tt.grade,
                     'division': tt.division,
@@ -284,6 +336,7 @@ def timetable_list(request):
                 })
         else:
             rows.append({
+                'school': tt.school.school_name,
                 'program': tt.program,
                 'grade': tt.grade,
                 'division': tt.division,
@@ -300,6 +353,7 @@ def timetable_list(request):
         'total_timetables': timetables.count(),
         'total_schools': assigned_schools.count(),
     }
+    context.update(_timetable_chrome(request))
     return render(request, 'coordinator/timetable-list.html', context)
 
 
@@ -325,10 +379,10 @@ def _save_slots(request, timetable):
 
 
 @login_required
-@user_passes_test(is_coordinator)
+@user_passes_test(is_timetable_manager)
 def timetable_detail(request, pk):
     """Read-only display of a full schedule. Scoped to coordinator's schools."""
-    assigned_schools = _coordinator_schools(request)
+    assigned_schools = _timetable_schools(request)
     school_ids = assigned_schools.values_list('id', flat=True)
     timetable = (
         Timetable.objects
@@ -338,8 +392,8 @@ def timetable_detail(request, pk):
         .first()
     )
     if not timetable:
-        messages.error(request, 'Timetable not found or not in your assigned schools.')
-        return redirect('coordinator:timetable_list')
+        messages.error(request, 'Timetable not found or not available to you.')
+        return redirect(_tt_url(request, 'list'))
 
     slot_rows = []
     for slot in timetable.slots.all():
@@ -361,14 +415,15 @@ def timetable_detail(request, pk):
         'timetable': timetable,
         'slot_rows': slot_rows,
     }
+    context.update(_timetable_chrome(request))
     return render(request, 'coordinator/timetable-detail.html', context)
 
 
 @login_required
-@user_passes_test(is_coordinator)
+@user_passes_test(is_timetable_manager)
 def timetable_edit(request, pk):
     """Edit an existing schedule. Reuses the create form (timetable-upload.html) in edit mode."""
-    assigned_schools = _coordinator_schools(request)
+    assigned_schools = _timetable_schools(request)
     school_ids = assigned_schools.values_list('id', flat=True)
     timetable = (
         Timetable.objects
@@ -378,8 +433,8 @@ def timetable_edit(request, pk):
         .first()
     )
     if not timetable:
-        messages.error(request, 'Timetable not found or not in your assigned schools.')
-        return redirect('coordinator:timetable_list')
+        messages.error(request, 'Timetable not found or not available to you.')
+        return redirect(_tt_url(request, 'list'))
 
     thinking_coaches = User.objects.filter(role='THINKING_COACH').order_by('first_name', 'username')
 
@@ -397,12 +452,12 @@ def timetable_edit(request, pk):
 
         if not school_id or not grade or not division:
             messages.error(request, 'School, grade and section are required.')
-            return redirect('coordinator:timetable_edit', pk=pk)
+            return redirect(_tt_url(request, 'edit'), pk=pk)
 
         school = assigned_schools.filter(id=school_id).first()
         if not school:
             messages.error(request, 'Invalid school selection.')
-            return redirect('coordinator:timetable_edit', pk=pk)
+            return redirect(_tt_url(request, 'edit'), pk=pk)
 
         coach = None
         if coach_id:
@@ -430,10 +485,10 @@ def timetable_edit(request, pk):
             _save_slots(request, timetable)
 
             messages.success(request, 'Timetable updated successfully!')
-            return redirect('coordinator:timetable_list')
+            return redirect(_tt_url(request, 'list'))
         except Exception as e:
             messages.error(request, f'Error updating timetable: {str(e)}')
-            return redirect('coordinator:timetable_edit', pk=pk)
+            return redirect(_tt_url(request, 'edit'), pk=pk)
 
     # GET — prefill the create form
     program_choices = [
@@ -459,36 +514,37 @@ def timetable_edit(request, pk):
         'day_choices': DAY_CHOICES,
         'program_choices': program_choices,
     }
+    context.update(_timetable_chrome(request))
     return render(request, 'coordinator/timetable-upload.html', context)
 
 
 @login_required
-@user_passes_test(is_coordinator)
+@user_passes_test(is_timetable_manager)
 def timetable_delete(request, pk):
     """Delete a schedule (POST only). Scoped to coordinator's schools."""
     if request.method != 'POST':
         messages.error(request, 'Invalid request method.')
-        return redirect('coordinator:timetable_list')
+        return redirect(_tt_url(request, 'list'))
 
-    assigned_schools = _coordinator_schools(request)
+    assigned_schools = _timetable_schools(request)
     school_ids = assigned_schools.values_list('id', flat=True)
     timetable = Timetable.objects.filter(id=pk, school_id__in=school_ids).first()
     if not timetable:
-        messages.error(request, 'Timetable not found or not in your assigned schools.')
-        return redirect('coordinator:timetable_list')
+        messages.error(request, 'Timetable not found or not available to you.')
+        return redirect(_tt_url(request, 'list'))
 
     timetable.delete()
     messages.success(request, 'Timetable deleted successfully!')
-    return redirect('coordinator:timetable_list')
+    return redirect(_tt_url(request, 'list'))
 
 
 @login_required
-@user_passes_test(is_coordinator)
+@user_passes_test(is_timetable_manager)
 def timetable_upload(request):
     """Upload a schedule for a school class.
     Flow: select school -> assign thinking coach -> grade + division ->
     academic year -> program -> upload schedule file -> notes."""
-    assigned_schools = _coordinator_schools(request)
+    assigned_schools = _timetable_schools(request)
     thinking_coaches = User.objects.filter(role='THINKING_COACH').order_by('first_name', 'username')
 
     if request.method == 'POST':
@@ -506,13 +562,13 @@ def timetable_upload(request):
         # Validation
         if not school_id or not grade or not division:
             messages.error(request, 'School, grade and section are required.')
-            return redirect('coordinator:timetable_upload')
+            return redirect(_tt_url(request, 'upload'))
 
         # Ensure the selected school belongs to this SRM
         school = assigned_schools.filter(id=school_id).first()
         if not school:
             messages.error(request, 'Invalid school selection.')
-            return redirect('coordinator:timetable_upload')
+            return redirect(_tt_url(request, 'upload'))
 
         coach = None
         if coach_id:
@@ -541,10 +597,10 @@ def timetable_upload(request):
             _save_slots(request, timetable)
 
             messages.success(request, 'Timetable uploaded successfully!')
-            return redirect('coordinator:timetable_list')
+            return redirect(_tt_url(request, 'list'))
         except Exception as e:
             messages.error(request, f'Error uploading timetable: {str(e)}')
-            return redirect('coordinator:timetable_upload')
+            return redirect(_tt_url(request, 'upload'))
 
     program_choices = [
         ('FSL', 'Future Skills Lab (FSL)'),
@@ -559,6 +615,7 @@ def timetable_upload(request):
         'day_choices': DAY_CHOICES,
         'program_choices': program_choices,
     }
+    context.update(_timetable_chrome(request))
     return render(request, 'coordinator/timetable-upload.html', context)
 
 

@@ -208,7 +208,11 @@ function initializeSidebar() {
             '/super-admin/profile/': 'nav-profile',
             'profile.html': 'nav-profile',
             '/super-admin/change-password/': 'nav-change-password',
-            'change-password.html': 'nav-change-password'
+            'change-password.html': 'nav-change-password',
+
+            // Timetable
+            '/super-admin/timetable/': 'nav-timetable',
+            '/super-admin/timetable/upload/': 'nav-add-timetable'
         };
 
         // Remove all active classes from links
@@ -247,6 +251,12 @@ function initializeSidebar() {
             console.log('Slash variation linkId:', linkId);
         }
         
+        // A schedule's detail and edit pages carry an id in the path, so no
+        // exact key matches them; fall back to the section they sit in.
+        if (!linkId && currentPath.indexOf('/super-admin/timetable/') === 0) {
+            linkId = 'nav-timetable';
+        }
+
         // Still not found? Try matching by page name
         if (!linkId && currentPage) {
             console.log('Trying page name:', currentPage + '.html');

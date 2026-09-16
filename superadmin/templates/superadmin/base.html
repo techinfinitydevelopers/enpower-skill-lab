@@ -164,6 +164,15 @@
                             <span class="material-symbols-outlined">add</span>
                             Add Class
                         </a>
+
+                        <a href="{% url 'superadmin_timetable_list' %}" id="nav-timetable">
+                            <span class="material-symbols-outlined">calendar_month</span>
+                            Timetable
+                        </a>
+                        <a href="{% url 'superadmin_timetable_upload' %}" id="nav-add-timetable">
+                            <span class="material-symbols-outlined">upload_file</span>
+                            Upload Timetable
+                        </a>
                         {% comment %} <a href="bulk-import-classes.html" id="nav-bulk-import-classes">
                             <span class="material-symbols-outlined">upload_file</span>
                             Bulk Import Classes

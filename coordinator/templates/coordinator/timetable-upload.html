@@ -1,7 +1,7 @@
-{% extends 'coordinator/base.html' %}
+{% extends base_template %}
 {% load static %}
 
-{% block title %}{% if editing %}Edit Schedule{% else %}Schedule Management{% endif %} - Program Coordinator{% endblock %}
+{% block title %}{% if editing %}Edit Schedule{% else %}Schedule Management{% endif %} - {{ role_label }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -31,7 +31,7 @@
 
     <!-- Page header -->
     <div class="d-flex align-items-center gap-3 mb-4">
-      <a href="{% url 'coordinator:timetable_list' %}" class="text-decoration-none text-muted d-inline-flex align-items-center">
+      <a href="{% url urls.list %}" class="text-decoration-none text-muted d-inline-flex align-items-center">
         <span class="material-symbols-outlined">arrow_back</span>
       </a>
       <div>
@@ -46,7 +46,7 @@
       {% endfor %}
     {% endif %}
 
-    <form method="post" enctype="multipart/form-data" action="{% if editing %}{% url 'coordinator:timetable_edit' editing.id %}{% else %}{% url 'coordinator:timetable_upload' %}{% endif %}">
+    <form method="post" enctype="multipart/form-data" action="{% if editing %}{% url urls.edit editing.id %}{% else %}{% url urls.upload %}{% endif %}">
       {% csrf_token %}
       <input type="hidden" name="academic_year" id="academic_year" value="{% if editing %}{{ editing.academic_year }}{% else %}2025-2026{% endif %}">
 

@@ -56,7 +56,8 @@
       "Bash(./venv/Scripts/python.exe -c ' *)",
       "Bash(grep -iE \"\\\\.\\(png|jpg|jpeg|svg|webp\\)$\")",
       "Bash(PYTHONIOENCODING=utf-8 ./venv/Scripts/python.exe verify_email.py)",
-      "Bash(./venv/Scripts/python.exe -)"
+      "Bash(./venv/Scripts/python.exe -)",
+      "Bash(PYTHONIOENCODING=utf-8 ./venv/Scripts/python.exe verify_timetable.py)"
     ]
   }
 }

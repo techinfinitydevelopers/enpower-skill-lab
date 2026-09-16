@@ -1,7 +1,7 @@
-{% extends 'coordinator/base.html' %}
+{% extends base_template %}
 {% load static %}
 
-{% block title %}Timetable - Program Coordinator{% endblock %}
+{% block title %}Timetable - {{ role_label }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -34,9 +34,9 @@
         <header class="mb-4 d-flex flex-column flex-lg-row align-items-start align-items-lg-center justify-content-between gap-3">
             <div>
                 <h1 class="h4 mb-1 fw-bold text-dark">Manage Classrooms</h1>
-                <p class="mb-0 text-muted" style="font-size:0.875rem;">Upload and manage class schedules for your assigned schools</p>
+                <p class="mb-0 text-muted" style="font-size:0.875rem;">Upload and manage class schedules for {{ scope_label }}</p>
             </div>
-            <a href="{% url 'coordinator:timetable_upload' %}" class="text-decoration-none">
+            <a href="{% url urls.upload %}" class="text-decoration-none">
                 <button class="btn d-inline-flex align-items-center gap-2"
                         style="background:#5A1F6E;color:#fff;border-radius:0.5rem;padding:0.5rem 1.25rem;font-weight:600;">
                     <span class="material-symbols-outlined">upload</span>
@@ -69,7 +69,7 @@
                         </div>
                         <div>
                             <div class="h4 mb-0 fw-bold text-dark">{{ total_schools }}</div>
-                            <div class="text-muted" style="font-size:0.813rem;">Assigned Schools</div>
+                            <div class="text-muted" style="font-size:0.813rem;">{{ schools_label }}</div>
                         </div>
                     </div>
                 </div>
@@ -81,6 +81,7 @@
                 <table class="tt-table">
                     <thead>
                         <tr>
+                            <th>School</th>
                             <th>Program</th>
                             <th>Grade / Section</th>
                             <th>Day</th>
@@ -93,6 +94,7 @@
                     <tbody>
                         {% for row in rows %}
                         <tr>
+                            <td>{{ row.school }}</td>
                             <td>
                                 <span class="tt-prog">
                                     <span class="tt-prog-icon"><span class="material-symbols-outlined">menu_book</span></span>
@@ -107,13 +109,13 @@
                                 {% if row.teacher %}{{ row.teacher }}{% else %}<span class="tt-muted">— Not assigned</span>{% endif %}
                             </td>
                             <td style="text-align:right; white-space:nowrap;">
-                                <a href="{% url 'coordinator:timetable_detail' row.tt_id %}" class="tt-act tt-act-view" title="Open / View">
+                                <a href="{% url urls.detail row.tt_id %}" class="tt-act tt-act-view" title="Open / View">
                                     <span class="material-symbols-outlined">visibility</span>
                                 </a>
-                                <a href="{% url 'coordinator:timetable_edit' row.tt_id %}" class="tt-act tt-act-edit" title="Edit">
+                                <a href="{% url urls.edit row.tt_id %}" class="tt-act tt-act-edit" title="Edit">
                                     <span class="material-symbols-outlined">edit</span>
                                 </a>
-                                <form method="post" action="{% url 'coordinator:timetable_delete' row.tt_id %}" style="display:inline;"
+                                <form method="post" action="{% url urls.delete row.tt_id %}" style="display:inline;"
                                       onsubmit="return confirm('Delete this schedule? This cannot be undone.');">
                                     {% csrf_token %}
                                     <button type="submit" class="tt-act tt-act-del" title="Delete">
@@ -124,11 +126,11 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="7" style="text-align:center; padding:48px 16px;">
+                            <td colspan="8" style="text-align:center; padding:48px 16px;">
                                 <div class="text-muted">
                                     <span class="material-symbols-outlined" style="font-size:48px;">calendar_month</span>
                                     <p class="mt-2 mb-3">No timetables uploaded yet</p>
-                                    <a href="{% url 'coordinator:timetable_upload' %}" class="text-decoration-none">
+                                    <a href="{% url urls.upload %}" class="text-decoration-none">
                                         <button class="btn btn-sm" style="background:#5A1F6E;color:#fff;border-radius:0.5rem;padding:0.5rem 1.25rem;font-weight:600;">
                                             Upload Schedule
                                         </button>

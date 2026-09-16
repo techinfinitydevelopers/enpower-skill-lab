@@ -2,6 +2,16 @@ from django.urls import path
 from . import views
 from .bulk_import import download_sample_csv, bulk_import, bulk_import_stream
 from . import reports
+# The five timetable views serve a Super Admin and a coordinator alike;
+# scope and chrome are decided from the signed-in user, not the route.
+# The routes themselves are still gated: these live under /super-admin/,
+# so a coordinator reaching them is wrong even though the view would have
+# scoped their data correctly anyway.
+from django.contrib.auth.decorators import user_passes_test
+
+from coordinator import views as coordinator_views
+
+superadmin_only = user_passes_test(views.is_superadmin)
 
 
 urlpatterns = [
@@ -41,6 +51,17 @@ urlpatterns = [
     # Class Management URLs
     path('classes/', views.class_list, name='class_list'),
     path('add-class/', views.add_class, name='add_class'),
+
+    path('timetable/', superadmin_only(coordinator_views.timetable_list),
+         name='superadmin_timetable_list'),
+    path('timetable/upload/', superadmin_only(coordinator_views.timetable_upload),
+         name='superadmin_timetable_upload'),
+    path('timetable/<int:pk>/', superadmin_only(coordinator_views.timetable_detail),
+         name='superadmin_timetable_detail'),
+    path('timetable/<int:pk>/edit/', superadmin_only(coordinator_views.timetable_edit),
+         name='superadmin_timetable_edit'),
+    path('timetable/<int:pk>/delete/', superadmin_only(coordinator_views.timetable_delete),
+         name='superadmin_timetable_delete'),
     path('class/<int:class_id>/edit/', views.edit_class, name='edit_class'),
     path('class/<int:class_id>/delete/', views.delete_class, name='delete_class'),
     # Lesson Management URLs
