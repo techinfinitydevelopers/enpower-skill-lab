@@ -213,3 +213,38 @@ tr.bd-picked > td {
     opacity: .55;
     cursor: not-allowed;
 }
+
+/* "Select all 1290 rows" -- the step past the header checkbox, which only
+   ever ticks the page you can see. */
+.bd-all-pages {
+    background: none;
+    border: 1px solid #7C3E92;
+    border-radius: 7px;
+    padding: 5px 11px;
+    color: #F3E6F8;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.bd-all-pages:hover {
+    background: #46164F;
+    color: #fff;
+}
+
+/* Progress while the batches go out. Real percentages, not a timer. */
+.bd-progress {
+    height: 8px;
+    border-radius: 999px;
+    background: #EDE4F2;
+    overflow: hidden;
+    margin: 0 0 12px;
+}
+
+.bd-progress > span {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, #DC2626, #B91C1C);
+    transition: width .2s ease;
+}

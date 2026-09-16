@@ -329,6 +329,138 @@ check('deleting one school takes its student too',
 check('and that student login account is gone too',
       not U.objects.filter(id=lone_uid).exists())
 
+
+# -- ids as a JSON body -------------------------------------------------
+# A select-all on the student list is 1290 ids. As form fields that is past
+# DATA_UPLOAD_MAX_NUMBER_FIELDS (1000) and Django rejects the request before
+# the view runs, so the ids travel as one JSON body instead.
+print(chr(10) + 'A SELECT-ALL IS TOO BIG FOR FORM FIELDS')
+from django.conf import settings as _s                     # noqa: E402
+
+cap = _s.DATA_UPLOAD_MAX_NUMBER_FIELDS
+check('the field cap is still low enough to matter', cap is not None and cap <= 1000,
+      str(cap))
+
+many = [str(n) for n in range(900000, 900000 + cap + 20)]
+r = admin.post('/bulk-delete/students/', {'ids': many})
+check(f'{len(many)} ids as form fields are rejected, as expected',
+      r.status_code == 400, f'HTTP {r.status_code}')
+
+r = admin.post('/bulk-delete/students/', json.dumps({'ids': many}),
+               content_type='application/json')
+check(f'the same {len(many)} ids as a JSON body go through',
+      r.status_code == 200, f'HTTP {r.status_code}')
+check('and match nothing, so nothing is deleted',
+      json.loads(r.content)['deleted'] == 0, r.content.decode()[:80])
+
+json_kid = make_student('jsonbody')
+json_uid = json_kid.user_id
+r = admin.post('/bulk-delete/students/preview/',
+               json.dumps({'ids': [json_kid.id]}),
+               content_type='application/json')
+check('preview reads a JSON body too', json.loads(r.content)['count'] == 1,
+      r.content.decode()[:80])
+r = admin.post('/bulk-delete/students/', json.dumps({'ids': [json_kid.id]}),
+               content_type='application/json')
+check('a JSON delete removes the row',
+      not Student.objects.filter(id=json_kid.id).exists())
+check('and its login account', not U.objects.filter(id=json_uid).exists())
+
+r = admin.post('/bulk-delete/students/', 'not json at all',
+               content_type='application/json')
+check('a body that is not JSON deletes nothing rather than erroring',
+      r.status_code == 200 and json.loads(r.content)['deleted'] == 0,
+      f'HTTP {r.status_code}')
+r = admin.post('/bulk-delete/students/', {})
+check('an empty form post deletes nothing rather than erroring',
+      r.status_code == 200 and json.loads(r.content)['deleted'] == 0,
+      f'HTTP {r.status_code}')
+
+# -- the bulk path ------------------------------------------------------
+# One transaction per row cannot finish a thousand rows inside the 60s
+# worker timeout, so the delete runs as a handful of statements instead.
+print(chr(10) + 'THE BULK PATH')
+import enpower_skill_lab.bulk_delete as bd                 # noqa: E402
+
+herd = [make_student(f'bulk{i}') for i in range(6)]
+herd_ids = [s.id for s in herd]
+herd_uids = [s.user_id for s in herd]
+
+from django.db import connection, reset_queries            # noqa: E402
+
+was_debug = _s.DEBUG
+_s.DEBUG = True
+reset_queries()
+r = admin.post('/bulk-delete/students/', json.dumps({'ids': herd_ids}),
+               content_type='application/json')
+queries = len(connection.queries)
+_s.DEBUG = was_debug
+
+check('six rows delete in one request', json.loads(r.content)['deleted'] == 6,
+      r.content.decode()[:90])
+check('they are gone', not Student.objects.filter(id__in=herd_ids).exists())
+check('their login accounts are gone',
+      not U.objects.filter(id__in=herd_uids).exists())
+# A per-row loop was several queries each; the point of the bulk path is
+# that the query count stops tracking the row count.
+check('it does not run a transaction per row', queries < 6 * 8,
+      f'{queries} queries for 6 rows')
+
+# -- the fallback names the row that would not go -----------------------
+# When the bulk statement fails the whole batch rolls back, so the view
+# retries one at a time. That is the only path that can say which row broke.
+print(chr(10) + 'THE FALLBACK STILL NAMES THE ROW')
+survivors = [make_student(f'fb{i}') for i in range(3)]
+survivor_ids = [s.id for s in survivors]
+survivor_uids = [s.user_id for s in survivors]
+
+real_purge = bd.purge_people
+
+
+def _explode(qs):
+    raise RuntimeError('bulk path deliberately broken by the test')
+
+
+bd.purge_people = _explode
+try:
+    r = admin.post('/bulk-delete/students/', json.dumps({'ids': survivor_ids}),
+                   content_type='application/json')
+finally:
+    bd.purge_people = real_purge
+
+out = json.loads(r.content)
+check('a broken bulk path falls back instead of failing the request',
+      r.status_code == 200, f'HTTP {r.status_code}')
+check('and still deletes every row one at a time', out['deleted'] == 3, str(out))
+check('nothing survives the fallback',
+      not Student.objects.filter(id__in=survivor_ids).exists())
+check('and no login account does either',
+      not U.objects.filter(id__in=survivor_uids).exists())
+check('the bulk path was put back', bd.purge_people is real_purge)
+
+# -- the script can select past the page it is on -----------------------
+print(chr(10) + 'SELECT ALL, NOT JUST THIS PAGE')
+js = open(os.path.join(settings.BASE_DIR, 'static/js/common/bulk-delete.js'),
+          encoding='utf-8').read()
+check('it reads every row from DataTables, not just the DOM',
+      "rows({ search: 'applied' })" in js)
+check("a search narrows what 'select all' means",
+      "search: 'applied'" in js and 'allIds' in js)
+check('there is a select-all-rows control', 'bd-all-pages' in js)
+check('the header checkbox still ticks only the page',
+      "table.querySelectorAll('.bd-row')" in js)
+check('ids are sent as JSON, not as one field each',
+      "'Content-Type': 'application/json'" in js and 'JSON.stringify' in js)
+check('the delete is batched so no request nears the worker timeout',
+      'var BATCH' in js and 'batches' in js)
+check('progress is counted, not animated',
+      'bd-progress' in js and 'setInterval' not in js)
+
+css = open(os.path.join(settings.BASE_DIR, 'static/css/common/bulk-delete.css'),
+           encoding='utf-8').read()
+for cls in ('bd-all-pages', 'bd-progress'):
+    check(f'.{cls} is styled', f'.{cls}' in css)
+
 _cleanup()
 
 print('\n' + '=' * 62)

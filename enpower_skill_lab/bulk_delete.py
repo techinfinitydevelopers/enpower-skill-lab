@@ -32,6 +32,7 @@ import json
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.http import JsonResponse
+from django.http.request import RawPostDataException
 
 
 # ── helpers ─────────────────────────────────────────────────────────────
@@ -52,6 +53,38 @@ def delete_with_user(obj):
     obj.delete()
     if user is not None:
         user.delete()
+
+
+def purge_people(qs):
+    """Delete these profiles and their login accounts in two statements.
+
+    One transaction per row is fine for five rows and impossible for a
+    thousand: the worker is killed at 60 seconds, which would leave the list
+    half deleted. Django cascades in bulk here; only the login accounts need
+    a second pass, because the FK that points at them is SET_NULL.
+    """
+    from django.contrib.auth import get_user_model
+
+    user_ids = list(qs.filter(user__isnull=False).values_list('user_id', flat=True))
+    count = qs.count()
+    qs.delete()
+    if user_ids:
+        get_user_model().objects.filter(id__in=user_ids).delete()
+    return count
+
+
+def purge_schools(qs):
+    """Delete these schools, taking their people rather than stranding them."""
+    from school_admin.models import SchoolAdmin
+    from student.models import Student
+    from teacher.models import Teacher
+
+    ids = list(qs.values_list('id', flat=True))
+    for model in (Student, Teacher, SchoolAdmin):
+        purge_people(model.objects.filter(school_id__in=ids))
+    count = qs.count()
+    qs.delete()
+    return count
 
 
 # ── impact: what a selection takes with it ──────────────────────────────
@@ -114,14 +147,9 @@ def delete_school_and_its_people(school):
     accounts would not; students and teachers are SET_NULL and would survive
     with a null school, invisible on every list and still able to sign in.
     """
-    from school_admin.models import SchoolAdmin
-    from student.models import Student
-    from teacher.models import Teacher
+    from schools.models import School
 
-    for model in (Student, Teacher, SchoolAdmin):
-        for person in model.objects.filter(school=school):
-            delete_with_user(person)
-    school.delete()
+    purge_schools(School.objects.filter(pk=school.pk))
 
 
 # ── the registry ────────────────────────────────────────────────────────
@@ -142,6 +170,7 @@ def _registry():
             'name': lambda s: s.school_name,
             'impact': _school_impact,
             'delete': delete_school_and_its_people,
+            'purge': purge_schools,
         },
         'students': {
             'roles': ('SUPER_ADMIN',),
@@ -150,6 +179,7 @@ def _registry():
             'name': _student_name,
             'impact': _student_impact,
             'delete': delete_with_user,
+            'purge': purge_people,
         },
         'teachers': {
             'roles': ('SUPER_ADMIN',),
@@ -158,6 +188,7 @@ def _registry():
             'name': lambda t: t.full_name,
             'impact': _simple_impact,
             'delete': delete_with_user,
+            'purge': purge_people,
         },
         'parents': {
             'roles': ('SUPER_ADMIN',),
@@ -166,6 +197,7 @@ def _registry():
             'name': lambda p: p.full_name,
             'impact': _simple_impact,
             'delete': delete_with_user,
+            'purge': purge_people,
         },
         'coordinators': {
             'roles': ('SUPER_ADMIN',),
@@ -174,6 +206,7 @@ def _registry():
             'name': lambda c: c.full_name,
             'impact': _simple_impact,
             'delete': delete_with_user,
+            'purge': purge_people,
         },
         'school-admins': {
             'roles': ('SUPER_ADMIN',),
@@ -182,6 +215,7 @@ def _registry():
             'name': lambda a: a.full_name,
             'impact': _simple_impact,
             'delete': delete_with_user,
+            'purge': purge_people,
         },
     }
 
@@ -202,10 +236,14 @@ def _entry_for(request, key):
 def _selected(request, entry):
     """The requested ids, narrowed to rows this list actually shows."""
     raw = request.POST.getlist('ids') or request.POST.getlist('ids[]')
-    if not raw and request.body:
+    if not raw:
+        # A select-all sends one JSON body rather than one field per id:
+        # DATA_UPLOAD_MAX_NUMBER_FIELDS is 1000, so a list of 1290 students
+        # posted as form fields is rejected before any view sees it.
         try:
-            raw = json.loads(request.body.decode() or '{}').get('ids') or []
-        except (ValueError, UnicodeDecodeError):
+            raw = json.loads((request.body or b'{}').decode() or '{}').get('ids') or []
+        except (ValueError, UnicodeDecodeError, AttributeError,
+                RawPostDataException):
             raw = []
     ids = {int(v) for v in raw if str(v).strip().lstrip('-').isdigit()}
     return entry['rows'](request).filter(id__in=ids)
@@ -237,20 +275,31 @@ def bulk_delete(request, key):
     if request.method != 'POST':
         raise PermissionDenied('POST only')
     entry = _entry_for(request, key)
-    qs = _selected(request, entry)
+    ids = list(_selected(request, entry).values_list('id', flat=True))
     singular, plural = entry['label']
 
+    def rows():
+        return entry['rows'](request).filter(id__in=ids)
+
     deleted, failures = 0, []
-    for obj in list(qs):
-        name = entry['name'](obj)
+    if ids:
         try:
-            # Per row, so one row that will not go does not undo the rest --
-            # and so a half-deleted school cannot be left behind either.
             with transaction.atomic():
-                entry['delete'](obj)
-            deleted += 1
-        except Exception as exc:                       # noqa: BLE001
-            failures.append({'name': name, 'reason': str(exc)[:200]})
+                deleted = entry['purge'](rows())
+        except Exception:                              # noqa: BLE001
+            # Something in the batch will not go, and the transaction took
+            # the rest back with it. Retry one at a time -- slower, but the
+            # only way to say which row is the problem, and that detail is
+            # worth the queries exactly when something has gone wrong.
+            deleted = 0
+            for obj in list(rows()):
+                name = entry['name'](obj)
+                try:
+                    with transaction.atomic():
+                        entry['delete'](obj)
+                    deleted += 1
+                except Exception as exc:               # noqa: BLE001
+                    failures.append({'name': name, 'reason': str(exc)[:200]})
 
     label = singular if deleted == 1 else plural
     if deleted and not failures:
