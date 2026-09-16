@@ -43,13 +43,26 @@ from verify_client import HttpsClient as Client           # noqa: E402
 U = get_user_model()
 PASS, FAIL = [], []
 restore = {}
-MARKER = 'zz.bulkcheck'
+MARKER = 'zzbulkcheck'
 
 
 def _cleanup():
+    from coordinator.models import ProgramCoordinator
+    from parent.models import Parent
     from school_admin.models import SchoolAdmin
+    from schools.models import School
+    from student.models import Student
+    from teacher.models import Teacher
+
     U.objects.filter(email__startswith=MARKER).delete()
-    SchoolAdmin.objects.filter(email__startswith=MARKER).delete()
+    U.objects.filter(username__startswith=MARKER).delete()
+    Student.objects.filter(gr_number__startswith=MARKER).delete()
+    Teacher.objects.filter(employee_id__startswith=MARKER).delete()
+    School.objects.filter(school_code__startswith=MARKER.upper()).delete()
+    for model in (SchoolAdmin, Teacher, Parent, ProgramCoordinator, Student):
+        for field in ('email', 'official_email', 'school_email'):
+            if any(f.name == field for f in model._meta.fields):
+                model.objects.filter(**{f'{field}__startswith': MARKER}).delete()
     for pk, password in list(restore.items()):
         U.objects.filter(pk=pk).update(password=password)
     restore.clear()
@@ -182,6 +195,142 @@ for url, needles in [
         check(f'{url} carries {needle}', needle in body)
     check(f'{url} has no invented progress timer',
           'fakeProgress' not in body and 'readAsText' not in body)
+
+
+# -- every role, not just the one this suite grew up testing ------------
+# The sample workbook each role offers is the contract for that role. If it
+# cannot be filled in and uploaded back, the role's import is broken however
+# well the streaming machinery works.
+print(chr(10) + 'EVERY ROLE ROUND-TRIPS ITS OWN SAMPLE')
+
+ALL_ROLES = ['school', 'school_admin', 'teacher', 'student', 'parent',
+             'coordinator']
+
+from schools.models import School                          # noqa: E402
+
+host_school = School.objects.exclude(
+    school_code__startswith=MARKER.upper()).first()
+check('there is a school to attach the other roles to',
+      host_school is not None)
+
+_n = [0]
+
+
+def _unique(header, value, role):
+    """Make the identifying columns unique so a rerun is not a duplicate.
+
+    Everything else is left as the sample shipped it -- the point is to prove
+    the sample the app hands out is one the app accepts back.
+    """
+    h = header.lower()
+    _n[0] += 1
+    n = _n[0]
+    if 'email' in h:
+        return f'{MARKER}.{n}@example.com'
+    if h == 'school_code':
+        return f'{MARKER.upper()}{n}'
+    if h == 'school_name':
+        return host_school.school_name if role != 'school' else f'ZZ Bulk School {n}'
+    if h == 'pan_number':
+        return f'ZZ{n:03d}E1234F'
+    if h in ('gr_number', 'roll_number', 'employee_id', 'aadhar_number'):
+        return f'{MARKER}{n}'
+    if any(k in h for k in ('phone', 'mobile')) and str(value or '').strip():
+        return f'90000{n:05d}'
+    return value
+
+
+if host_school:
+    from openpyxl import load_workbook                     # noqa: E402
+
+    for role in ALL_ROLES:
+        r = admin.get(f'/super-admin/bulk-import/{role}/sample-csv/')
+        if r.status_code != 200:
+            check(f'{role}: sample downloads', False, f'HTTP {r.status_code}')
+            continue
+        check(f'{role}: sample downloads', True)
+
+        wb = load_workbook(io.BytesIO(r.content))
+        ws = wb.active
+        fields = [str(c.value or '').strip() for c in ws[2]]
+        sample = [[c.value for c in row] for row in ws.iter_rows(min_row=3)
+                  if any(c.value not in (None, '') for c in row)]
+        check(f'{role}: the sample ships a filled-in example row', bool(sample),
+              '' if sample else 'an empty sample teaches the user nothing')
+        if not sample:
+            continue
+
+        # One row per role: several of these carry uniqueness rules of their
+        # own (one active admin per school, for instance) that a second copy
+        # of the same sample row would trip for reasons of its own.
+        row = [_unique(fields[i], v, role) if i < len(fields) else v
+               for i, v in enumerate(sample[0])]
+        ws.delete_rows(3, ws.max_row)
+        ws.append(row)
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+
+        up = admin.post(f'/super-admin/bulk-import/{role}/upload-stream/',
+                        {'csv_file': SimpleUploadedFile('t.xlsx', buf.read())})
+        if up.status_code != 200:
+            check(f'{role}: upload is accepted', False, f'HTTP {up.status_code}')
+            continue
+
+        events = [json.loads(line) for line in
+                  b''.join(up.streaming_content).decode().splitlines()
+                  if line.strip()]
+        rows = [e for e in events if e.get('type') == 'row']
+        failed = [e for e in rows if e.get('status') == 'failed']
+        check(f'{role}: the row is imported', bool(rows) and not failed,
+              '' if (rows and not failed) else
+              ('; '.join(f"row {e['row']}: {e.get('reason')}" for e in failed)
+               or 'no row event'))
+        check(f'{role}: it is reported on spreadsheet row 3',
+              bool(rows) and rows[0]['row'] == 3,
+              str(rows[0]['row']) if rows else '-')
+
+# -- a duplicate is refused, and says which row and why -----------------
+# The complaint that started this was an unusable failure message. Uploading
+# the same sheet twice is the cheapest way to produce a real one.
+print(chr(10) + 'A REJECTED ROW NAMES ITSELF')
+if host_school:
+    r = admin.get('/super-admin/bulk-import/student/sample-csv/')
+    wb = load_workbook(io.BytesIO(r.content))
+    ws = wb.active
+    fields = [str(c.value or '').strip() for c in ws[2]]
+    sample = [[c.value for c in row] for row in ws.iter_rows(min_row=3)
+              if any(c.value not in (None, '') for c in row)][0]
+    row = [_unique(fields[i], v, 'student') if i < len(fields) else v
+           for i, v in enumerate(sample)]
+    ws.delete_rows(3, ws.max_row)
+    ws.append(row)
+
+    def _send():
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        resp = admin.post('/super-admin/bulk-import/student/upload-stream/',
+                          {'csv_file': SimpleUploadedFile('t.xlsx', buf.read())})
+        return [json.loads(l) for l in
+                b''.join(resp.streaming_content).decode().splitlines()
+                if l.strip()]
+
+    first = [e for e in _send() if e.get('type') == 'row']
+    second = [e for e in _send() if e.get('type') == 'row']
+    check('the same sheet twice: the first goes in',
+          bool(first) and first[0]['status'] != 'failed',
+          '' if (first and first[0]['status'] != 'failed')
+          else (str(first[0].get('reason')) if first else 'no row event'))
+    dupes = [e for e in second if e.get('status') == 'failed']
+    check('and the second is refused', bool(dupes),
+          '' if dupes else 'a duplicate was imported twice')
+    if dupes:
+        check('the refusal names the spreadsheet row', dupes[0]['row'] == 3,
+              str(dupes[0]['row']))
+        check('and gives a reason a person can act on',
+              len(dupes[0].get('reason') or '') > 10,
+              repr(dupes[0].get('reason')))
 
 _cleanup()
 

@@ -241,6 +241,39 @@ for key, (role, url) in PAGES.items():
     check(f'{key}: the Export button has a background', bool(backed),
           f'classes={classes}')
 
+# ── the workbook holds as many rows as the list does ────────────────────
+# Headers matching proves the shape, not the contents. An export that writes
+# the right columns and none of the rows passes every check above it.
+print('\nTHE ROW COUNT MATCHES THE QUERYSET')
+for key, entry in registry.items():
+    role = entry['roles'][0]
+    if role not in clients:
+        continue
+    c, user = clients[role]
+
+    class _Req:                              # what entry['rows'] expects
+        pass
+
+    req = _Req()
+    req.user = user
+    expected = entry['rows'](req).count()
+
+    r = c.get(f'/exports/{key}/')
+    if r.status_code != 200:
+        check(f'{key}: exports for the count check', False, f'HTTP {r.status_code}')
+        continue
+    ws = workbook_from(r).active
+    values = [ws.cell(row=i, column=1).value for i in range(4, ws.max_row + 1)]
+    values = [v for v in values if v not in (None, '')]
+    got = 0 if values == ['No records to export'] else len(values)
+
+    # An empty export is legitimate -- a School Admin whose school has no
+    # students has nothing to export -- so the assertion is that the count
+    # agrees with the queryset, not that it is above zero.
+    check(f'{key}: {got} row(s) written, {expected} in the queryset',
+          got == expected,
+          '' if got == expected else f'off by {abs(got - expected)}')
+
 _restore_passwords()
 
 print('\n' + '=' * 62)
