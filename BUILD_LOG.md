@@ -2,6 +2,66 @@
 
 Chronological record of completed tasks (per org policy: log after each completed task).
 
+## 2026-09-16 — Timetable for the Super Admin (commit b9bb698)
+
+The five timetable views belonged to the Program Coordinator, scoped to
+their assigned schools. Thinking Coach only *reads* timetables (as
+"classrooms" for attendance) — it never had CRUD, despite how the request
+was phrased. Super Admin had nothing.
+
+**Shared, not copied.** Rather than duplicate ~300 lines of view plus three
+templates, the same views now serve both roles. Two things differ, both
+read from the signed-in user and never from the route:
+
+- `_timetable_schools(request)` — all schools for a Super Admin, assigned
+  schools for a coordinator
+- `_timetable_chrome(request)` — base template, title wording and the URL
+  names the page links to itself with
+
+Templates use `{% extends base_template %}` and `{% url urls.detail ... %}`,
+so one set of markup serves both sidebars.
+
+**Routes gated separately.** `/super-admin/timetable/*` is wrapped in
+`user_passes_test(is_superadmin)`. The view would have scoped a coordinator
+correctly anyway, but a lower-privilege role getting a 200 on a
+`/super-admin/` URL is wrong regardless of whether data leaks.
+
+**Two gaps that only appeared once scope widened:**
+
+1. The list had **no School column**. Fine for a coordinator with two
+   schools; useless for a Super Admin seeing every school at once. Added
+   from the `select_related` already present.
+2. The stat card read "Assigned Schools" and the subtitle "your assigned
+   schools" — neither true for someone assigned nothing because they see
+   everything. Both now follow the role.
+
+**Files:** `coordinator/views.py` (helpers + 5 views), the three
+`coordinator/templates/coordinator/timetable-*.html`, `superadmin/urls.py`
+(5 routes), `superadmin/templates/superadmin/base.html` (sidebar, under
+Classes), `static/js/superadmin/sup-admin-dash.js` (active-state map +
+prefix fallback for the id-carrying detail/edit paths).
+
+**Verified:** `verify_timetable.py` **54/54**. The checks that matter are
+about what did *not* change — a coordinator still sees only their own
+schools through either set of routes, and still cannot open, edit or delete
+another school's schedule. Create/edit/delete are exercised as real POSTs,
+not just page loads. Regression: pages 65/65, bulk-delete 109/109, exports
+75/75, bulk-import 25/25, email 72/72, password-reset 47/47, HTML clean.
+
+**Two of my own assertions were wrong on the first run** and are documented
+in the suite so they are not rewritten the same way:
+
+- matching a bare row id (`str(tt.id) in content`) finds stray digits
+  anywhere in the markup and passes for free — match on the school name
+- `follow=True` turns a refusal into a 200 on the redirect target; check
+  the status *before* following
+
+Live on Railway: `/super-admin/timetable/` went 404 → 302 for an anonymous
+caller, and the sidebar script carries the new entries.
+
+**Not verified in a browser** — pages were driven through the test client
+and asserted on served HTML, not clicked through.
+
 ## 2026-09-16 — Select all, not just the current page (commit 5322050)
 
 The header checkbox only ticked rows in the DOM, which on a paged table is
