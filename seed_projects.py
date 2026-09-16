@@ -152,6 +152,33 @@ def profile_triplet(index, profiles):
     return [profiles[(start + i) % len(profiles)] for i in range(3)]
 
 
+def reachable_profiles(trio, covered_competency_ids):
+    """The trio members this project could actually produce as a top match.
+
+    The engine unlocks a profile only once at least two of its primary
+    competencies have been assessed. A trio member whose primaries this
+    project barely touches can therefore never win, however the scores are
+    biased -- seeding it as a student's target asks for an outcome the rules
+    forbid, and the check that follows would fail on correct behaviour.
+
+    Falls back to the whole trio when none qualify, so a thin project still
+    seeds something rather than nothing.
+    """
+    reachable = [
+        p for p in (trio or [])
+        if len({c.id for c in p.primary_competencies.all()}
+               & set(covered_competency_ids)) >= 2
+    ]
+    return reachable or list(trio or [])
+
+
+def target_for(student, usable_profiles):
+    """The profile this student's scores are biased toward on this project."""
+    if not usable_profiles:
+        return None
+    return usable_profiles[student.id % len(usable_profiles)]
+
+
 def build_project(framework, grade, shape, shape_index, profiles, fallback_pool):
     """Create one project (+ its plug-in) with assessments and competencies.
 
@@ -261,10 +288,13 @@ def score_students(project, trio, plugin, teacher):
         .select_related('competency')
     )
 
+    covered = {m.competency_id for m in mappings}
+    usable = reachable_profiles(trio, covered)
+
     made = 0
     targets = []
     for student in students:
-        target = trio[student.id % len(trio)] if trio else None
+        target = target_for(student, usable)
         targets.append((student, target))
 
         primary_ids   = {c.id for c in target.primary_competencies.all()}   if target else set()

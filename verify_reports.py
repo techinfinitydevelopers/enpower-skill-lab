@@ -27,7 +27,7 @@ from competencies.models import (
 )
 from competencies import engine
 from student.models import Student
-from seed_projects import profile_triplet
+from seed_projects import profile_triplet, reachable_profiles, target_for
 
 PASS, FAIL = [], []
 
@@ -67,7 +67,17 @@ def check_fsl_target_profiles():
         trio = profile_triplet(report.project.sequence_number - 1, profiles)
         if not trio:
             continue
-        target = trio[report.student.id % len(trio)]
+        # The same narrowing the seeder applies. Without it this expected a
+        # profile the project assesses too little of for the engine to unlock
+        # at all, and reported the engine's correct answer as a failure.
+        covered = set(
+            AssessmentCompetency.objects
+            .filter(assessment__project=report.project)
+            .values_list('competency_id', flat=True)
+        )
+        target = target_for(report.student, reachable_profiles(trio, covered))
+        if target is None:
+            continue
         top = (report.top_3_profiles or [{}])[0].get('profile_name')
         check(f'{report.student.first_name} / {report.project.title[:28]}',
               top == target.name, f'expected {target.name}, got {top}')
