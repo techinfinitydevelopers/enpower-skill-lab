@@ -819,3 +819,28 @@ def coordinator_announcements(request):
     announcements = announcements_for_user(request.user)
     announcements.sort(key=lambda a: a.created_at, reverse=True)
     return render(request, 'coordinator/announcements.html', {'announcements': announcements})
+
+
+@login_required
+@user_passes_test(is_coordinator)
+def bulk_import_stream_view(request, role):
+    """Streaming bulk import for coordinators.
+
+    Same shared machinery as the Super Admin's, gated to this role and to the
+    student/parent sheets a coordinator is allowed to upload.
+    """
+    from django.http import JsonResponse
+
+    from superadmin.bulk_stream import parse_upload, stream_rows, streaming_response
+
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    if role not in COORDINATOR_BULK_ROLES:
+        return JsonResponse({'error': 'Invalid role'}, status=400)
+
+    rows, numbers, error = parse_upload(request.FILES.get('csv_file'), role)
+    if error:
+        return JsonResponse({'error': error}, status=400)
+
+    return streaming_response(stream_rows(rows, numbers, role, request.user))

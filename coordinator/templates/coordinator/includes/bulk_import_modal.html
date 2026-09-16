@@ -74,6 +74,19 @@
             <span id="biProcessed-{{ role }}">0 / 0 processed</span>
             <span id="biPercent-{{ role }}">0%</span>
           </div>
+
+          <!-- Failures as they happen, so a bad sheet can be stopped early -->
+          <div id="biLiveBox-{{ role }}" class="d-none mt-3 p-2"
+               style="background:#FEF2F2; border-radius:8px; max-height:140px; overflow-y:auto;">
+            <p class="mb-1" style="font-size:0.75rem; color:#991B1B; font-weight:600;">Failed rows</p>
+            <div id="biLive-{{ role }}"></div>
+          </div>
+
+          <div class="text-center mt-3">
+            <button type="button" id="biCancel-{{ role }}" class="btn btn-sm btn-outline-danger">
+              Cancel import
+            </button>
+          </div>
         </div>
 
         <!-- Step 3: Results -->
@@ -97,6 +110,9 @@
                 <p class="text-muted mb-0" style="font-size: 0.8rem;">Total</p>
               </div>
             </div>
+
+          <p id="biCancelNote-{{ role }}" class="d-none p-2 mb-3"
+             style="background:#FFFBEB; border-radius:8px; font-size:0.8rem; color:#92400E;"></p>
           </div>
 
           <div id="biFailedSection-{{ role }}" class="d-none">
@@ -133,10 +149,12 @@
   </div>
 </div>
 
+<script src="{% static 'js/common/bulk-import.js' %}"></script>
 <script>
 (function() {
     const role = '{{ role }}';
     const uploadUrl = "{% url 'coordinator:bulk_import' role=role %}";
+    const streamUrl = "{% url 'coordinator:bulk_import_stream' role=role %}";
     const csrfToken = '{{ csrf_token }}';
 
     const dropZone = document.getElementById('biDrop-' + role);
@@ -212,93 +230,36 @@
         uploadBtn.disabled = true;
     });
 
-    uploadBtn.addEventListener('click', () => {
-        if (!selectedFile) return;
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const lines = e.target.result.split('\n').filter(l => l.trim());
-            const totalRows = Math.max(lines.length - 1, 0);
-
-            uploadSection.classList.add('d-none');
-            progressSection.classList.remove('d-none');
-            processedCount.textContent = `0 / ${totalRows} processed`;
-
-            let fakeProgress = 0;
-            const interval = setInterval(() => {
-                if (fakeProgress < 85) {
-                    fakeProgress += Math.random() * 8;
-                    fakeProgress = Math.min(fakeProgress, 85);
-                    progressBar.style.width = fakeProgress + '%';
-                    progressPercent.textContent = Math.round(fakeProgress) + '%';
-                    const processed = Math.round((fakeProgress / 100) * totalRows);
-                    processedCount.textContent = `${processed} / ${totalRows} processed`;
-                    progressText.textContent = `Processing row ${processed} of ${totalRows}...`;
-                }
-            }, 300);
-
-            const formData = new FormData();
-            formData.append('csv_file', selectedFile);
-
-            fetch(uploadUrl, {
-                method: 'POST',
-                headers: { 'X-CSRFToken': csrfToken },
-                body: formData,
-            })
-            .then(res => res.json())
-            .then(data => {
-                clearInterval(interval);
-                if (data.error) {
-                    spinner.classList.add('d-none');
-                    progressText.textContent = 'Import Failed';
-                    progressText.style.color = '#DC2626';
-                    progressSub.textContent = data.error;
-                    progressBar.style.width = '100%';
-                    progressBar.style.background = '#DC2626';
-                    return;
-                }
-                progressBar.style.width = '100%';
-                progressPercent.textContent = '100%';
-                processedCount.textContent = `${data.total} / ${data.total} processed`;
-                progressText.textContent = 'Import complete!';
-                setTimeout(() => showResults(data), 500);
-            })
-            .catch(() => {
-                clearInterval(interval);
-                spinner.classList.add('d-none');
-                progressText.textContent = 'Error';
-                progressText.style.color = '#DC2626';
-                progressSub.textContent = 'Network error. Please try again.';
-            });
-        };
-        reader.readAsText(selectedFile);
+    // Streaming import: real counts, real spreadsheet row numbers, and a
+    // Cancel that actually stops the server loop. See
+    // static/js/common/bulk-import.js for what this replaced.
+    const importer = initBulkImport({
+        streamUrl: streamUrl,
+        csrfToken: csrfToken,
+        els: {
+            uploadSection: uploadSection,
+            progressSection: progressSection,
+            resultsSection: resultsSection,
+            progressBar: progressBar,
+            progressText: progressText,
+            progressSub: progressSub,
+            processedCount: processedCount,
+            progressPercent: progressPercent,
+            spinner: spinner,
+            successCount: successCountEl,
+            failCount: failCountEl,
+            totalCount: totalCountEl,
+            failedSection: failedSection,
+            failedBody: failedBody,
+            allSuccessMsg: allSuccessMsg,
+            cancelBtn: document.getElementById('biCancel-' + role),
+            cancelNotice: document.getElementById('biCancelNote-' + role),
+            liveFailures: document.getElementById('biLive-' + role),
+            liveFailuresBox: document.getElementById('biLiveBox-' + role),
+        },
     });
 
-    function showResults(data) {
-        progressSection.classList.add('d-none');
-        resultsSection.classList.remove('d-none');
-        successCountEl.textContent = data.success;
-        failCountEl.textContent = data.failed;
-        totalCountEl.textContent = data.total;
-
-        const failed = data.results.filter(r => r.status === 'failed');
-        if (failed.length > 0) {
-            failedSection.classList.remove('d-none');
-            allSuccessMsg.classList.add('d-none');
-            failedBody.innerHTML = '';
-            failed.forEach(f => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td style="padding: 0.5rem; border-color: #F3F4F6;">${f.row}</td>
-                    <td style="padding: 0.5rem; border-color: #F3F4F6; font-weight: 500;">${f.name}</td>
-                    <td style="padding: 0.5rem; border-color: #F3F4F6; color: #DC2626;">${f.reason}</td>
-                `;
-                failedBody.appendChild(tr);
-            });
-        } else {
-            failedSection.classList.add('d-none');
-            allSuccessMsg.classList.remove('d-none');
-        }
-    }
+    uploadBtn.addEventListener('click', () => importer.start(selectedFile));
 
     importMoreBtn.addEventListener('click', () => {
         selectedFile = null;

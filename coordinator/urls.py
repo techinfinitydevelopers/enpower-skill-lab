@@ -15,6 +15,7 @@ urlpatterns = [
     path('bulk-upload/', views.bulk_upload_page, name='bulk_upload'),
     path('bulk-upload/<str:role>/sample/', views.download_sample_view, name='download_sample'),
     path('bulk-upload/<str:role>/', views.bulk_import_view, name='bulk_import'),
+    path('bulk-upload/<str:role>/stream/', views.bulk_import_stream_view, name='bulk_import_stream'),
     path('timetable/', views.timetable_list, name='timetable_list'),
     path('timetable/upload/', views.timetable_upload, name='timetable_upload'),
     path('timetable/<int:pk>/', views.timetable_detail, name='timetable_detail'),

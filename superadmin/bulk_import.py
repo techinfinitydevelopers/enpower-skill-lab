@@ -1875,3 +1875,24 @@ ROLE_PROCESSORS = {
     'parent': _process_parent,
     'coordinator': _process_coordinator,
 }
+
+
+@login_required
+@user_passes_test(is_superadmin)
+def bulk_import_stream(request, role):
+    """Streaming counterpart of `bulk_import`.
+
+    Reports progress as rows are actually processed, names the real spreadsheet
+    row on a failure, and can be abandoned mid-import by the browser. See
+    superadmin/bulk_stream.py for why each of those was needed.
+    """
+    from .bulk_stream import parse_upload, stream_rows, streaming_response
+
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    rows, numbers, error = parse_upload(request.FILES.get('csv_file'), role)
+    if error:
+        return JsonResponse({'error': error}, status=400)
+
+    return streaming_response(stream_rows(rows, numbers, role, request.user))

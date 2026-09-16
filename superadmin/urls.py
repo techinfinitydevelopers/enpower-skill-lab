@@ -1,6 +1,6 @@
 from django.urls import path
 from . import views
-from .bulk_import import download_sample_csv, bulk_import
+from .bulk_import import download_sample_csv, bulk_import, bulk_import_stream
 from . import reports
 
 
@@ -62,6 +62,7 @@ urlpatterns = [
     # Bulk Import URLs
     path('bulk-import/<str:role>/sample-csv/', download_sample_csv, name='download_sample_csv'),
     path('bulk-import/<str:role>/upload/', bulk_import, name='bulk_import'),
+    path('bulk-import/<str:role>/upload-stream/', bulk_import_stream, name='bulk_import_stream'),
     # Skill Passport
     path('skill-passport/learning-pillars/', views.learning_pillars, name='learning_pillars'),
     path('skill-passport/profiles-competencies/', views.profiles_competencies, name='profiles_competencies'),
