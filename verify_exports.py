@@ -15,6 +15,7 @@ Passwords it changes to sign in are restored from atexit.
 import atexit
 import io
 import os
+import re
 import sys
 
 import django
@@ -223,6 +224,22 @@ for key, (role, url) in PAGES.items():
     body = r.content.decode(errors='ignore')
     check(f'{key}: Export link present on {url}',
           f'/exports/{key}/' in body)
+
+    # The colour comes from a modifier class, not the base one. Without it
+    # the button is white text on nothing -- which is how it shipped.
+    match = re.search(
+        r'href="/exports/' + re.escape(key) + r'/"\s*class="([^"]*)"',
+        body.replace(chr(10), chr(32)))
+    classes = match.group(1).split() if match else []
+    css = ''
+    for sheet in re.findall(r'href="[^"]*?(css/[a-z_/-]+\.css)"', body):
+        path = os.path.join(settings.BASE_DIR, 'static', sheet)
+        if os.path.exists(path):
+            css += open(path, encoding='utf-8', errors='ignore').read()
+    backed = [c for c in classes
+              if re.search(r'\.' + re.escape(c) + r'\s*\{[^}]*background', css)]
+    check(f'{key}: the Export button has a background', bool(backed),
+          f'classes={classes}')
 
 _restore_passwords()
 

@@ -593,3 +593,14 @@ body.dark .dataTables_wrapper .dataTables_paginate .paginate_button:hover:not(.d
         padding: 0.75rem 1rem;
     }
 }
+
+/* Export: the base class carries no background of its own, so a
+   modifier is required or the button renders as white on white.
+   Slate keeps it apart from the blue, green and purple beside it. */
+.btn-export {
+    background: linear-gradient(90deg, #475569, #334155);
+}
+
+.btn-export:hover {
+    background: linear-gradient(90deg, #334155, #1E293B);
+}

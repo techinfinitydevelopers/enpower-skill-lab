@@ -567,3 +567,14 @@ body.dark .sa-table-scroll-wrapper::-webkit-scrollbar-thumb:hover {
         justify-content: center;
     }
 }
+
+/* Export: the base class carries no background of its own, so a
+   modifier is required or the button renders as white on white.
+   Slate keeps it apart from the blue, green and purple beside it. */
+.sa-btn-gradient-export {
+    background: linear-gradient(90deg, #475569, #334155);
+}
+
+.sa-btn-gradient-export:hover {
+    background: linear-gradient(90deg, #334155, #1E293B);
+}
