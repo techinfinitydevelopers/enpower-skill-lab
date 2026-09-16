@@ -55,7 +55,8 @@
       "Bash(PYTHONPATH=\"/c/Users/kunal/Desktop/Enpower Skill Lab\" ./venv/Scripts/python.exe \"C:/Users/kunal/AppData/Local/Temp/claude/C--Users-kunal-Desktop-Enpower-Skill-Lab/aa82f826-ec1a-449f-b5e6-754d42a1ec1c/scratchpad/test_school_admin_pages.py\")",
       "Bash(./venv/Scripts/python.exe -c ' *)",
       "Bash(grep -iE \"\\\\.\\(png|jpg|jpeg|svg|webp\\)$\")",
-      "Bash(PYTHONIOENCODING=utf-8 ./venv/Scripts/python.exe verify_email.py)"
+      "Bash(PYTHONIOENCODING=utf-8 ./venv/Scripts/python.exe verify_email.py)",
+      "Bash(./venv/Scripts/python.exe -)"
     ]
   }
 }

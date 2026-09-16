@@ -2,6 +2,52 @@
 
 Chronological record of completed tasks (per org policy: log after each completed task).
 
+## 2026-09-16 — Select all, not just the current page (commit 5322050)
+
+The header checkbox only ticked rows in the DOM, which on a paged table is
+one page. Selecting 1290 students meant paging through and ticking each
+page. The selection bar now offers **"Select all N rows"** once a page is
+selected and there is more beyond it.
+
+It reads rows from the DataTables cache rather than the DOM (these tables
+paginate in the browser, so every row is already there) and asks for
+`{search: "applied"}` — after a search, "select all" means the rows the
+search found, not the whole list. The header checkbox deliberately still
+ticks only the page.
+
+**Two limits sat between that and a working delete.** Both would have shown
+up as a broken database rather than an error message, and neither was
+reachable before select-all existed:
+
+1. `DATA_UPLOAD_MAX_NUMBER_FIELDS` is **1000**. Ids went up as one form
+   field each, so a select-all on the student list (1290) was rejected with
+   a 400 before any view ran. Ids now travel as a JSON body; the view still
+   accepts form fields, so nothing else had to change.
+2. gunicorn runs with `--timeout 60`. The delete ran one transaction per
+   row, so a few hundred rows in the worker would have been killed
+   part-way, leaving the list half deleted. It now deletes in bulk
+   statements (`purge_people`, `purge_schools`), and the client sends the
+   selection in batches of 300 so no single request comes near the timeout.
+
+Progress in the dialog is counted from completed batches, not animated.
+The per-row path is kept as a fallback: when a bulk statement fails the
+transaction takes the whole batch back, and retrying one at a time is the
+only way to report which row is the problem.
+
+**Verified:** `verify_bulk_delete.py` **109/109**, including that 1020 ids
+as form fields are still rejected while the same ids as JSON are not, that
+the bulk path does not run a transaction per row (47 queries for 6 rows,
+and that count is flat in the number of rows), and that a deliberately
+broken bulk path still deletes everything through the fallback. Regression:
+exports 75/75, pages 65/65, bulk-import 25/25, email 72/72, password-reset
+47/47, HTML nesting clean.
+
+Live on Railway; the served JS and CSS match the repo.
+
+**Not verified in a browser** — the select-all button, the progress bar and
+the cross-page selection were checked in the served assets and by asserting
+the server behaviour, not by clicking through the rendered page.
+
 ## 2026-09-16 — Select-and-delete on the list screens (commit f019375)
 
 Checkbox column, selection bar and a confirmation dialog on the six Super
