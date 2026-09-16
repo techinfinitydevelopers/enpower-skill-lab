@@ -18,10 +18,15 @@ body.dark {
 }
 
 /* Page Container */
+/* No width cap: every other list screen fills the content area, and this one
+   kept a 1600px centred box, so it read as a narrower page than its
+   neighbours. The same cap was removed from the coordinator list in 23b91d5;
+   this page was missed. */
 .parent-list-page {
-    padding: 1.5rem;
-    max-width: 1600px;
-    margin: 0 auto;
+    padding: 1.5rem 2rem;
+    max-width: 100%;
+    margin-left: 0;
+    margin-right: 0;
 }
 
 /* Page Header */

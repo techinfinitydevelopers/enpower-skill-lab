@@ -325,6 +325,33 @@ def run():
     for u, problem in BADLY_NESTED:
         print(f'     {u}  ->  {problem}')
 
+    # ── the list screens are the same width as each other ───────────────
+    # The parent list kept a 1600px centred container after the same cap had
+    # been removed from its neighbours, so it rendered visibly narrower than
+    # every other list and read as a broken page. Nothing server-side could
+    # see that: the page returned 200 and contained everything it should.
+    print('\nTHE LIST SCREENS ARE NOT CAPPED NARROWER THAN EACH OTHER')
+    import re as _re
+
+    capped = []
+    for sheet in ('school-list', 'student-list', 'teacher-list',
+                  'parent-list', 'pc-list', 'school-admin-list'):
+        path = os.path.join(settings.BASE_DIR, 'static', 'css', 'superadmin',
+                            f'{sheet}.css')
+        if not os.path.exists(path):
+            continue
+        css = open(path, encoding='utf-8', errors='ignore').read()
+        # Strip comments first: the cap is commented out on some of these and
+        # a commented rule is not a rule.
+        live = _re.sub(r'/\*.*?\*/', '', css, flags=_re.S)
+        for block in _re.findall(r'\.[\w-]*(?:page|wrapper)[\w-]*\s*\{[^}]*\}', live):
+            fixed = _re.search(r'max-width:\s*(\d+)px', block)
+            if fixed and 'media' not in block:
+                capped.append(f'{sheet}.css: {fixed.group(0)}')
+
+    check('no list page container is pinned to a fixed pixel width',
+          not capped, '; '.join(capped))
+
     restore_passwords()
 
     print(f'\n{"="*60}\nPASS {len(PASS)}   FAIL {len(FAIL)}')
