@@ -2,6 +2,64 @@
 
 Chronological record of completed tasks (per org policy: log after each completed task).
 
+## 2026-09-16 — Select-and-delete on the list screens (commit f019375)
+
+Checkbox column, selection bar and a confirmation dialog on the six Super
+Admin lists that already carried a per-row delete: schools, students,
+teachers, parents, coordinators, school-admins. Nothing else got one — the
+other four list screens (coordinator schools, School Admin students/parents,
+coach students) have no delete at all and were left alone.
+
+**Two defects found while surveying the cascade, both fixed:**
+
+1. `Student`, `Teacher` and `Parent` link to `accounts.User` with
+   `on_delete=SET_NULL`. `delete_student`, `delete_teacher` and
+   `delete_parent` deleted only the profile, leaving a login account that
+   still worked with nothing behind it. `delete_school_admin` and
+   `delete_coordinator` already deleted theirs — two behaviours for the
+   same action.
+2. `Student.school` and `Teacher.school` are `SET_NULL`, so deleting a
+   school left its students and coaches with a null school: off every list,
+   and still able to sign in. On a school of 200 students that is 200
+   invisible accounts.
+
+Both now go through shared helpers (`delete_with_user`,
+`delete_school_and_its_people`) that `superadmin/views.py` imports, so a row
+is removed the same way singly or in a batch.
+
+**Files**
+
+- `enpower_skill_lab/bulk_delete.py` (new) — registry + preview/delete views
+- `static/js/common/bulk-delete.js`, `static/css/common/bulk-delete.css` (new)
+- `enpower_skill_lab/urls.py` — `/bulk-delete/<key>/` and `.../preview/`
+- six list templates + their DataTables configs
+- `verify_bulk_delete.py` (new)
+
+**Safety**
+
+The preview is a separate call that destroys nothing and reports the real
+counts (score entries, project reports, feedback, attendance, login
+accounts, and for a school its classes/admins/coaches/students). Selected
+ids are filtered through the list's own queryset rather than trusted from
+the POST, and the role is read from the signed-in user, not the URL key.
+Each row deletes inside its own transaction, so one failure neither undoes
+the rest nor leaves a half-deleted school.
+
+**Verified:** `verify_bulk_delete.py` 82/82 — cascade counts against real
+rows, every other role and anonymous refused, junk and out-of-list ids
+dropped, login accounts gone with the profile, and every body row still
+having as many cells as its header. Regression: exports 75/75, pages 65/65,
+bulk-import 25/25, email 72/72, password-reset 47/47, HTML nesting clean.
+`verify_security` 26/8 — all eight are dev-environment settings
+(`DEBUG=True` locally), pre-existing and unrelated.
+
+Live on Railway; assets return 200 and the endpoint returns 403 to an
+anonymous POST.
+
+**Not verified in a browser** — the checkbox column, selection bar and
+dialog were checked in the served HTML and by asserting the CSS/JS load,
+not by looking at the rendered page.
+
 ## OPEN — Toasts still not visible on the teacher scoring page (2026-08-24)
 
 **Status: unresolved. Parked at the user's request.** Everything below is deployed and verified; the toast still does not appear on screen for the user.
