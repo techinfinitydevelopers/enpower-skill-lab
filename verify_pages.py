@@ -352,6 +352,32 @@ def run():
     check('no list page container is pinned to a fixed pixel width',
           not capped, '; '.join(capped))
 
+    # ── nothing sends a user to the old droplet's domain ────────────────
+    # enpower.techinfinity.link still resolves, to the destroyed droplet's
+    # IP, and has no MX record -- so an address there cannot receive mail
+    # and a link there cannot load. A schedule page told people to write to
+    # lbsupport@ on that domain to delete a schedule they could delete
+    # themselves with the button next to it.
+    print(chr(10) + 'NO PAGE POINTS AT THE DEAD DOMAIN')
+    import re as _re2
+
+    _guilty = []
+    for _root, _dirs, _files in os.walk(settings.BASE_DIR):
+        if any(p in _root for p in ('venv', '.git', 'node_modules', 'staticfiles')):
+            continue
+        for _f in _files:
+            if not _f.endswith('.html'):
+                continue
+            _path = os.path.join(_root, _f)
+            _text = open(_path, encoding='utf-8', errors='ignore').read()
+            # A {% comment %} explaining why it was removed is not a link.
+            _live = _re2.sub(r'\{%\s*comment\s*%\}.*?\{%\s*endcomment\s*%\}',
+                             '', _text, flags=_re2.S)
+            if 'techinfinity.link' in _live:
+                _guilty.append(os.path.relpath(_path, settings.BASE_DIR))
+    check('no template links to enpower.techinfinity.link', not _guilty,
+          '; '.join(_guilty))
+
     restore_passwords()
 
     print(f'\n{"="*60}\nPASS {len(PASS)}   FAIL {len(FAIL)}')

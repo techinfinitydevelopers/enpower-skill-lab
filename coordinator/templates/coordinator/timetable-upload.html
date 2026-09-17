@@ -58,10 +58,14 @@
         </div>
         <p id="schoolCoachLine" class="text-muted mb-3" style="font-size:12.5px;">Select a school and thinking coach below.</p>
 
-        <div class="sm-note mb-4">
-          <span class="material-symbols-outlined" style="font-size:18px;">info</span>
-          To delete schedule data, write to <strong>&nbsp;lbsupport@enpower.techinfinity.link</strong>
-        </div>
+        {% comment %}
+        A notice here told people to email lbsupport@enpower.techinfinity.link
+        to delete a schedule. Both untrue: every schedule has a working Delete
+        on the list and on its own page, for coordinators and Super Admins
+        alike, and that domain has no MX record at all while its A record
+        still points at the destroyed droplet. Mail to it cannot arrive.
+        Removed rather than readdressed -- the action is in the UI.
+        {% endcomment %}
 
         <!-- School + Coach (coordinator picks; reference shows these in header) -->
         <div class="row g-3 mb-3">
