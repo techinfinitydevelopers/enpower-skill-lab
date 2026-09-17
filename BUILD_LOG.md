@@ -2,6 +2,68 @@
 
 Chronological record of completed tasks (per org policy: log after each completed task).
 
+## 2026-09-17 — Parent email optional; import errors name the column (69d38e1, 2dcab57)
+
+**Why:** client filling the parent bulk sheet asked what to put in the
+student email column — they do not collect student emails. Two separate
+problems behind that one question.
+
+### 1. The error named the wrong thing (2dcab57)
+
+Column K reads "Student Reg ID, GR Number or Email (for Linking)" and the
+importer accepts a **registration ID or GR number first**, falling back to
+school email only when exactly one student holds it. But the error said
+`student_emails is required` — the raw parser field, invisible in the
+spreadsheet. So the client went looking for an email the column never asked
+for.
+
+Required-field errors across **all six roles** now quote the sheet heading:
+
+```
+student_emails -> Student Reg ID, GR Number or Email (for Linking) is required
+official_email -> Official Email ID is required
+school_code    -> School Code / UDISE is required
+```
+
+That is what "say which cell is wrong" has to mean for someone looking at a
+spreadsheet. `_require(row, fields, role)` is shared by all six processors.
+
+### 2. Parent email made optional (69d38e1)
+
+Checked before changing: parents are **never emailed**
+(`EMAIL_SUPPRESSED_ROLES = {PARENT, STUDENT}`) and **cannot reset a
+password** (`RESET_ALLOWED_ROLES` excludes PARENT). The address is a contact
+detail on a list screen; `mobile_number` already covers that.
+
+`Parent.email` was `EmailField(unique=True)` — not null, not blank — so
+dropping it from required_fields alone would have failed at the DB. Needed:
+
+- migration `0003_alter_parent_email`: `null=True, blank=True`, unique kept
+- **NULL, not `''`** — the column is unique, two blank strings collide where
+  two NULLs do not. Both write paths (bulk + manual form) now store `None`.
+- a null renders as the literal word **"None"** in Django templates — both
+  parent lists, view-parent and the parent's own profile now show "—", and
+  the two forms dropped `required`
+- the fallback login was `username = email`; with no address that is a blank
+  username — a User nobody can sign in as, created silently. No child matched
+  **and** no address is now refused, naming the column that would fix it.
+
+`student_emails` **stays required** — it is what produces the
+`<student-id>-par` login the client originally could not sign in to.
+
+**Timing:** production had 0 parents, so the migration converted no rows.
+Doing this after 1290 parents existed would have been far riskier.
+
+**Verified:** `verify_bulk_import` 54 → **73/73** — two parents imported with
+the column blank coexist on the unique index, store as NULL, still get the
+child-derived `-par` login, and no list prints "None". Regression: exports
+85, bulk-delete 109, timetable 54, pages 66, reports 49, email 72,
+password-reset 47.
+
+**Live:** site returns 200 after deploy. Railway runs `migrate --noinput`
+before gunicorn, so a failed migration would have taken the site down —
+it did not. **Not verified by signing in and looking at the form.**
+
 ## 2026-09-16 — Cleared the last two failing checks (commit 333d003)
 
 `verify_reports` had sat at 47/2 for a while. I had twice called those two
