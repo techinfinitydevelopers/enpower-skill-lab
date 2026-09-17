@@ -57,6 +57,7 @@ def _cleanup():
     U.objects.filter(email__startswith=MARKER).delete()
     U.objects.filter(username__startswith=MARKER).delete()
     Student.objects.filter(gr_number__startswith=MARKER).delete()
+    Parent.objects.filter(full_name__startswith=MARKER).delete()
     Teacher.objects.filter(employee_id__startswith=MARKER).delete()
     School.objects.filter(school_code__startswith=MARKER.upper()).delete()
     for model in (SchoolAdmin, Teacher, Parent, ProgramCoordinator, Student):
@@ -361,6 +362,122 @@ if host_school:
         check('and gives a reason a person can act on',
               len(dupes[0].get('reason') or '') > 10,
               repr(dupes[0].get('reason')))
+
+
+# -- a parent with no email address -------------------------------------
+# The platform never emails a parent and they cannot reset a password, so an
+# address the school does not have should not block an import. Two of them
+# must also coexist: the column is unique, and '' collides where NULL does not.
+print(chr(10) + 'A PARENT CAN BE IMPORTED WITH NO EMAIL')
+
+from datetime import date as _date                         # noqa: E402
+
+from accounts.onboarding_ids import student_id_for         # noqa: E402
+from parent.models import Parent                           # noqa: E402
+from schools.models import School as _School               # noqa: E402
+from student.models import Student as _Student             # noqa: E402
+
+check('email is no longer a required column on the parent sheet',
+      'email' not in EXCEL_CONFIG['parent']['required_fields'])
+check('but the student link still is',
+      'student_emails' in EXCEL_CONFIG['parent']['required_fields'])
+
+_host = _School.objects.first()
+_kids = []
+if _host:
+    for _i, (_fn, _ln) in enumerate((('Zeta', 'Noemail'), ('Theta', 'Noemail'))):
+        _k = _Student.objects.create(
+            first_name=_fn, last_name=_ln, gender='Male',
+            date_of_birth=_date(2013, 3, _i + 1), student_class='8',
+            division='C', roll_number=str(700 + _i), academic_year='2026-2027',
+            school_board='CBSE', school_email=f'{MARKER}ne{_i}@example.com',
+            enrollment_date=_date(2026, 6, 1), emergency_name='X',
+            emergency_relationship='Parent', emergency_mobile='9000000000',
+            gr_number=f'{MARKER}ne{_i}', school=_host)
+        _k.skill_lab_reg_id = student_id_for(
+            _host, _fn, _ln, '8', 'C', _k.date_of_birth, '2026-2027')
+        _k.save()
+        _kids.append(_k)
+
+if _kids:
+    from openpyxl import load_workbook as _load            # noqa: E402
+
+    _r = admin.get('/super-admin/bulk-import/parent/sample-csv/')
+    _wb = _load(io.BytesIO(_r.content))
+    _ws = _wb.active
+    _fields = [str(c.value or '').strip() for c in _ws[2]]
+    _base = [[c.value for c in row] for row in _ws.iter_rows(min_row=3)
+             if any(c.value not in (None, '') for c in row)][0]
+    _ws.delete_rows(3, _ws.max_row)
+    for _i, _k in enumerate(_kids):
+        _row = list(_base)
+        _row[_fields.index('full_name')] = f'{MARKER} NoEmail {_i}'
+        _row[_fields.index('email')] = ''                  # deliberately blank
+        _row[_fields.index('mobile_number')] = f'900007000{_i}'
+        _row[_fields.index('student_emails')] = _k.skill_lab_reg_id
+        _ws.append(_row)
+    _buf = io.BytesIO()
+    _wb.save(_buf)
+    _buf.seek(0)
+
+    _up = admin.post('/super-admin/bulk-import/parent/upload-stream/',
+                     {'csv_file': SimpleUploadedFile('p.xlsx', _buf.read())})
+    _ev = [json.loads(l) for l in
+           b''.join(_up.streaming_content).decode().splitlines() if l.strip()]
+    _rows = [e for e in _ev if e.get('type') == 'row']
+    _bad = [e for e in _rows if e.get('status') == 'failed']
+    check('both rows import with the email column blank', len(_rows) == 2 and not _bad,
+          '; '.join(f"row {e['row']}: {e.get('reason')}" for e in _bad))
+
+    _made = list(Parent.objects.filter(full_name__startswith=f'{MARKER} NoEmail'))
+    check('two blank addresses coexist on a unique column', len(_made) == 2,
+          '' if len(_made)==2 else f'{len(_made)} created -- NULL, not empty string, is what lets them')
+    check('the address is stored as NULL, not an empty string',
+          all(p.email is None for p in _made),
+          str([p.email for p in _made]))
+
+    for _p in _made:
+        check(f'{_p.parent_id}: the child-derived login still works',
+              Client().login(username=_p.parent_id, password=_p.parent_id))
+        check(f'{_p.parent_id}: it is the child\'s id with -par',
+              _p.parent_id.endswith('-par'), _p.parent_id)
+
+    _body = admin.get('/super-admin/parents/', follow=True).content.decode(
+        errors='ignore')
+    # A null renders as the word "None" unless a template filter stops it.
+    check('the list does not print the word "None" for a missing address',
+          '>None<' not in _body)
+
+    # With no child matched AND no address there is nothing to sign in with.
+    # That must be refused, not turned into a User nobody can use.
+    _wb2 = _load(io.BytesIO(admin.get(
+        '/super-admin/bulk-import/parent/sample-csv/').content))
+    _ws2 = _wb2.active
+    _row2 = list(_base)
+    _row2[_fields.index('full_name')] = f'{MARKER} Nothing'
+    _row2[_fields.index('email')] = ''
+    _row2[_fields.index('mobile_number')] = '9000079999'
+    _row2[_fields.index('student_emails')] = 'no-such-student-anywhere'
+    _ws2.delete_rows(3, _ws2.max_row)
+    _ws2.append(_row2)
+    _b2 = io.BytesIO()
+    _wb2.save(_b2)
+    _b2.seek(0)
+    _up2 = admin.post('/super-admin/bulk-import/parent/upload-stream/',
+                      {'csv_file': SimpleUploadedFile('p.xlsx', _b2.read())})
+    _ev2 = [json.loads(l) for l in
+            b''.join(_up2.streaming_content).decode().splitlines() if l.strip()]
+    _r2 = [e for e in _ev2 if e.get('type') == 'row']
+    _failed2 = [e for e in _r2 if e.get('status') == 'failed']
+    check('no child and no address is refused, not half-created',
+          bool(_failed2), '' if _failed2 else 'a parent was created with nothing to sign in with')
+    if _failed2:
+        check('and the refusal names the column that would fix it',
+              'Reg ID' in (_failed2[0].get('reason') or ''),
+              _failed2[0].get('reason'))
+
+    _Student.objects.filter(gr_number__startswith=f'{MARKER}ne').delete()
+    Parent.objects.filter(full_name__startswith=MARKER).delete()
 
 _cleanup()
 

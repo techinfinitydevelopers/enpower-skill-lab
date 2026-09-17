@@ -672,7 +672,9 @@ EXCEL_CONFIG = {
             'volunteer_interest': ['yes', 'no'],
         },
         'required_fields': {
-            'full_name', 'relation_to_student', 'mobile_number', 'email',
+            'full_name', 'relation_to_student', 'mobile_number',
+            # email is optional: a parent is never emailed and cannot reset a
+            # password, so the address is a contact detail, not a credential.
             'student_emails',
             'preferred_contact', 'residential_address', 'city', 'state', 'pin_code',
             'contact_method', 'preferred_language', 'fee_category',
@@ -1585,7 +1587,7 @@ def _ensure_structured_parent_id(parent, student):
 def _process_parent(row, created_by):
     from parent.models import Parent
 
-    required = ['full_name', 'relation_to_student', 'mobile_number', 'email',
+    required = ['full_name', 'relation_to_student', 'mobile_number',
                 'student_emails',
                 'preferred_contact', 'residential_address', 'city', 'state', 'pin_code',
                 'contact_method', 'preferred_language', 'fee_category',
@@ -1593,8 +1595,9 @@ def _process_parent(row, created_by):
 
     _require(row, required, 'parent')
 
-    email = row['email']
-    if email and User.objects.filter(email=email).exists():
+    email = _opt(row.get('email'))
+    if email and (User.objects.filter(email=email).exists()
+                  or Parent.objects.filter(email__iexact=email).exists()):
         raise ValueError(f'Email "{email}" already exists')
 
     name_parts = row['full_name'].split(' ', 1)
@@ -1632,8 +1635,18 @@ def _process_parent(row, created_by):
         username = parent_id
         password = parent_id
     else:
-        # No child imported yet — fall back to email login + random password;
-        # the model auto-generates a temporary P##### id.
+        # No child matched. Fall back to email login + random password; the
+        # model auto-generates a temporary P##### id.
+        #
+        # With the address now optional there may be nothing to sign in with
+        # at all, and a blank username is a User nobody can ever use -- worse
+        # than a refusal, because it looks like the import worked. Say so
+        # instead, and name the column that would fix it.
+        if not email:
+            raise ValueError(
+                'No child matched, and no Email Address to sign in with. '
+                'Fill "Student Reg ID, GR Number or Email (for Linking)" '
+                'with the child\'s registration ID.')
         parent_id = ''
         username = email
         password = generate_password()

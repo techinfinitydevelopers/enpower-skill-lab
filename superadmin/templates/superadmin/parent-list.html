@@ -63,7 +63,7 @@
                             <span class="parent-name">{{ parent.full_name }}</span>
                         </div>
                     </td>
-                    <td>{{ parent.email }}</td>
+                    <td>{{ parent.email|default:"—" }}</td>
                     <td>{{ parent.children_names|default:"-" }}</td>
                     <td>{{ parent.children_grades|default:"-" }}</td>
                     <td>

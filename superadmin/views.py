@@ -1583,7 +1583,9 @@ def onboard_parent(request):
                 relation_to_student=data.get('relation_to_student', ''),
                 mobile_number=data.get('mobile_number', ''),
                 alternate_mobile=data.get('alternate_mobile', '') or None,
-                email=data.get('email', ''),
+                # NULL, not '': the column is unique, and two parents with a
+                # blank string would collide while two NULLs do not.
+                email=data.get('email', '').strip() or None,
                 occupation=data.get('occupation', '') or None,
                 organization=data.get('organization', '') or None,
                 education_level=data.get('education_level', '') or None,
@@ -1748,7 +1750,9 @@ def edit_parent(request, parent_id):
             parent.relation_to_student = data.get('relation_to_student', parent.relation_to_student)
             parent.mobile_number = data.get('mobile_number', parent.mobile_number)
             parent.alternate_mobile = data.get('alternate_mobile', '') or None
-            parent.email = data.get('email', parent.email)
+            # NULL rather than '': the column is unique and two blank
+            # strings would collide, while two NULLs do not.
+            parent.email = (data.get('email', parent.email) or '').strip() or None
             parent.occupation = data.get('occupation', '') or None
             parent.organization = data.get('organization', '') or None
             parent.education_level = data.get('education_level', '') or None

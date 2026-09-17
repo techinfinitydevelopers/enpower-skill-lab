@@ -104,7 +104,11 @@ class Parent(models.Model):
     relation_to_student = models.CharField(max_length=20, choices=RELATION_CHOICES)
     mobile_number = models.CharField(max_length=15)
     alternate_mobile = models.CharField(max_length=15, blank=True, null=True)
-    email = models.EmailField(unique=True)
+    # Optional: a parent is never emailed by the platform (PARENT is in
+    # EMAIL_SUPPRESSED_ROLES) and cannot use the password-reset flow, so an
+    # address the school does not have is not worth blocking an import for.
+    # Still unique when present; NULL repeats freely, blank '' would not.
+    email = models.EmailField(unique=True, null=True, blank=True)
     occupation = models.CharField(max_length=100, blank=True, null=True)
     organization = models.CharField(max_length=200, blank=True, null=True)
     education_level = models.CharField(max_length=20, choices=EDUCATION_LEVEL_CHOICES, blank=True, null=True)
