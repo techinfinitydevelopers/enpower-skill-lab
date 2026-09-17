@@ -130,9 +130,39 @@ print('\nROW NUMBERS  (the spreadsheet\'s, not the list index)')
 check('data rows are reported as 3, 4, 5',
       [e['row'] for e in rows] == [3, 4, 5], str([e['row'] for e in rows]))
 failed = [e for e in rows if e['status'] == 'failed']
-check('the broken row is named by its own number',
-      any(e['row'] == 4 and 'full_name' in (e.get('reason') or '') for e in failed),
+# The reason quotes the column heading, not the raw field name -- "Full Name",
+# not "full_name" -- because the heading is what the person filling the sheet
+# is looking at. Asserting the raw name would push the message back to
+# something they cannot find in their spreadsheet.
+check('the broken row is named by its own number, and by its column',
+      any(e['row'] == 4 and 'Full Name' in (e.get('reason') or '') for e in failed),
       '; '.join(f"row {e['row']}: {e.get('reason')}" for e in failed))
+# Every required column must be nameable the way the sheet names it. A
+# message quoting the raw field sent a client looking for an email address
+# when the column asks for a registration ID.
+print(chr(10) + 'REQUIRED-COLUMN ERRORS QUOTE THE COLUMN HEADING')
+from superadmin.bulk_import import EXCEL_CONFIG, _require    # noqa: E402
+
+for _role, _cfg in EXCEL_CONFIG.items():
+    labels = _cfg.get('header_map', {})
+    bad = []
+    for _field in sorted(_cfg.get('required_fields', ())):
+        try:
+            _require({}, (_field,), _role)
+        except ValueError as exc:
+            if str(exc).startswith(_field + ' '):
+                bad.append(_field)
+    check(f'{_role}: every required column is named as the sheet names it',
+          not bad, ('raw field name in: ' + ', '.join(bad)) if bad else '')
+
+try:
+    _require({}, ('student_emails',), 'parent')
+    _linking = ''
+except ValueError as exc:
+    _linking = str(exc)
+check('the parent sheet says a Reg ID or GR Number will do, not just an email',
+      'Reg ID' in _linking and 'GR Number' in _linking, _linking)
+
 check('every failure carries a reason',
       all(e.get('reason') for e in failed))
 check('every row carries the running counts',

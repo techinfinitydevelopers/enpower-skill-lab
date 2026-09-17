@@ -1130,6 +1130,21 @@ def _digits(row, field, length, required=True):
     return cleaned
 
 
+def _require(row, fields, role):
+    """Reject a row missing a required column, naming it as the sheet does.
+
+    The raw field name is what the parser reads; it is not what the person
+    filling the sheet sees. "student_emails is required" sent a client
+    hunting for an email address when that column actually asks for the
+    student's registration ID -- the label in row 1 says so, the error did
+    not. Errors now quote the label, so the message and the column heading
+    are the same words.
+    """
+    labels = EXCEL_CONFIG.get(role, {}).get('header_map', {})
+    for field in fields:
+        if not row.get(field):
+            raise ValueError(f'{labels.get(field, field)} is required')
+
 def _process_school(row, created_by):
     """Create one school from a spreadsheet row.
 
@@ -1149,10 +1164,7 @@ def _process_school(row, created_by):
     school_name = (row.get('school_name') or '').strip()
     school_code = (row.get('school_code') or '').strip()
 
-    if not school_name:
-        raise ValueError('school_name is required')
-    if not school_code:
-        raise ValueError('school_code is required')
+    _require(row, ('school_name', 'school_code'), 'school')
 
     # school_code is unique, so the IntegrityError would otherwise surface as
     # a database message the Super Admin cannot act on.
@@ -1235,16 +1247,8 @@ def _process_school_admin(row, created_by):
     gender = row.get('gender', '')
     school_name = row.get('school_name', '')
 
-    if not full_name:
-        raise ValueError('full_name is required')
-    if not email:
-        raise ValueError('email is required')
-    if not phone:
-        raise ValueError('phone is required')
-    if not gender:
-        raise ValueError('gender is required')
-    if not school_name:
-        raise ValueError('school_name is required')
+    _require(row, ('full_name', 'email', 'phone', 'gender', 'school_name'),
+             'school_admin')
 
     school = School.objects.filter(school_name__iexact=school_name).first()
     if not school:
@@ -1299,9 +1303,7 @@ def _process_teacher(row, created_by):
                 'emergency_contact_name', 'emergency_relation', 'emergency_mobile',
                 'school_name']
 
-    for field in required:
-        if not row.get(field):
-            raise ValueError(f'{field} is required')
+    _require(row, required, 'teacher')
 
     email = row['official_email']
     if User.objects.filter(username=email).exists():
@@ -1414,9 +1416,7 @@ def _process_student(row, created_by):
                 'emergency_name', 'emergency_relationship', 'emergency_mobile',
                 'parent_email']
 
-    for field in required:
-        if not row.get(field):
-            raise ValueError(f'{field} is required')
+    _require(row, required, 'student')
 
     email = row['school_email']
     gr_number = (row.get('gr_number') or '').strip() or None
@@ -1591,9 +1591,7 @@ def _process_parent(row, created_by):
                 'contact_method', 'preferred_language', 'fee_category',
                 'emergency_name', 'emergency_relation', 'emergency_phone']
 
-    for field in required:
-        if not row.get(field):
-            raise ValueError(f'{field} is required')
+    _require(row, required, 'parent')
 
     email = row['email']
     if email and User.objects.filter(email=email).exists():
@@ -1718,9 +1716,7 @@ def _process_coordinator(row, created_by):
                 'id_proof',
                 'program_assigned', 'joining_date', 'employment_type']
 
-    for field in required:
-        if not row.get(field):
-            raise ValueError(f'{field} is required')
+    _require(row, required, 'coordinator')
 
     email = row['official_email']
     if User.objects.filter(username=email).exists():
