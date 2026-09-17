@@ -12,6 +12,12 @@ nothing on screen will show them any more.
 
     python manage.py check_coach_accounts
     python manage.py check_coach_accounts --fix-orphan-logins
+    python manage.py check_coach_accounts --delete-orphan-logins
+
+Which of the two to use turns on one fact that is easy to miss: onboarding
+refuses an email that any account already holds, and it does not check whether
+that account is active. Deactivating an orphan therefore leaves the person
+un-onboardable under their own address; only deleting it frees them.
 """
 
 from django.contrib.auth import get_user_model
@@ -27,7 +33,15 @@ class Command(BaseCommand):
             '--fix-orphan-logins', action='store_true',
             help='Deactivate coach logins that have no Teacher profile. '
                  'Deactivates, never deletes -- the account may be a person '
-                 'whose profile was removed by mistake.')
+                 'whose profile was removed by mistake. Note this does NOT '
+                 'free the email address for re-onboarding.')
+        parser.add_argument(
+            '--delete-orphan-logins', action='store_true',
+            help='Delete them outright, freeing the email address so the '
+                 'person can be onboarded properly. Every reference to them '
+                 'is SET_NULL, so anything they were assigned to becomes '
+                 'unassigned rather than being deleted -- the counts printed '
+                 'above say how much.')
 
     def handle(self, *args, **options):
         from teacher.models import Teacher
@@ -67,6 +81,19 @@ class Command(BaseCommand):
                 self.stdout.write(
                     f'     id={u.id:<6} {u.username:<38} {name:<26} '
                     f'active={u.is_active}')
+                # Every reference is SET_NULL, so deleting the login unassigns
+                # these rather than removing them. Worth knowing the number
+                # before choosing between deactivate and delete.
+                for label, count in self._references(u):
+                    if count:
+                        self.stdout.write(f'               assigned to {count} {label}')
+            self.stdout.write('')
+            self.stdout.write(
+                '  Deactivating keeps the email taken, so onboarding the same '
+                'person again will still be refused.')
+            self.stdout.write(
+                '  Deleting frees it. Nothing cascades: every reference above '
+                'is SET_NULL and simply becomes unassigned.')
         else:
             self.stdout.write(self.style.SUCCESS(
                 '  every coach login has a Teacher profile'))
@@ -90,9 +117,37 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS(
                 f'  deactivated {count} orphan login(s). Nothing was deleted; '
                 f'reactivate from the admin if a profile should be restored.'))
+        elif options['delete_orphan_logins'] and orphan_logins:
+            self.stdout.write('')
+            with transaction.atomic():
+                count, _ = User.objects.filter(
+                    id__in=[u.id for u in orphan_logins]).delete()
+            self.stdout.write(self.style.SUCCESS(
+                f'  deleted {len(orphan_logins)} orphan login(s). Their email '
+                f'addresses are free; onboard the people who should be coaches '
+                f'through Onboard Thinking Coaches.'))
         elif orphan_logins:
             self.stdout.write('')
             self.stdout.write(
-                '  run with --fix-orphan-logins to deactivate them '
-                '(deactivate, not delete).')
+                '  --fix-orphan-logins   deactivate (email stays taken)')
+            self.stdout.write(
+                '  --delete-orphan-logins  delete (email freed, assignments '
+                'become unassigned)')
         self.stdout.write('')
+
+    def _references(self, user):
+        """What this login is attached to. All SET_NULL, so all unassignable."""
+        from attendance.models import (AttendanceSession, DailySessionFeedback,
+                                       Timetable, WeeklySessionFeedback)
+        from schools.models import Class
+
+        return [
+            ('class(es)', Class.objects.filter(thinking_coach=user).count()),
+            ('timetable(s)', Timetable.objects.filter(thinking_coach=user).count()),
+            ('attendance session(s)',
+             AttendanceSession.objects.filter(thinking_coach=user).count()),
+            ('daily feedback row(s)',
+             DailySessionFeedback.objects.filter(thinking_coach=user).count()),
+            ('weekly feedback row(s)',
+             WeeklySessionFeedback.objects.filter(thinking_coach=user).count()),
+        ]

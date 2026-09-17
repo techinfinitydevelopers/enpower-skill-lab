@@ -395,6 +395,40 @@ check('--fix-orphan-logins deactivates it', not _orphan.is_active)
 check('and does not delete it -- a profile may have gone by mistake',
       U.objects.filter(id=_orphan.id).exists())
 
+# Which flag to use turns on this: onboarding refuses an email any account
+# holds, active or not. So deactivating leaves the person un-onboardable
+# under their own address and only deleting frees it.
+check('a deactivated login still holds its email, so onboarding stays blocked',
+      U.objects.filter(email=_orphan.email).exists())
+
+# What the login is attached to decides whether deleting is safe, so the
+# report has to say. Every reference is SET_NULL: unassigned, not destroyed.
+from schools.models import Class as _Class                # noqa: E402
+
+_cls = _Class.objects.first()
+_had = None
+if _cls:
+    _had = _cls.thinking_coach_id
+    _cls.thinking_coach = _orphan
+    _cls.save(update_fields=['thinking_coach'])
+    _out3 = StringIO()
+    call_command('check_coach_accounts', stdout=_out3)
+    check('the report says what the orphan is assigned to',
+          'assigned to 1 class' in _out3.getvalue(),
+          '' if 'assigned to 1 class' in _out3.getvalue() else 'deleting blind is how assignments disappear quietly')
+
+_out4 = StringIO()
+call_command('check_coach_accounts', '--delete-orphan-logins', stdout=_out4)
+check('--delete-orphan-logins frees the email',
+      not U.objects.filter(id=_orphan.id).exists())
+if _cls:
+    _cls.refresh_from_db()
+    check('and the class it was on survives, merely unassigned',
+          _Class.objects.filter(id=_cls.id).exists()
+          and _cls.thinking_coach_id is None)
+    _cls.thinking_coach_id = _had
+    _cls.save(update_fields=['thinking_coach'])
+
 U.objects.filter(id=_orphan.id).delete()
 
 
