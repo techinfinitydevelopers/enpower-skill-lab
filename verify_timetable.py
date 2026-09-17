@@ -329,6 +329,75 @@ for name, path in templates.items():
     check(f'{name} template hardcodes no coordinator route',
           'coordinator:timetable' not in html)
 
+
+# ── the coach dropdown and the coach list agree ────────────────────────
+# They read different tables. The list reads Teacher; the dropdown read
+# User.role. A login whose Teacher profile was deleted stayed a "coach"
+# forever -- assignable on a timetable, absent from the screen that manages
+# coaches. That is the shape of the bug the client reported.
+print('\nTHE COACH DROPDOWN MATCHES THE COACH LIST')
+
+from teacher.models import Teacher                          # noqa: E402
+
+_orphan = U.objects.create_user(
+    username=f'{MARKER}orphancoach', password=PASSWORD,
+    role='THINKING_COACH', first_name='ZZ', last_name='OrphanCoach')
+check('a coach login with no Teacher profile exists to test with',
+      not Teacher.objects.filter(user=_orphan).exists())
+
+_upload = admin.get(reverse(SA['upload']), follow=True).content.decode(
+    errors='ignore')
+check('loading the timetable form works', bool(_upload))
+check('the orphan login is NOT offered as a coach',
+      'ZZ OrphanCoach' not in _upload and _orphan.username not in _upload,
+      'a login with no profile is assignable on a timetable')
+
+# Everything the dropdown does offer must be on the coach list.
+_listed = {t.user_id for t in Teacher.objects.filter(user__isnull=False)}
+_offered = set(
+    U.objects.filter(role='THINKING_COACH', teacher_profile__isnull=False)
+    .values_list('id', flat=True))
+check('every coach the dropdown offers has a Teacher profile',
+      not (_offered - _listed),
+      '' if not (_offered - _listed) else f'{len(_offered - _listed)} without one')
+
+# And a real coach is still offered -- narrowing must not empty the list.
+_real = (Teacher.objects.select_related('user')
+         .filter(user__isnull=False, user__role='THINKING_COACH').first())
+if _real:
+    check('a coach that does have a profile is still offered',
+          _real.user_id in _offered, _real.full_name)
+    check('and their name reaches the form',
+          (_real.user.get_full_name() or _real.user.username).split()[0]
+          in _upload if _upload else False)
+else:
+    print('  ..    no coach with both a profile and a login on this database')
+
+# The diagnostic exists and reports the orphan, because nothing on screen
+# will show it any more now that the dropdown filters it out.
+from io import StringIO                                     # noqa: E402
+
+from django.core.management import call_command             # noqa: E402
+
+_out = StringIO()
+call_command('check_coach_accounts', stdout=_out)
+_report = _out.getvalue()
+check('check_coach_accounts reports the orphan login',
+      f'{MARKER}orphancoach' in _report,
+      'the only way left to find these is the command')
+check('and it changes nothing without being asked',
+      U.objects.filter(id=_orphan.id, is_active=True).exists())
+
+_out2 = StringIO()
+call_command('check_coach_accounts', '--fix-orphan-logins', stdout=_out2)
+_orphan.refresh_from_db()
+check('--fix-orphan-logins deactivates it', not _orphan.is_active)
+check('and does not delete it -- a profile may have gone by mistake',
+      U.objects.filter(id=_orphan.id).exists())
+
+U.objects.filter(id=_orphan.id).delete()
+
+
 _cleanup()
 
 print('\n' + '=' * 62)

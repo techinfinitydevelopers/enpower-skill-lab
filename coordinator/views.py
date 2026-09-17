@@ -436,7 +436,13 @@ def timetable_edit(request, pk):
         messages.error(request, 'Timetable not found or not available to you.')
         return redirect(_tt_url(request, 'list'))
 
-    thinking_coaches = User.objects.filter(role='THINKING_COACH').order_by('first_name', 'username')
+    # Only coaches that the Thinking Coaches list also shows. The dropdown
+    # used to read User.role alone while the list reads Teacher, so a login
+    # left behind by a deleted profile still appeared here and nowhere else --
+    # assignable on a timetable, invisible on the screen that manages them.
+    thinking_coaches = (User.objects
+                       .filter(role='THINKING_COACH', teacher_profile__isnull=False)
+                       .order_by('first_name', 'username'))
 
     if request.method == 'POST':
         school_id = request.POST.get('school', '').strip()
@@ -545,7 +551,13 @@ def timetable_upload(request):
     Flow: select school -> assign thinking coach -> grade + division ->
     academic year -> program -> upload schedule file -> notes."""
     assigned_schools = _timetable_schools(request)
-    thinking_coaches = User.objects.filter(role='THINKING_COACH').order_by('first_name', 'username')
+    # Only coaches that the Thinking Coaches list also shows. The dropdown
+    # used to read User.role alone while the list reads Teacher, so a login
+    # left behind by a deleted profile still appeared here and nowhere else --
+    # assignable on a timetable, invisible on the screen that manages them.
+    thinking_coaches = (User.objects
+                       .filter(role='THINKING_COACH', teacher_profile__isnull=False)
+                       .order_by('first_name', 'username'))
 
     if request.method == 'POST':
         school_id = request.POST.get('school', '').strip()
@@ -629,7 +641,13 @@ def assign_coaches(request):
     All operations are scoped to the coordinator's assigned schools for security."""
     assigned_schools = _coordinator_schools(request)
     school_ids = list(assigned_schools.values_list('id', flat=True))
-    thinking_coaches = User.objects.filter(role='THINKING_COACH').order_by('first_name', 'username')
+    # Only coaches that the Thinking Coaches list also shows. The dropdown
+    # used to read User.role alone while the list reads Teacher, so a login
+    # left behind by a deleted profile still appeared here and nowhere else --
+    # assignable on a timetable, invisible on the screen that manages them.
+    thinking_coaches = (User.objects
+                       .filter(role='THINKING_COACH', teacher_profile__isnull=False)
+                       .order_by('first_name', 'username'))
 
     if request.method == 'POST':
         class_id = request.POST.get('class_id', '').strip()
