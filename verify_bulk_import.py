@@ -46,6 +46,19 @@ restore = {}
 MARKER = 'zzbulkcheck'
 
 
+def _drop(qs):
+    """Delete these profiles and the login accounts behind them.
+
+    The FK is SET_NULL, so deleting a Parent or Student on its own leaves a
+    User holding the <child>-par / -stu username. The next run then resolves
+    to <child>-2-par and fails on leftovers from the last one rather than on
+    anything real.
+    """
+    ids = list(qs.filter(user__isnull=False).values_list('user_id', flat=True))
+    qs.delete()
+    if ids:
+        U.objects.filter(id__in=ids).delete()
+
 def _cleanup():
     from coordinator.models import ProgramCoordinator
     from parent.models import Parent
@@ -54,10 +67,14 @@ def _cleanup():
     from student.models import Student
     from teacher.models import Teacher
 
+    # Take the login accounts with the profiles. The FK is SET_NULL, so
+    # deleting a Parent leaves its User behind -- and that User still holds
+    # the <child>-par username, so the next run's id resolves to
+    # <child>-2-par and the run fails on a leftover from the last one.
     U.objects.filter(email__startswith=MARKER).delete()
     U.objects.filter(username__startswith=MARKER).delete()
-    Student.objects.filter(gr_number__startswith=MARKER).delete()
-    Parent.objects.filter(full_name__startswith=MARKER).delete()
+    _drop(Student.objects.filter(gr_number__startswith=MARKER))
+    _drop(Parent.objects.filter(full_name__startswith=MARKER))
     Teacher.objects.filter(employee_id__startswith=MARKER).delete()
     School.objects.filter(school_code__startswith=MARKER.upper()).delete()
     for model in (SchoolAdmin, Teacher, Parent, ProgramCoordinator, Student):
@@ -476,8 +493,141 @@ if _kids:
               'Reg ID' in (_failed2[0].get('reason') or ''),
               _failed2[0].get('reason'))
 
-    _Student.objects.filter(gr_number__startswith=f'{MARKER}ne').delete()
-    Parent.objects.filter(full_name__startswith=MARKER).delete()
+    _drop(_Student.objects.filter(gr_number__startswith=f'{MARKER}ne'))
+    _drop(Parent.objects.filter(full_name__startswith=MARKER))
+
+
+# -- the whole journey, end to end --------------------------------------
+# Student -> parent linked to that student -> Download Credentials -> log in
+# with exactly what the CSV printed. Each step already passed alone; the
+# journey did not, because the student sheet required a parent email while the
+# parent needed the student's Reg ID. Neither could be created first.
+print(chr(10) + 'STUDENT, THEN PARENT, THEN THE CREDENTIALS FILE')
+
+import csv as _csv                                         # noqa: E402
+
+from openpyxl import load_workbook as _load2               # noqa: E402
+from parent.models import Parent as _Parent                # noqa: E402
+from schools.models import School as _Sch                  # noqa: E402
+from student.models import Student as _Stu                 # noqa: E402
+
+check('the student sheet does not demand a parent that cannot exist yet',
+      'parent_email' not in EXCEL_CONFIG['student']['required_fields'],
+      'requiring it deadlocks student-then-parent')
+
+_school = _Sch.objects.first()
+
+
+def _one_row(role, mutate):
+    r = admin.get(f'/super-admin/bulk-import/{role}/sample-csv/')
+    wb = _load2(io.BytesIO(r.content))
+    ws = wb.active
+    fields = [str(c.value or '').strip() for c in ws[2]]
+    base = [[c.value for c in row] for row in ws.iter_rows(min_row=3)
+            if any(c.value not in (None, '') for c in row)][0]
+    row = list(base)
+    mutate(fields, row)
+    ws.delete_rows(3, ws.max_row)
+    ws.append(row)
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    resp = admin.post(f'/super-admin/bulk-import/{role}/upload-stream/',
+                      {'csv_file': SimpleUploadedFile('x.xlsx', buf.read())})
+    events = [json.loads(l) for l in
+              b''.join(resp.streaming_content).decode().splitlines() if l.strip()]
+    return [e for e in events if e.get('type') == 'row']
+
+
+if _school:
+    def _student(f, row):
+        row[f.index('first_name')] = MARKER
+        row[f.index('last_name')] = 'Journey'
+        row[f.index('school_name')] = _school.school_name
+        row[f.index('school_email')] = f'{MARKER}journey@example.com'
+        row[f.index('gr_number')] = f'{MARKER}jr'
+        row[f.index('student_class')] = '6'
+        row[f.index('division')] = 'A'
+        row[f.index('roll_number')] = '911'
+        row[f.index('parent_email')] = ''          # deliberately blank
+
+    _r = _one_row('student', _student)
+    _bad = [e for e in _r if e.get('status') == 'failed']
+    check('a student imports with Parent Email left blank', _r and not _bad,
+          '; '.join(f"row {e['row']}: {e.get('reason')}" for e in _bad))
+
+    _kid = _Stu.objects.filter(gr_number=f'{MARKER}jr').first()
+    check('the student got a structured registration id',
+          _kid is not None and (_kid.skill_lab_reg_id or '').endswith('-stu'),
+          _kid.skill_lab_reg_id if _kid else 'no student')
+
+    if _kid:
+        def _parent(f, row):
+            row[f.index('full_name')] = f'{MARKER} Journey Parent'
+            row[f.index('email')] = ''             # also blank
+            row[f.index('mobile_number')] = '9000091111'
+            row[f.index('student_emails')] = _kid.skill_lab_reg_id
+
+        _r2 = _one_row('parent', _parent)
+        _bad2 = [e for e in _r2 if e.get('status') == 'failed']
+        check('a parent imports linked by that Reg ID', _r2 and not _bad2,
+              '; '.join(f"row {e['row']}: {e.get('reason')}" for e in _bad2))
+
+        _par = _Parent.objects.filter(
+            full_name=f'{MARKER} Journey Parent').first()
+        check('the parent id is the child id with -par',
+              _par is not None
+              and _par.parent_id == _kid.skill_lab_reg_id.replace('-stu', '-par'),
+              (_par.parent_id if _par else 'no parent')
+              + ' vs ' + _kid.skill_lab_reg_id)
+
+        # -- the credentials file --------------------------------------
+        _resp = admin.get('/super-admin/export-credentials/')
+        check('the credentials file downloads', _resp.status_code == 200,
+              f'HTTP {_resp.status_code}')
+        _rows = list(_csv.reader(io.StringIO(_resp.content.decode())))
+        _ours = [r for r in _rows if len(r) > 6 and MARKER in r[1]]
+        check('it lists both the student and the parent',
+              {r[0] for r in _ours} == {'Student', 'Parent'},
+              str([(r[0], r[1]) for r in _ours]))
+
+        # -- and the credentials actually work -------------------------
+        for _row in _ours:
+            _ok = Client().login(username=_row[5], password=_row[6])
+            check(f'{_row[0]}: the file\'s own id and password sign in', _ok,
+                  f'id={_row[5]} password={_row[6]}')
+
+        _parent_row = next((r for r in _ours if r[0] == 'Parent'), None)
+        if _parent_row:
+            _c = Client()
+            _c.login(username=_parent_row[5], password=_parent_row[6])
+            _dash = _c.get('/parent/dashboard/', follow=True)
+            check('the parent dashboard opens with no redirect loop',
+                  _dash.status_code == 200 and len(_dash.redirect_chain) <= 1,
+                  f'HTTP {_dash.status_code}, {len(_dash.redirect_chain)} redirects')
+            check('and it shows the child',
+                  MARKER.encode() in _dash.content)
+
+    # A parent with no child has a random password that was never its login
+    # id. Printing the id there hands out a credential that cannot work.
+    def _orphan(f, row):
+        row[f.index('full_name')] = f'{MARKER} Orphan Parent'
+        row[f.index('email')] = f'{MARKER}.orphan@example.com'
+        row[f.index('mobile_number')] = '9000092222'
+        row[f.index('student_emails')] = f'{MARKER}.orphan@example.com'
+
+    _one_row('parent', _orphan)
+    _op = _Parent.objects.filter(full_name=f'{MARKER} Orphan Parent').first()
+    if _op:
+        _rows = list(_csv.reader(io.StringIO(
+            admin.get('/super-admin/export-credentials/').content.decode())))
+        _orow = next((r for r in _rows if len(r) > 6 and 'Orphan' in r[1]), None)
+        check('a parent with no child is not given a password that cannot work',
+              _orow is not None and _orow[6] != _orow[5],
+              str(_orow))
+
+    _drop(_Stu.objects.filter(gr_number__startswith=MARKER))
+    _drop(_Parent.objects.filter(full_name__startswith=MARKER))
 
 _cleanup()
 

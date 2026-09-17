@@ -609,7 +609,11 @@ EXCEL_CONFIG = {
             'school_email',
             'enrollment_date',
             'emergency_name', 'emergency_relationship', 'emergency_mobile',
-            'parent_email',
+            # parent_email is NOT required: it only auto-links to a parent that
+            # already exists, and the processor skips silently when none does.
+            # Requiring it deadlocked the natural order -- a student could not be
+            # created without a parent, and a parent needs the student's Reg ID
+            # to get its <base>-par login.
         },
     },
 
@@ -1416,7 +1420,7 @@ def _process_student(row, created_by):
                 'school_email',
                 'enrollment_date',
                 'emergency_name', 'emergency_relationship', 'emergency_mobile',
-                'parent_email']
+                ]
 
     _require(row, required, 'student')
 

@@ -3954,6 +3954,12 @@ def export_credentials(request):
             school_name = (first_student.school.school_name if (first_student and first_student.school) else '')
             grade = (first_student.student_class if first_student else '')
             div = (first_student.division if first_student else '')
+            # A parent imported with a child linked gets login id == password.
+            # One imported with no child falls back to an email username and a
+            # RANDOM password, which was never the login id -- printing the id
+            # there would hand out a credential that cannot work.
+            derived = bool(p.parent_id) and p.parent_id.endswith('-par') \
+                and login_id == p.parent_id
             writer.writerow([
                 'Parent',
                 p.full_name,
@@ -3961,7 +3967,7 @@ def export_credentials(request):
                 grade,
                 div,
                 login_id,
-                login_id,
+                login_id if derived else 'not recoverable - reset the password',
             ])
 
     return response
