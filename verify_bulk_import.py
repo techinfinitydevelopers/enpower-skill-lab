@@ -629,6 +629,81 @@ if _school:
     _drop(_Stu.objects.filter(gr_number__startswith=MARKER))
     _drop(_Parent.objects.filter(full_name__startswith=MARKER))
 
+
+# -- the school name, and what a miss says ------------------------------
+# A real upload failed on all 336 rows with "School \'Saint Capitanio\' not
+# found" because the registered name was longer. The lookup is right to stay
+# exact -- guessing the nearest school would attach 336 students to the wrong
+# one -- but the refusal has to say what the sheet should have contained.
+print(chr(10) + 'A MISSING SCHOOL NAMES THE ONES THAT NEARLY MATCH')
+
+from superadmin.bulk_import import _school_by_name          # noqa: E402
+
+_reg = _School.objects.create(
+    school_name=f'{MARKER} Capitanio High School',
+    school_code=f'{MARKER.upper()}CAP', board='CBSE', school_type='Private',
+    medium='English', school_email=f'{MARKER}cap@example.com',
+    school_phone='9000000001', principal_name='P', principal_phone='9000000002',
+    principal_email=f'{MARKER}capp@example.com', branch_address='A',
+    city='Mumbai', state='MH', pincode='400001',
+    emergency_contact_person='X', emergency_phone='9000000003')
+
+check('an exact name still matches',
+      _school_by_name(_reg.school_name).id == _reg.id)
+check('and case does not matter',
+      _school_by_name(_reg.school_name.upper()).id == _reg.id)
+
+
+def _miss(name):
+    try:
+        _school_by_name(name)
+        return ''
+    except ValueError as exc:
+        return str(exc)
+
+
+# The shape the real upload took: the sheet holds a prefix of the registered
+# name. difflib alone scores that pair poorly, which is why substring is tried
+# first.
+_short = _miss(f'{MARKER} Capitanio')
+check('a name that is a prefix of the real one is refused, not guessed at',
+      'not found' in _short, _short)
+check('and the refusal names the school that was meant',
+      _reg.school_name in _short, _short)
+
+_typo = _miss(f'{MARKER} Capitano')
+check('a typo gets the same help', _reg.school_name in _typo, _typo)
+
+_none = _miss('Nothing Like Any Registered School At All')
+check('an unrelated name says how to find the right one',
+      'not found' in _none and 'school list' in _none, _none)
+check('and does not invent a suggestion',
+      'Did you mean' not in _none, _none)
+
+# End to end: the message has to survive the import and reach the modal.
+if _school:
+    def _wrong_school(f, row):
+        row[f.index('first_name')] = MARKER
+        row[f.index('last_name')] = 'WrongSchool'
+        row[f.index('school_name')] = f'{MARKER} Capitanio'   # the prefix
+        row[f.index('school_email')] = f'{MARKER}ws@example.com'
+        row[f.index('gr_number')] = f'{MARKER}ws'
+        row[f.index('student_class')] = '6'
+        row[f.index('division')] = 'A'
+        row[f.index('roll_number')] = '912'
+        row[f.index('parent_email')] = ''
+
+    _wr = _one_row('student', _wrong_school)
+    _wf = [e for e in _wr if e.get('status') == 'failed']
+    check('the row is refused rather than filed under the wrong school',
+          bool(_wf), '' if _wf else 'a student was created against a name that does not exist')
+    if _wf:
+        check('and the suggestion reaches the failure list the user reads',
+              _reg.school_name in (_wf[0].get('reason') or ''),
+              _wf[0].get('reason'))
+
+_reg.delete()
+
 _cleanup()
 
 print('\n' + '=' * 62)

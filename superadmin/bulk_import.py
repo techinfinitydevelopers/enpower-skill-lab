@@ -1136,6 +1136,40 @@ def _digits(row, field, length, required=True):
     return cleaned
 
 
+def _school_by_name(name):
+    """Find a school by name, or refuse with the names that nearly matched.
+
+    The match is exact bar case, which is right -- picking the closest school
+    on a guess would attach hundreds of students to the wrong one. But
+    "School X not found", repeated 336 times, tells the person filling the
+    sheet nothing about what to write instead. The near misses do.
+    """
+    from difflib import get_close_matches
+
+    from schools.models import School
+
+    wanted = (name or '').strip()
+    school = School.objects.filter(school_name__iexact=wanted).first()
+    if school:
+        return school
+
+    names = list(School.objects.values_list('school_name', flat=True))
+    folded = wanted.casefold()
+    # Substring first: "Saint Capitanio" against "Saint Capitanio High School"
+    # is the shape this actually takes, and difflib scores that pair poorly
+    # because of the length difference.
+    near = [n for n in names
+            if folded and (folded in n.casefold() or n.casefold() in folded)]
+    near += [n for n in get_close_matches(wanted, names, n=3, cutoff=0.6)
+             if n not in near]
+
+    if near:
+        listed = ', '.join(f'"{n}"' for n in near[:3])
+        raise ValueError(f'School "{wanted}" not found. Did you mean {listed}?')
+    raise ValueError(
+        f'School "{wanted}" not found. The name must match the school exactly '
+        f'as it appears in the school list ({len(names)} schools registered).')
+
 def _require(row, fields, role):
     """Reject a row missing a required column, naming it as the sheet does.
 
@@ -1256,9 +1290,7 @@ def _process_school_admin(row, created_by):
     _require(row, ('full_name', 'email', 'phone', 'gender', 'school_name'),
              'school_admin')
 
-    school = School.objects.filter(school_name__iexact=school_name).first()
-    if not school:
-        raise ValueError(f'School "{school_name}" not found')
+    school = _school_by_name(school_name)
 
     if SchoolAdmin.objects.filter(school=school, is_active=True).exists():
         raise ValueError(f'School "{school_name}" already has an active admin')
@@ -1318,9 +1350,7 @@ def _process_teacher(row, created_by):
     school = None
     school_name = row.get('school_name', '')
     if school_name:
-        school = School.objects.filter(school_name__iexact=school_name).first()
-        if not school:
-            raise ValueError(f'School "{school_name}" not found')
+        school = _school_by_name(school_name)
 
     password = generate_password()
     name_parts = row['full_name'].split(' ', 1)
@@ -1443,9 +1473,7 @@ def _process_student(row, created_by):
     school = None
     school_name = row.get('school_name', '')
     if school_name:
-        school = School.objects.filter(school_name__iexact=school_name).first()
-        if not school:
-            raise ValueError(f'School "{school_name}" not found')
+        school = _school_by_name(school_name)
 
     from accounts.onboarding_ids import student_id_for
     dob = _parse_date(row['date_of_birth'])
