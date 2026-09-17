@@ -590,7 +590,7 @@ EXCEL_CONFIG = {
             'sibling_3_name': 'Sibling 3 Name',
             'sibling_3_class_school': 'Sibling 3 Class/School',
             'sibling_3_skill_lab_id': 'Sibling 3 Skill Lab ID',
-            'parent_email': 'Parent Email (for Linking)',
+            'parent_email': 'Parent Email (only if the parent already exists)',
         },
         'dropdowns': {
             'gender': ['male', 'female', 'other'],
@@ -1547,7 +1547,13 @@ def _process_student(row, created_by):
                 # parent already has a structured id.
                 _ensure_structured_parent_id(parent, this_student)
             except Parent.DoesNotExist:
-                pass  # Parent not imported yet — will auto-link when parent is imported later
+                # Nothing happens later. parent_email is not stored on the
+                # Student, and the parent import only links the students
+                # listed in its own linking column -- it never looks back
+                # for students that named its address. So this column only
+                # does anything when the parent already exists, and the link
+                # otherwise has to be made from the parent sheet.
+                pass
 
     _send_welcome_email(email, f"{row['first_name']} {row['last_name']}", password, 'Student', login_id=reg_id)
 
