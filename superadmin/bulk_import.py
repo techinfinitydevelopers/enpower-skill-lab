@@ -1154,6 +1154,18 @@ def _school_by_name(name):
         return school
 
     names = list(School.objects.values_list('school_name', flat=True))
+
+    # Rows saved before School.save() started trimming may carry surrounding
+    # whitespace, which is invisible on screen and not a real difference. Match
+    # those too -- this is still an exact match, not a guess, so it is only
+    # taken when exactly one school qualifies.
+    trimmed = [n for n in names if n.strip().casefold() == wanted.casefold()]
+    if len(trimmed) == 1:
+        return School.objects.filter(school_name=trimmed[0]).first()
+    if len(trimmed) > 1:
+        raise ValueError(
+            f'"{wanted}" matches {len(trimmed)} schools whose names differ only '
+            f'by spacing. Fix the duplicates in the school list first.')
     folded = wanted.casefold()
     # Substring first: "Saint Capitanio" against "Saint Capitanio High School"
     # is the shape this actually takes, and difflib scores that pair poorly

@@ -702,6 +702,28 @@ if _school:
               _reg.school_name in (_wf[0].get('reason') or ''),
               _wf[0].get('reason'))
 
+# A name stored with surrounding whitespace looks identical on screen and
+# matches nothing. That is what actually failed 336 rows: the school was
+# saved as 'Saint Capitanio ' and the sheet said 'Saint Capitanio'.
+_reg.school_name = f'{MARKER} Spaced School'
+_reg.save()
+_School.objects.filter(pk=_reg.pk).update(
+    school_name=f'{MARKER} Spaced School ')      # raw, bypassing save()
+_reg.refresh_from_db()
+check('a school can be stored with trailing whitespace (as production had)',
+      _reg.school_name.endswith(' '), repr(_reg.school_name))
+check('and a clean name still finds it',
+      _school_by_name(f'{MARKER} Spaced School').id == _reg.id,
+      '')
+
+# And saving normalises, so the row stops being a trap for anything else.
+_reg.save()
+_reg.refresh_from_db()
+check('saving the school trims the name', not _reg.school_name.endswith(' '),
+      repr(_reg.school_name))
+check('and the lookup still resolves afterwards',
+      _school_by_name(f'{MARKER} Spaced School').id == _reg.id)
+
 _reg.delete()
 
 _cleanup()

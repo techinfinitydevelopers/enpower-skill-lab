@@ -742,7 +742,19 @@ class School(models.Model):
     
     def __str__(self):
         return f"{self.school_name} ({self.school_code})"
-    
+
+    def save(self, *args, **kwargs):
+        # Trim the name and code. Every sheet that names a school matches it
+        # exactly bar case, and surrounding whitespace is invisible on screen:
+        # a school saved as "Saint Capitanio " failed 336 student rows that
+        # said "Saint Capitanio", with nothing to see in either string. The
+        # bulk import already stripped; the onboarding and edit forms did not.
+        for field in ('school_name', 'school_code'):
+            value = getattr(self, field, None)
+            if isinstance(value, str):
+                setattr(self, field, value.strip())
+        super().save(*args, **kwargs)
+
     def get_full_address(self):
         """Returns the complete address of the school"""
         return f"{self.branch_address}, {self.city}, {self.state} - {self.pincode}"
