@@ -719,7 +719,17 @@ if _any_coach:
               _card is not None and 'cr-card' in _card.group(1),
               _card.group(1) if _card else 'card not found')
         check('and the page defines that override',
-              '.am .cr-card { overflow:visible; }' in _page)
+              'overflow:visible' in _page and '.am .cr-card' in _page)
+
+        # The same stylesheet lifts a hovered card with a transform, which
+        # creates a stacking context and traps the dropdown's z-index inside
+        # it -- so the panels below, later in the DOM, paint over the open
+        # list. You hover this card to open the dropdown, so it was every time.
+        check('the classroom card does not lift on hover',
+              '.am .cr-card:hover { transform:none;' in _page,
+              'a hover transform would trap the dropdown behind the panels')
+        check('and it carries a z-index of its own',
+              re.search(r'\.am \.cr-card \{[^}]*z-index:\s*\d+', _page) is not None)
 
         # The list itself must travel as JSON. Python's repr() went in raw
         # before, which parses by luck and dies on the first odd character.

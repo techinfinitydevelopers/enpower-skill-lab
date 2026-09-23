@@ -17,7 +17,14 @@
        clipped at the card's edge. The search row sits inside the card and
        stayed visible, which made it look as though the list had loaded empty
        when it had rendered perfectly and been cut off. */
-    .am .cr-card { overflow:visible; }
+    .am .cr-card { overflow:visible; position:relative; z-index:50; }
+    /* teacher-dashboard.css lifts every .card on hover with a transform, and
+       a transform creates a stacking context -- which traps the dropdown's
+       own z-index inside this card, letting the panels below it (later in the
+       DOM) paint over the open list. You hover this card to open the dropdown,
+       so it happened every time. No lift on this one, and a z-index of its own
+       so the card sits above those panels either way. */
+    .am .cr-card:hover { transform:none; box-shadow:0 1px 3px rgba(0,0,0,0.06); }
     .am .cr-toggle { width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px;
         padding:13px 16px; border:1.5px solid #e2e8f0; border-radius:10px; background:#fff; cursor:pointer; font-size:15px; font-weight:600; color:#1e1b4b; }
     .am .cr-toggle:hover { border-color:#cbb8d6; }
