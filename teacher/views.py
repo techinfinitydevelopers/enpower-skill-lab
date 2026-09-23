@@ -1259,14 +1259,16 @@ def _class_students(school, grade, division):
 # ---------- SLIDE 14: Attendance (classroom + session based) ----------
 
 def _teacher_timetables(user):
-    """Distinct Timetables visible to this coach: own timetables + school's, de-duped."""
+    """The schedules assigned to this coach.
+
+    This used to fall back to every schedule at the coach's school, so one
+    coach could mark attendance against a colleague's class. The fallback
+    existed in case a coach had nothing assigned; on the live data every
+    schedule has a coach, so it only ever widened access.
+    """
     from attendance.models import Timetable
-    school = _teacher_school(user)
-    q = Timetable.objects.filter(thinking_coach=user)
-    if school:
-        from django.db.models import Q
-        q = Timetable.objects.filter(Q(thinking_coach=user) | Q(school=school))
-    return q.distinct().order_by('grade', 'division', 'program')
+    return (Timetable.objects.filter(thinking_coach=user)
+            .distinct().order_by('grade', 'division', 'program'))
 
 
 def _classroom_label(tt):
@@ -1292,12 +1294,9 @@ def _resolve_teacher_timetable(user, tt_id):
         tt = Timetable.objects.get(id=int(tt_id))
     except (Timetable.DoesNotExist, ValueError, TypeError):
         return None
-    school = _teacher_school(user)
-    if tt.thinking_coach_id == user.id:
-        return tt
-    if school and tt.school_id == school.id:
-        return tt
-    return None
+    # Assigned to them, or nothing. Sharing a school is not permission to
+    # mark another coach's register.
+    return tt if tt.thinking_coach_id == user.id else None
 
 
 def _generate_sessions(tt, cap=60):

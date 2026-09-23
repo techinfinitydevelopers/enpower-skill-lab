@@ -543,6 +543,23 @@ else:
         _co_live = _re3.sub(r'<style.*?</style>', '', _co, flags=_re3.S)
         check('the coordinator still has Upload', 'Upload Schedule' in _co_live)
 
+    # Attendance used the same data through a school-wide fallback, so a
+    # coach could mark a colleague's register. Every schedule on the live
+    # data has a coach, so the fallback only ever widened access.
+    if _cc:
+        _att = _cc.get('/teacher/attendance/', follow=True).content.decode(
+            errors='ignore')
+        check('attendance offers the coach their own class', 'ZMINE' in _att)
+        check("and not a colleague's at the same school",
+              'ZTHEIRS' not in _att,
+              'one coach could mark a colleague register')
+        _ok = _cc.get(f'/teacher/api/attendance-sessions/?classroom={_mine.id}')
+        _no = _cc.get(f'/teacher/api/attendance-sessions/?classroom={_theirs.id}')
+        check('the sessions API serves their own class',
+              _ok.status_code == 200, f'HTTP {_ok.status_code}')
+        check("and refuses a colleague's by id",
+              _no.status_code != 200, f'HTTP {_no.status_code}')
+
     Timetable.objects.filter(id__in=[_mine.id, _theirs.id]).delete()
 
 
