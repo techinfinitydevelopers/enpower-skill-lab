@@ -312,9 +312,23 @@ for name in ('list', 'detail', 'edit', 'delete', 'upload'):
     check(f'timetable_{name} is open to both roles',
           re.search(r'@user_passes_test\(is_timetable_manager\)\s*\ndef timetable_'
                     + name + r'\(', views.replace('\r\n', '\n')) is not None)
-check('scope is read from the user, not the route',
-      "_timetable_schools(request)" in views
-      and "role', None) == 'SUPER_ADMIN'" in views)
+# Matching the exact wording of a role check made this fail the moment the
+# helper was refactored, while the behaviour was fine. What is worth holding
+# is that every view narrows through the one shared queryset rather than
+# building its own filter, since that is where a role's limits live.
+check('one shared queryset decides scope', '_timetable_queryset' in views)
+_lines = views.replace('\r\n', '\n').split('\n')
+# The helper is the one place allowed to build the filter; skip its own body.
+_h_start = next(i for i, l in enumerate(_lines)
+                if l.startswith('def _timetable_queryset('))
+_h_end = next(i for i in range(_h_start + 1, len(_lines))
+              if _lines[i].startswith('def ') or _lines[i].startswith('@'))
+_own_filters = [
+    l.strip() for i, l in enumerate(_lines)
+    if 'Timetable.objects.filter' in l and not (_h_start <= i < _h_end)
+]
+check('no view builds its own timetable filter', not _own_filters,
+      '; '.join(_own_filters[:2]))
 
 templates = {
     'list': 'coordinator/templates/coordinator/timetable-list.html',
@@ -430,6 +444,106 @@ if _cls:
     _cls.save(update_fields=['thinking_coach'])
 
 U.objects.filter(id=_orphan.id).delete()
+
+
+
+# ── the coach reads their own schedule, and only reads ─────────────────
+# The client could add slots, days and timings and the coach had nowhere to
+# see them: the teacher app had no timetable page at all, and the one place
+# timetable data reached it -- the attendance classroom picker -- carried
+# program, grade and division and nothing about when the class actually runs.
+print('\nTHE COACH SEES THEIR OWN SCHEDULE, READ ONLY')
+
+import re as _re3                                          # noqa: E402
+
+from attendance.models import TimetableSlot               # noqa: E402
+from teacher.models import Teacher as _Teacher             # noqa: E402
+
+_coaches = list(_Teacher.objects.select_related('user', 'school').filter(
+    user__isnull=False, user__role='THINKING_COACH', school__isnull=False)[:2])
+
+if len(_coaches) < 2:
+    print('  ..    need two coaches with logins to test isolation; skipped')
+else:
+    _a, _b = _coaches
+    # Both schedules at the SAME school, so only the coach assignment can
+    # separate them. Filtering by school would hand each coach the other's.
+    _mine = make_timetable(mine, 'CoachOwn')
+    _mine.thinking_coach = _a.user
+    _mine.school = _a.school
+    _mine.division = 'ZMINE'
+    _mine.save()
+    TimetableSlot.objects.create(timetable=_mine, day_of_week=1,
+                                 period_number=1, start_time='09:00',
+                                 end_time='10:00', note=f'{MARKER} slot')
+    _theirs = make_timetable(mine, 'CoachOther')
+    _theirs.thinking_coach = _b.user
+    _theirs.school = _a.school           # same school, different coach
+    _theirs.division = 'ZTHEIRS'
+    _theirs.save()
+
+    _cc = sign_in(_a.user)
+    check('a coach can sign in to test with', _cc is not None)
+
+    if _cc:
+        _r = _cc.get('/teacher/timetable/', follow=True)
+        _html = _r.content.decode(errors='ignore')
+        check('the coach has a timetable page at all', _r.status_code == 200,
+              f'HTTP {_r.status_code}')
+        check('it shows the schedule assigned to them', 'ZMINE' in _html)
+        check("it does not show another coach's at the same school",
+              'ZTHEIRS' not in _html,
+              'filtering by school would leak every colleague\'s timetable')
+
+        # Controls are checked on the markup with <style> stripped: the class
+        # names tt-act-edit and tt-act-del appear in the page's own CSS
+        # whether or not a button uses them.
+        _live = _re3.sub(r'<style.*?</style>', '', _html, flags=_re3.S)
+        check('no Upload button for a role that only reads',
+              'Upload Schedule' not in _live)
+        check('no edit link',
+              _re3.search(r'href="[^"]*timetable/\d+/edit', _live) is None)
+        check('no delete form',
+              _re3.search(r'action="[^"]*timetable/\d+/delete', _live) is None)
+        check('the sidebar offers it', 'nav-timetable' in _html)
+
+        _d = _cc.get(f'/teacher/timetable/{_mine.id}/', follow=True)
+        _dhtml = _d.content.decode(errors='ignore')
+        check('the detail page opens', _d.status_code == 200, f'HTTP {_d.status_code}')
+        check('and shows the timings, which is the whole point',
+              '09:00' in _dhtml or '9:00' in _dhtml,
+              'slot times never reached the coach before')
+        check('the detail page offers no edit either',
+              _re3.search(r'href="[^"]*timetable/\d+/edit',
+                          _re3.sub(r'<style.*?</style>', '', _dhtml,
+                                   flags=_re3.S)) is None)
+
+        _o = _cc.get(f'/teacher/timetable/{_theirs.id}/', follow=True)
+        check("a colleague's schedule is refused by id too",
+              b'not available to you' in _o.content,
+              'scope must not depend on the list hiding it')
+
+        # The edit routes are not wired under /teacher/ at all.
+        for _p in (f'/teacher/timetable/{_mine.id}/edit/',
+                   '/teacher/timetable/upload/'):
+            check(f'{_p} does not exist for a coach',
+                  _cc.get(_p).status_code in (301, 302, 403, 404),
+                  f'HTTP {_cc.get(_p).status_code}')
+
+    # And the roles that do edit still can -- hiding must be per role, not
+    # a blanket removal.
+    _sa = admin.get(reverse(SA['list']), follow=True).content.decode(errors='ignore')
+    _sa_live = _re3.sub(r'<style.*?</style>', '', _sa, flags=_re3.S)
+    check('the Super Admin still has Upload', 'Upload Schedule' in _sa_live)
+    check('and still has edit',
+          _re3.search(r'href="[^"]*timetable/\d+/edit', _sa_live) is not None)
+
+    if coord:
+        _co = coord.get(reverse(CO['list']), follow=True).content.decode(errors='ignore')
+        _co_live = _re3.sub(r'<style.*?</style>', '', _co, flags=_re3.S)
+        check('the coordinator still has Upload', 'Upload Schedule' in _co_live)
+
+    Timetable.objects.filter(id__in=[_mine.id, _theirs.id]).delete()
 
 
 _cleanup()

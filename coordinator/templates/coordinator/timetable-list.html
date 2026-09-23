@@ -34,8 +34,9 @@
         <header class="mb-4 d-flex flex-column flex-lg-row align-items-start align-items-lg-center justify-content-between gap-3">
             <div>
                 <h1 class="h4 mb-1 fw-bold text-dark">Manage Classrooms</h1>
-                <p class="mb-0 text-muted" style="font-size:0.875rem;">Upload and manage class schedules for {{ scope_label }}</p>
+                <p class="mb-0 text-muted" style="font-size:0.875rem;">{% if can_edit %}Upload and manage class schedules for {{ scope_label }}{% else %}Your class schedule{% endif %}</p>
             </div>
+            {% if can_edit %}
             <a href="{% url urls.upload %}" class="text-decoration-none">
                 <button class="btn d-inline-flex align-items-center gap-2"
                         style="background:#5A1F6E;color:#fff;border-radius:0.5rem;padding:0.5rem 1.25rem;font-weight:600;">
@@ -43,6 +44,7 @@
                     Upload Schedule
                 </button>
             </a>
+            {% endif %}
         </header>
 
         <div class="row g-3 mb-4">
@@ -112,6 +114,7 @@
                                 <a href="{% url urls.detail row.tt_id %}" class="tt-act tt-act-view" title="Open / View">
                                     <span class="material-symbols-outlined">visibility</span>
                                 </a>
+                                {% if can_edit %}
                                 <a href="{% url urls.edit row.tt_id %}" class="tt-act tt-act-edit" title="Edit">
                                     <span class="material-symbols-outlined">edit</span>
                                 </a>
@@ -122,6 +125,7 @@
                                         <span class="material-symbols-outlined">delete</span>
                                     </button>
                                 </form>
+                                {% endif %}
                             </td>
                         </tr>
                         {% empty %}
@@ -130,11 +134,13 @@
                                 <div class="text-muted">
                                     <span class="material-symbols-outlined" style="font-size:48px;">calendar_month</span>
                                     <p class="mt-2 mb-3">No timetables uploaded yet</p>
-                                    <a href="{% url urls.upload %}" class="text-decoration-none">
+                                    {% if can_edit %}
+<a href="{% url urls.upload %}" class="text-decoration-none">
                                         <button class="btn btn-sm" style="background:#5A1F6E;color:#fff;border-radius:0.5rem;padding:0.5rem 1.25rem;font-weight:600;">
                                             Upload Schedule
                                         </button>
                                     </a>
+{% endif %}
                                 </div>
                             </td>
                         </tr>

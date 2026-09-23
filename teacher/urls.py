@@ -1,6 +1,17 @@
 from django.urls import path
 from . import views
 from . import score_views
+# The timetable pages are shared with the coordinator; see
+# coordinator/views.py _timetable_queryset / _timetable_chrome.
+from django.contrib.auth.decorators import user_passes_test
+
+from coordinator import views as coordinator_views
+
+def _is_coach(user):
+    """These routes live under /teacher/, so only a coach belongs on them."""
+    return user.is_authenticated and getattr(user, 'role', None) == 'THINKING_COACH'
+
+coach_only = user_passes_test(_is_coach)
 
 app_name = 'teacher'
 
@@ -33,6 +44,14 @@ urlpatterns = [
     path('api/save-project-feedback/', views.api_save_project_feedback, name='api_save_project_feedback'),
 
     # ESL Dashboard — Thinking Coach features (slides 14-17)
+    # Read-only. The same two views the coordinator and Super Admin use;
+    # scope and the hiding of edit controls are decided from the signed-in
+    # user, so a coach gets their own schedules and no way to change them.
+    path('timetable/', coach_only(coordinator_views.timetable_list),
+         name='timetable_list'),
+    path('timetable/<int:pk>/', coach_only(coordinator_views.timetable_detail),
+         name='timetable_detail'),
+
     path('attendance/', views.attendance_mark, name='attendance_mark'),
     path('attendance/list/', views.attendance_list, name='attendance_list'),
     path('api/attendance-sessions/', views.api_attendance_sessions, name='api_attendance_sessions'),

@@ -122,11 +122,13 @@
     </div>
 
     <div class="d-flex flex-wrap gap-2">
+      {% if can_edit %}
       <a href="{% url urls.edit timetable.id %}" class="sm-btn"><span class="material-symbols-outlined" style="font-size:18px;">edit</span>Edit</a>
       <form method="post" action="{% url urls.delete timetable.id %}" onsubmit="return confirm('Delete this schedule? This cannot be undone.');">
         {% csrf_token %}
         <button type="submit" class="sm-btn-del"><span class="material-symbols-outlined" style="font-size:18px;">delete</span>Delete</button>
       </form>
+      {% endif %}
       <a href="{% url urls.list %}" class="sm-btn-ghost"><span class="material-symbols-outlined" style="font-size:18px;">arrow_back</span>Back</a>
     </div>
 

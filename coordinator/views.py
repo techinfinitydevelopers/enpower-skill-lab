@@ -30,14 +30,17 @@ def _coordinator_schools(request):
 
 
 def is_timetable_manager(user):
-    """Coordinator or Super Admin.
+    """Coordinator, Super Admin or Thinking Coach.
 
-    The five timetable views serve both. A coordinator manages the
-    schools assigned to them; a Super Admin manages all of them.
+    A coordinator manages the schools assigned to them, a Super Admin
+    all of them, and a coach reads the schedules assigned to them.
+    The routes are gated per role on top of this -- only the two
+    read-only views are wired under /teacher/.
     """
     return (user.is_authenticated
             and getattr(user, 'role', None) in ('PROGRAM_COORDINATOR',
-                                                'SUPER_ADMIN'))
+                                                'SUPER_ADMIN',
+                                                'THINKING_COACH'))
 
 
 def _timetable_schools(request):
@@ -47,10 +50,30 @@ def _timetable_schools(request):
     Super Admin routes and the coordinator routes run the same code, so
     the path must not be what decides how much is visible.
     """
-    if getattr(request.user, 'role', None) == 'SUPER_ADMIN':
+    role = getattr(request.user, 'role', None)
+    if role == 'SUPER_ADMIN':
         return School.objects.all()
+    if role == 'THINKING_COACH':
+        # Only schools the coach actually holds a schedule at. The school
+        # itself is not the unit here -- _timetable_queryset narrows to the
+        # schedules assigned to them, and this only feeds the counters.
+        return School.objects.filter(
+            timetables__thinking_coach=request.user).distinct()
     return _coordinator_schools(request)
 
+
+def _timetable_queryset(request):
+    """The schedules this user may reach.
+
+    A coordinator and a Super Admin work by school, so theirs is every
+    schedule at the schools in scope. A coach works by class: only the
+    schedules assigned to them. One school has several coaches, and
+    filtering by school would hand each of them the others' timetables.
+    """
+    if getattr(request.user, 'role', None) == 'THINKING_COACH':
+        return Timetable.objects.filter(thinking_coach=request.user)
+    school_ids = _timetable_schools(request).values_list('id', flat=True)
+    return Timetable.objects.filter(school_id__in=school_ids)
 
 def _timetable_chrome(request):
     """The base template and URL names these pages render themselves with.
@@ -58,21 +81,33 @@ def _timetable_chrome(request):
     One set of templates for both roles; only the sidebar around them and
     the names of their own links differ.
     """
-    if getattr(request.user, 'role', None) == 'SUPER_ADMIN':
+    role = getattr(request.user, 'role', None)
+    # A coach only reads. The pages are the same ones; the controls that
+    # change a schedule are hidden rather than left to 404 on routes their
+    # role does not have.
+    can_edit = True
+    if role == 'SUPER_ADMIN':
         prefix, base = 'superadmin_', 'superadmin/base.html'
         role_label, scope_label = 'Super Admin', 'every school'
         schools_label = 'Schools'
+    elif role == 'THINKING_COACH':
+        prefix, base = 'teacher:', 'teacher/base.html'
+        role_label, scope_label = 'Thinking Coach', 'your classes'
+        schools_label = 'Your Schools'
+        can_edit = False
     else:
         prefix, base = 'coordinator:', 'coordinator/base.html'
         role_label, scope_label = 'Program Coordinator', 'your assigned schools'
         schools_label = 'Assigned Schools'
+    names = ('list', 'detail') if not can_edit else (
+        'list', 'upload', 'detail', 'edit', 'delete')
     return {
         'base_template': base,
         'role_label': role_label,
         'scope_label': scope_label,
         'schools_label': schools_label,
-        'urls': {name: f'{prefix}timetable_{name}'
-                 for name in ('list', 'upload', 'detail', 'edit', 'delete')},
+        'can_edit': can_edit,
+        'urls': {name: f'{prefix}timetable_{name}' for name in names},
     }
 
 
@@ -297,10 +332,8 @@ def _fmt_time(t):
 def timetable_list(request):
     """List timetables for the SRM's assigned schools, flattened to one row per slot."""
     assigned_schools = _timetable_schools(request)
-    school_ids = assigned_schools.values_list('id', flat=True)
     timetables = (
-        Timetable.objects
-        .filter(school_id__in=school_ids)
+        _timetable_queryset(request)
         .select_related('school', 'thinking_coach')
         .prefetch_related('slots')
         .order_by('-created_at')
@@ -382,11 +415,9 @@ def _save_slots(request, timetable):
 @user_passes_test(is_timetable_manager)
 def timetable_detail(request, pk):
     """Read-only display of a full schedule. Scoped to coordinator's schools."""
-    assigned_schools = _timetable_schools(request)
-    school_ids = assigned_schools.values_list('id', flat=True)
     timetable = (
-        Timetable.objects
-        .filter(id=pk, school_id__in=school_ids)
+        _timetable_queryset(request)
+        .filter(id=pk)
         .select_related('school', 'thinking_coach')
         .prefetch_related('slots')
         .first()
@@ -424,10 +455,9 @@ def timetable_detail(request, pk):
 def timetable_edit(request, pk):
     """Edit an existing schedule. Reuses the create form (timetable-upload.html) in edit mode."""
     assigned_schools = _timetable_schools(request)
-    school_ids = assigned_schools.values_list('id', flat=True)
     timetable = (
-        Timetable.objects
-        .filter(id=pk, school_id__in=school_ids)
+        _timetable_queryset(request)
+        .filter(id=pk)
         .select_related('school', 'thinking_coach')
         .prefetch_related('slots')
         .first()
@@ -534,7 +564,7 @@ def timetable_delete(request, pk):
 
     assigned_schools = _timetable_schools(request)
     school_ids = assigned_schools.values_list('id', flat=True)
-    timetable = Timetable.objects.filter(id=pk, school_id__in=school_ids).first()
+    timetable = _timetable_queryset(request).filter(id=pk).first()
     if not timetable:
         messages.error(request, 'Timetable not found or not available to you.')
         return redirect(_tt_url(request, 'list'))
