@@ -54,6 +54,11 @@ PASSWORD = 'Timetable!2026'
 
 
 def _cleanup():
+    # Saving a Timetable now creates the Class the parent screens read, so
+    # the fixtures spawn Class rows too. Deleting only the Timetable would
+    # leave one behind on every run.
+    from schools.models import Class
+    Class.objects.filter(division__startswith='Z').delete()
     Timetable.objects.filter(notes__startswith=MARKER).delete()
     School.objects.filter(school_code__startswith=MARKER).delete()
     for pk, password in list(restore.items()):
@@ -562,6 +567,62 @@ else:
 
     Timetable.objects.filter(id__in=[_mine.id, _theirs.id]).delete()
 
+
+
+# -- Class and Timetable agree about the coach -------------------------
+# They hold the same four facts and nothing joined them. Parents and School
+# Admins read Class; the coach and attendance read Timetable. 50 timetables
+# with 3 Class rows meant almost every parent saw no coach at all.
+print(chr(10) + 'SAVING EITHER ONE CARRIES THE COACH ACROSS')
+
+from schools.models import Class as _Cls                   # noqa: E402
+
+_co = (U.objects.filter(role='THINKING_COACH', is_active=True)
+       .exclude(pk=None).first())
+_co2 = (U.objects.filter(role='THINKING_COACH', is_active=True)
+        .exclude(pk=_co.pk).first() if _co else None)
+
+if _co and _co2:
+    _Cls.objects.filter(division='ZSYNC').delete()
+    _tt = make_timetable(mine, 'Sync')
+    _tt.division = 'ZSYNC'
+    _tt.thinking_coach = _co
+    _tt.save()
+
+    _made = _Cls.objects.filter(school=mine, grade=_tt.grade,
+                                division='ZSYNC').first()
+    check('saving a schedule creates the Class the parent screens read',
+          _made is not None,
+          'without it a parent sees no coach for their child')
+    if _made:
+        check('and the Class gets the coach', _made.thinking_coach_id == _co.id)
+
+        _tt.thinking_coach = _co2
+        _tt.save()
+        _made.refresh_from_db()
+        check('changing the schedule updates the Class',
+              _made.thinking_coach_id == _co2.id)
+
+        _made.thinking_coach = _co
+        _made.save()
+        _tt.refresh_from_db()
+        check('and changing the Class updates the schedule',
+              _tt.thinking_coach_id == _co.id,
+              'assigning on the Class list reached nothing the coach could see')
+
+    # A Class must NOT invent a schedule: it knows no days or times, and an
+    # empty row on the coach's timetable is worse than no row.
+    _before = Timetable.objects.count()
+    _lone = _Cls.objects.create(school=mine, grade='9', division='ZSYNC2',
+                                academic_year='2025-2026', thinking_coach=_co)
+    check('a Class does not invent a schedule',
+          Timetable.objects.count() == _before,
+          'an invented timetable would show the coach a class with no times')
+    _lone.delete()
+    _Cls.objects.filter(division='ZSYNC').delete()
+    Timetable.objects.filter(id=_tt.id).delete()
+else:
+    print('  ..    need two coach logins to test the sync; skipped')
 
 _cleanup()
 
