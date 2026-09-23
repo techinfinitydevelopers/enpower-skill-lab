@@ -118,7 +118,7 @@
             <input type="date" name="start_date" id="start_date" class="sm-ctrl" value="{% if editing and editing.start_date %}{{ editing.start_date|date:'Y-m-d' }}{% endif %}">
           </div>
           <div class="col-md-6">
-            <label class="sm-lbl">End Date <span style="text-transform:none; color:#cbd5e1; font-weight:500;">(optional)</span></label>
+            <label class="sm-lbl">End Date <span style="text-transform:none; color:#cbd5e1; font-weight:500;">(optional &mdash; leave blank to run for the academic year)</span></label>
             <input type="date" name="end_date" id="end_date" class="sm-ctrl" value="{% if editing and editing.end_date %}{{ editing.end_date|date:'Y-m-d' }}{% endif %}">
           </div>
         </div>
