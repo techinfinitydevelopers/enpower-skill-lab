@@ -624,6 +624,78 @@ if _co and _co2:
 else:
     print('  ..    need two coach logins to test the sync; skipped')
 
+
+# -- a schedule with no end date still has sessions --------------------
+# The form calls the end date optional and 49 of the 50 live schedules were
+# saved without one. Session generation treated it as required and returned
+# nothing, so a coach opened Attendance, picked a classroom, and got no
+# sessions and therefore no students to mark.
+print(chr(10) + 'ATTENDANCE WORKS WITHOUT AN END DATE')
+
+import json as _json                                       # noqa: E402
+from datetime import timedelta as _td                      # noqa: E402
+
+from attendance.models import TimetableSlot as _Slot       # noqa: E402
+from student.models import Student as _Stud                # noqa: E402
+from teacher.views import _generate_sessions               # noqa: E402
+
+_kid = _Stud.objects.select_related('school').filter(school__isnull=False).first()
+_tc = (_Teacher.objects.select_related('user')
+       .filter(user__isnull=False, user__role='THINKING_COACH').first()
+       if _kid else None)
+
+if _kid and _tc:
+    _tc.school = _kid.school
+    _tc.save(update_fields=['school'])
+    _open = Timetable.objects.create(
+        school=_kid.school, thinking_coach=_tc.user, grade=_kid.student_class,
+        division=_kid.division, academic_year='2026-2027', program='FSL',
+        start_date=date(2026, 6, 25), end_date=None,
+        notes=f'{MARKER} open ended')
+    for _d in ('mon', 'wed', 'fri'):
+        _Slot.objects.create(timetable=_open, day_of_week=_d, period_number=1,
+                             start_time='09:00', end_time='10:00')
+
+    check('a schedule with no end date still generates sessions',
+          len(_generate_sessions(_open)) > 0,
+          'no sessions means no students to mark')
+
+    # An end date that IS set must still be obeyed, or this fix would quietly
+    # run every schedule to the cap.
+    _bounded = Timetable.objects.create(
+        school=_kid.school, thinking_coach=_tc.user, grade=_kid.student_class,
+        division=_kid.division, academic_year='2026-2027', program='FSL',
+        start_date=date(2026, 6, 25), end_date=date(2026, 7, 10),
+        notes=f'{MARKER} bounded')
+    for _d in ('mon', 'wed', 'fri'):
+        _Slot.objects.create(timetable=_bounded, day_of_week=_d,
+                             period_number=1, start_time='09:00',
+                             end_time='10:00')
+    _bs = _generate_sessions(_bounded)
+    check('an end date that is set is still respected',
+          _bs and _bs[-1]['date'] <= '2026-07-10',
+          _bs[-1]['date'] if _bs else 'no sessions at all')
+    check('and it is shorter than the open-ended one',
+          len(_bs) < len(_generate_sessions(_open)))
+
+    _cc2 = sign_in(_tc.user)
+    if _cc2:
+        _s = _cc2.get(f'/teacher/api/attendance-sessions/?classroom={_open.id}')
+        _sd = _json.loads(_s.content) if _s.status_code == 200 else {}
+        check('the sessions API returns them to the page',
+              len(_sd.get('sessions', [])) > 0, f'HTTP {_s.status_code}')
+        if _sd.get('sessions'):
+            _st = _cc2.get('/teacher/api/attendance-students/'
+                           f"?classroom={_open.id}&date={_sd['sessions'][0]['date']}")
+            _std = _json.loads(_st.content) if _st.status_code == 200 else {}
+            check('and the students to mark actually arrive',
+                  len(_std.get('students', [])) > 0,
+                  'this is the screen the client could not use')
+
+    Timetable.objects.filter(id__in=[_open.id, _bounded.id]).delete()
+else:
+    print('  ..    need a student and a coach to test attendance; skipped')
+
 _cleanup()
 
 print('\n' + '=' * 62)

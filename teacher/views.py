@@ -1300,10 +1300,22 @@ def _resolve_teacher_timetable(user, tt_id):
 
 
 def _generate_sessions(tt, cap=60):
-    """Build session dicts (one per matching weekday date x slot) within the
-    timetable date range. Returns [] defensively if range/slots are missing."""
+    """Build session dicts (one per matching weekday date x slot).
+
+    The end date is optional on the form that creates a schedule, and 49 of
+    the 50 live schedules were saved without one. This used to return []
+    for those, so the coach opened Attendance, picked a classroom and got no
+    sessions and therefore no students to mark -- the form said optional and
+    the logic treated it as required.
+
+    Without an end date the run is bounded by an academic year and then by
+    `cap`, which already limited how many sessions are listed anyway.
+    """
     from datetime import timedelta
-    if not tt or not tt.start_date or not tt.end_date or tt.end_date < tt.start_date:
+    if not tt or not tt.start_date:
+        return []
+    end = tt.end_date or (tt.start_date + timedelta(days=365))
+    if end < tt.start_date:
         return []
     day_index = {'mon': 0, 'tue': 1, 'wed': 2, 'thu': 3, 'fri': 4, 'sat': 5, 'sun': 6}
     day_short = {0: 'MON', 1: 'TUE', 2: 'WED', 3: 'THU', 4: 'FRI', 5: 'SAT', 6: 'SUN'}
@@ -1312,7 +1324,7 @@ def _generate_sessions(tt, cap=60):
         return []
     sessions = []
     cur = tt.start_date
-    while cur <= tt.end_date:
+    while cur <= end:
         wd = cur.weekday()
         for slot in slots:
             if day_index.get(slot.day_of_week) != wd:
