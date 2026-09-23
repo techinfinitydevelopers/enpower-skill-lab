@@ -12,6 +12,12 @@
 
     /* Classroom dropdown */
     .am .cr-wrap { position:relative; }
+    /* The classroom dropdown hangs below its card, and the global .card rule
+       in teacher-dashboard.css sets overflow:hidden -- so the menu was being
+       clipped at the card's edge. The search row sits inside the card and
+       stayed visible, which made it look as though the list had loaded empty
+       when it had rendered perfectly and been cut off. */
+    .am .cr-card { overflow:visible; }
     .am .cr-toggle { width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px;
         padding:13px 16px; border:1.5px solid #e2e8f0; border-radius:10px; background:#fff; cursor:pointer; font-size:15px; font-weight:600; color:#1e1b4b; }
     .am .cr-toggle:hover { border-color:#cbb8d6; }
@@ -99,7 +105,7 @@
     </div>
 
     <!-- SECTION 1 — SELECT CLASSROOM -->
-    <div class="card" style="padding:20px; margin-bottom:20px;">
+    <div class="card cr-card" style="padding:20px; margin-bottom:20px;">
         <label class="lbl">Select Classroom</label>
         <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
             <div class="cr-wrap" style="flex:1; min-width:260px;">
@@ -198,8 +204,18 @@
 {% endblock %}
 
 {% block extra_js %}
+{% comment %}
+  json_script, not |safe. |safe wrote Python's repr() straight into the
+  script: single-quoted keys, and None/True where JavaScript needs
+  null/true. It parsed by luck, and one apostrophe or unusual character in
+  a school or program name would have thrown a SyntaxError that killed the
+  whole block -- the dropdown would still open, because that listener was
+  already attached, and then show nothing at all.
+{% endcomment %}
+{{ classrooms|json_script:"classrooms-data" }}
 <script>
-const CLASSROOMS = {{ classrooms|safe }};
+const CLASSROOMS = JSON.parse(
+    document.getElementById('classrooms-data').textContent);
 const SESSIONS_URL = "{% url 'teacher:api_attendance_sessions' %}";
 const STUDENTS_URL = "{% url 'teacher:api_attendance_students' %}";
 const SAVE_URL = "{% url 'teacher:api_save_attendance' %}";

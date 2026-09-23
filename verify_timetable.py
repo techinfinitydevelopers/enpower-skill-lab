@@ -696,6 +696,49 @@ if _kid and _tc:
 else:
     print('  ..    need a student and a coach to test attendance; skipped')
 
+
+# -- the attendance page can actually show its dropdown ----------------
+# The backend had the classrooms, the JS rendered them, and the coach still
+# saw nothing: the menu hangs below its card and the global .card rule in
+# teacher-dashboard.css sets overflow:hidden, so it was clipped at the card
+# edge. Only the search row, which sits inside the card, stayed visible --
+# which read as an empty list rather than a hidden one.
+print(chr(10) + 'THE CLASSROOM DROPDOWN IS NOT CLIPPED AWAY')
+
+_any_coach = (_Teacher.objects.select_related('user')
+              .filter(user__isnull=False, user__role='THINKING_COACH').first())
+if _any_coach:
+    _ac = sign_in(_any_coach.user)
+    if _ac:
+        _page = _ac.get('/teacher/attendance/', follow=True).content.decode(
+            errors='ignore')
+        _card = re.search(
+            r'<div class="([^"]*card[^"]*)"[^>]*>\s*<label class="lbl">Select Classroom',
+            _page)
+        check('the classroom card opts out of the global overflow:hidden',
+              _card is not None and 'cr-card' in _card.group(1),
+              _card.group(1) if _card else 'card not found')
+        check('and the page defines that override',
+              '.am .cr-card { overflow:visible; }' in _page)
+
+        # The list itself must travel as JSON. Python's repr() went in raw
+        # before, which parses by luck and dies on the first odd character.
+        check('classrooms reach the page as JSON, not Python repr',
+              'classrooms-data' in _page
+              and re.search(r"CLASSROOMS = \[\{'", _page) is None)
+
+        # The clipping rule is real and still loaded, so the override is
+        # load-bearing rather than decorative.
+        _css = os.path.join(settings.BASE_DIR, 'static', 'css', 'teacher',
+                            'teacher-dashboard.css')
+        _rule = re.search(r'\.card\s*\{[^}]*overflow:\s*hidden',
+                          open(_css, encoding='utf-8', errors='ignore').read())
+        check('the global rule that made this necessary still exists',
+              _rule is not None,
+              'if it is gone the override is harmless, but check why')
+else:
+    print('  ..    no coach to load the attendance page with; skipped')
+
 _cleanup()
 
 print('\n' + '=' * 62)
