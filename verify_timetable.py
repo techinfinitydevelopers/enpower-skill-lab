@@ -728,8 +728,25 @@ if _any_coach:
         check('the classroom card does not lift on hover',
               '.am .cr-card:hover { transform:none;' in _page,
               'a hover transform would trap the dropdown behind the panels')
-        check('and it carries a z-index of its own',
-              re.search(r'\.am \.cr-card \{[^}]*z-index:\s*\d+', _page) is not None)
+        # It must sit between two things: above the session panels below it
+        # (z-index auto) and BELOW the sticky header (z-index 10). The header
+        # is its own stacking context, so its profile menu's z-index:1000
+        # only applies inside it -- a card above 10 out here covers the menu,
+        # which is exactly what a first attempt at this did.
+        _card_z = re.search(r'\.am \.cr-card \{[^}]*z-index:\s*(\d+)', _page)
+        _base = open(os.path.join(settings.BASE_DIR, 'teacher', 'templates',
+                                  'teacher', 'base.html'),
+                     encoding='utf-8', errors='ignore').read()
+        _hdr_z = re.search(r'position:\s*sticky;\s*top:\s*0;\s*z-index:\s*(\d+)',
+                           _base)
+        check('the classroom card carries a z-index of its own',
+              _card_z is not None)
+        if _card_z and _hdr_z:
+            check('and it stays below the header, so the profile menu is not covered',
+                  int(_card_z.group(1)) < int(_hdr_z.group(1)),
+                  f'card={_card_z.group(1)} header={_hdr_z.group(1)}')
+            check('while still above the panels it has to cover',
+                  int(_card_z.group(1)) > 0, _card_z.group(1))
 
         # The list itself must travel as JSON. Python's repr() went in raw
         # before, which parses by luck and dies on the first odd character.

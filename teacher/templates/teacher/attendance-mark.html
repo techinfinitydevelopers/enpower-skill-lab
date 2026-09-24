@@ -17,7 +17,13 @@
        clipped at the card's edge. The search row sits inside the card and
        stayed visible, which made it look as though the list had loaded empty
        when it had rendered perfectly and been cut off. */
-    .am .cr-card { overflow:visible; position:relative; z-index:50; }
+    /* z-index 5, deliberately: above the session panels below (z-index auto,
+       so 0) and below the sticky header (z-index 10). The header is a
+       stacking context, so its profile menu's own z-index:1000 only counts
+       inside it -- from out here the whole header sits at 10. A 50 here put
+       this card over the profile menu, which is how that menu ended up
+       painted behind the page. */
+    .am .cr-card { overflow:visible; position:relative; z-index:5; }
     /* teacher-dashboard.css lifts every .card on hover with a transform, and
        a transform creates a stacking context -- which traps the dropdown's
        own z-index inside this card, letting the panels below it (later in the
