@@ -2,6 +2,80 @@
 
 Chronological record of completed tasks (per org policy: log after each completed task).
 
+## 2026-09-23/24 — Timetable for the coach, and why Attendance showed nothing
+
+Client raised three things. All resolved; the last one took three attempts
+and is worth reading for how it was missed twice.
+
+### 1. Class List coach assignment reached nobody
+
+`Class` and `Timetable` hold the same four facts plus a coach and **nothing
+joined them**. Different screens read different tables:
+
+- `Class` -> the parent's "who teaches my child", School Admin's coach list
+- `Timetable` -> the coach's own schedule, and attendance
+
+Production had **50 timetables and 3 classes**, so almost every parent saw
+"-" for their child's coach. Nobody had reported it.
+
+Fixed with post_save signals (`attendance/signals.py`) carrying the coach
+across, plus migration `0011` backfilling. Production went 3 -> 50 classes.
+
+Asymmetric on purpose: a Timetable creates a Class; a Class never creates a
+Timetable (it has no days or times, and an empty schedule on the coach's
+timetable is worse than none).
+
+**I first suggested deleting the Class list's coach field. That was wrong** --
+it is the field the parent screen reads. Checking before acting caught it.
+
+### 2. Coach could not see the timetable at all
+
+The teacher app had no timetable page -- 18 sidebar entries, none of them
+this -- and the one place timetable data reached it (the attendance
+classroom picker) carried program/grade/division and nothing about *when*.
+
+Coach now has the coordinator's list and detail pages, **read only**, scoped
+to schedules assigned to them (`_timetable_queryset`). One school has several
+coaches; filtering by school would hand each of them the others'. Attendance
+was narrowed the same way -- checked production first (50/50 assigned) so no
+coach would be locked out.
+
+### 3. "Can't see students to mark attendance" -- three separate causes
+
+| # | Cause | Layer |
+|---|---|---|
+| 1 | Form says "END DATE (optional)", session generator required it | Backend |
+| 2 | `.card { overflow:hidden }` clipped the dropdown | CSS |
+| 3 | `.card:hover { transform }` trapped its z-index | CSS |
+
+**49 of 50** schedules had no end date, so `_generate_sessions` returned []
+immediately. Fixed in the generator, not the form: making the field mandatory
+would not repair a single existing row, and would force people to fill a
+genuinely optional field to work around our own bug.
+
+Then the dropdown still showed nothing. Both remaining causes were CSS rules
+in a **shared stylesheet loaded on every teacher page**, invisible to every
+server-side check. The search row sits *inside* the card so it stayed
+visible, which read as "list loaded empty" rather than "list is hidden".
+
+Also replaced `{{ classrooms|safe }}` (Python `repr()` straight into a
+`<script>`) with `json_script`. Not the cause here; the same empty dropdown
+waiting on the first apostrophe in a school name.
+
+**Process note worth keeping:** I fixed the backend twice and said "done"
+while the fault was in the browser. Production diagnostics proved the data
+and the APIs were correct *before* the second attempt -- that should have
+redirected me to CSS immediately. **For a UI complaint, ask for the screenshot
+or console first.**
+
+**Verified:** `verify_timetable` 54 -> **106/106**. Every CSS assertion was
+confirmed to fail with the fix removed. Regression: bulk-import 98,
+bulk-delete 109, exports 85, pages 67, reports 49, email 72,
+password-reset 47, HTML clean.
+
+**Confirmed live by the client:** 60 sessions, 35 students, attendance
+markable.
+
 ## 2026-09-17 — Parent email optional; import errors name the column (69d38e1, 2dcab57)
 
 **Why:** client filling the parent bulk sheet asked what to put in the
