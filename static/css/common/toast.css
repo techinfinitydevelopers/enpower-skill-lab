@@ -15,7 +15,10 @@
 
 .esl-toast-container {
     position: fixed;
-    top: 20px;
+    /* Clear of the sticky header rather than on top of it. At 20px the
+       toast covered the signed-in user name and the account menu, so you
+       could not use the page until it dismissed itself. */
+    top: 84px;
     right: 20px;
     z-index: 99999;
     display: flex;
@@ -192,7 +195,7 @@
 
 @media (max-width: 480px) {
     .esl-toast-container {
-        top: 12px;
+        top: 76px;
         right: 12px;
         left: 12px;
         width: auto;

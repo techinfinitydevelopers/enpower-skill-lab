@@ -415,6 +415,36 @@ def run():
         check(f'and its icon uses that colour, not a fallback',
               f'.esl-toast-{_kind} .esl-toast-icon {{ background: var(--esl-toast-{_kind}); }}' in _toast_css)
 
+    # Both files changed twice while the URL stayed ?v=3, so browsers kept
+    # serving the broken copy and the fix was invisible on screen even
+    # though the server had it. Every page that loads them must ask for a
+    # version, and the same one.
+    _busted = []
+    for _root, _dirs, _files in os.walk(settings.BASE_DIR):
+        if any(p in _root for p in ('venv', '.git', 'node_modules',
+                                    'staticfiles', '__pycache__')):
+            continue
+        for _f in _files:
+            if not _f.endswith('.html'):
+                continue
+            _p = os.path.join(_root, _f)
+            _txt = open(_p, encoding='utf-8', errors='ignore').read()
+            for _asset in ('toast.css', 'toast.js'):
+                for _m in _re3.finditer(
+                        _re3.escape(_asset) + r"' %\}(\?v=(\d+))?", _txt):
+                    if not _m.group(1):
+                        _busted.append(
+                            f'{os.path.relpath(_p, settings.BASE_DIR)}: {_asset} has no ?v=')
+    check('every page asks for a versioned toast asset', not _busted,
+          '; '.join(sorted(set(_busted))[:3]))
+
+    # And it must sit clear of the sticky header, which it covered at 20px.
+    _top = _re3.search(r'\.esl-toast-container \{[^}]*top:\s*(\d+)px',
+                       _toast_css)
+    check('the toast clears the header rather than covering it',
+          _top is not None and int(_top.group(1)) >= 70,
+          f'top: {_top.group(1)}px' if _top else 'no top found')
+
     # ── adding a school says so, and shows you ──────────────────────────
     # It used to save the school, redirect silently to the dashboard, and
     # leave the user thinking nothing had happened.
