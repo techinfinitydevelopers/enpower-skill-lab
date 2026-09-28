@@ -350,7 +350,9 @@ def onboard_school(request):
             school.save()
             
             messages.success(request, f'School "{school.school_name}" has been successfully onboarded!')
-            return redirect('superadmin_dashboard')
+            # To the school list, not the dashboard. The new row is visible
+            # there, which tells you it worked even if you miss the toast.
+            return redirect('school_list')
             
         except Exception as e:
             messages.error(request, f'Error onboarding school: {str(e)}')

@@ -708,22 +708,22 @@ function notify(message, type) {
     const TITLES = { success: 'Success', error: 'Error', warning: 'Warning', info: 'Info' };
     const t = type || 'success';
 
-    let box = document.querySelector('.toast-container');
+    let box = document.querySelector('.esl-toast-container');
     if (!box) {
         box = document.createElement('div');
-        box.className = 'toast-container';
+        box.className = 'esl-toast-container';
         document.body.appendChild(box);
     }
     const el = document.createElement('div');
     el.className = `toast toast-${t}`;
     el.innerHTML =
-        `<div class="toast-icon"><span class="material-symbols-outlined">${ICONS[t] || ICONS.info}</span></div>` +
-        `<div class="toast-content"><div class="toast-title">${TITLES[t] || 'Info'}</div>` +
-        `<div class="toast-message"></div></div>` +
-        `<button class="toast-close" onclick="this.closest('.toast').remove()">` +
+        `<div class="esl-toast-icon"><span class="material-symbols-outlined">${ICONS[t] || ICONS.info}</span></div>` +
+        `<div class="esl-toast-content"><div class="esl-toast-title">${TITLES[t] || 'Info'}</div>` +
+        `<div class="esl-toast-message"></div></div>` +
+        `<button class="esl-toast-close" onclick="this.closest('.esl-toast').remove()">` +
         `<span class="material-symbols-outlined">close</span></button>` +
-        `<div class="toast-progress"><div class="toast-progress-bar"></div></div>`;
-    el.querySelector('.toast-message').textContent = message;
+        `<div class="esl-toast-progress"><div class=" KEEPesl-toast-progress -bar"></div></div>`;
+    el.querySelector('.esl-toast-message').textContent = message;
     box.appendChild(el);
     setTimeout(() => el.remove(), 3000);
     return el;

@@ -352,6 +352,72 @@ def run():
     check('no list page container is pinned to a fixed pixel width',
           not capped, '; '.join(capped))
 
+    # ── our toast does not share a name with Bootstrap's ────────────────
+    # Bootstrap 5.3 ships `.toast:not(.show){display:none}`. That selector is
+    # (0,2,0); a plain `.toast` rule of ours is (0,1,0), so Bootstrap wins
+    # whichever stylesheet loads last. Our toasts carry no `.show`, so every
+    # one of them sat in the DOM fully built and invisible -- which is why
+    # adding a school looked like it had failed, and why the toast bug stayed
+    # open from 24 August. Six of the seven role bases load Bootstrap.
+    print(chr(10) + 'THE TOAST DOES NOT COLLIDE WITH BOOTSTRAP')
+    import re as _re3
+
+    _BOOTSTRAP_OWNS = ('toast', 'toast-container', 'toast-header', 'toast-body')
+    _clashes = []
+    for _root, _dirs, _files in os.walk(settings.BASE_DIR):
+        if any(p in _root for p in ('venv', '.git', 'node_modules', 'staticfiles',
+                                    'migrations', '__pycache__')):
+            continue
+        for _f in _files:
+            if not _f.endswith(('.html', '.css', '.js')):
+                continue
+            _path = os.path.join(_root, _f)
+            _text = open(_path, encoding='utf-8', errors='ignore').read()
+            for _cls in _BOOTSTRAP_OWNS:
+                # class="toast ..." in markup, or a bare .toast selector.
+                if _re3.search(r'class="[^"]*(?<![\w-])' + _cls + r'(?![\w-])',
+                               _text) or \
+                   _re3.search(r'(?<![\w-])\.' + _cls + r'(?![\w-])', _text):
+                    _clashes.append(
+                        f'{os.path.relpath(_path, settings.BASE_DIR)}: .{_cls}')
+    check('nothing uses a class name Bootstrap also styles', not _clashes,
+          '; '.join(sorted(set(_clashes))[:3]))
+
+    # ── adding a school says so, and shows you ──────────────────────────
+    # It used to save the school, redirect silently to the dashboard, and
+    # leave the user thinking nothing had happened.
+    print(chr(10) + 'ADDING A SCHOOL TELLS YOU IT WORKED')
+    from schools.models import School as _School
+
+    _su = User.objects.filter(role='SUPER_ADMIN', is_active=True).first()
+    _admin = login_as(_su) if _su else None
+    if _admin:
+        _School.objects.filter(school_code='ZZVP1').delete()
+        _r = _admin.post('/super-admin/onboard-school/', {
+            'schoolName': 'ZZ Verify School', 'schoolCode': 'ZZVP1',
+            'board': 'cbse', 'schoolType': 'private', 'medium': 'english',
+            'schoolEmail': 'zzvp1@example.com', 'schoolPhone': '9000000001',
+            'principalName': 'P', 'principalPhone': '9000000002',
+            'principalEmail': 'zzvp1p@example.com', 'branchAddress': 'A',
+            'city': 'Mumbai', 'state': 'Maharashtra', 'pincode': '400001',
+            'emergencyContactPerson': 'X', 'emergencyPhone': '9000000003',
+        }, follow=True)
+        _made = _School.objects.filter(school_code='ZZVP1').first()
+        _html = _r.content.decode('utf-8', 'replace')
+        _landed = _r.redirect_chain[-1][0] if _r.redirect_chain else ''
+
+        check('the school is created', _made is not None)
+        check('and you land on the school list, not the dashboard',
+              'schools' in _landed and 'dashboard' not in _landed, _landed)
+        check('with a success message', 'successfully onboarded' in _html)
+        check('rendered in a toast Bootstrap will not hide',
+              'esl-toast' in _html and 'class="toast' not in _html)
+        check('and the new school is visibly in the list',
+              _made is not None and _made.school_name in _html,
+              'seeing the row is what actually reassures')
+        if _made:
+            _made.delete()
+
     # ── nothing sends a user to the old droplet's domain ────────────────
     # enpower.techinfinity.link still resolves, to the destroyed droplet's
     # IP, and has no MX record -- so an address there cannot receive mail

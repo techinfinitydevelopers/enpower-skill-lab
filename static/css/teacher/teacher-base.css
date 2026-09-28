@@ -941,7 +941,7 @@ body.dark .dropdown-item .material-symbols-outlined {
 }
 
 /* Toast Container */
-.toast-container {
+.esl-toast-container {
     position: fixed;
     top: 100px;
     right: 20px;
@@ -951,7 +951,7 @@ body.dark .dropdown-item .material-symbols-outlined {
     gap: 10px;
 }
 
-.toast {
+.esl-toast {
     display: flex;
     align-items: flex-start;
     gap: 12px;
@@ -977,7 +977,7 @@ body.dark .dropdown-item .material-symbols-outlined {
     }
 }
 
-.toast-icon {
+.esl-toast-icon {
     width: 32px;
     height: 32px;
     border-radius: 8px;
@@ -987,45 +987,45 @@ body.dark .dropdown-item .material-symbols-outlined {
     flex-shrink: 0;
 }
 
-.toast-icon .material-symbols-outlined {
+.esl-toast-icon .material-symbols-outlined {
     font-size: 1.25rem;
     color: white;
 }
 
-.toast-success .toast-icon {
+.esl-toast-success .esl-toast-icon {
     background: linear-gradient(135deg, #10B981 0%, #059669 100%);
 }
 
-.toast-error .toast-icon {
+.esl-toast-error .esl-toast-icon {
     background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
 }
 
-.toast-warning .toast-icon {
+.esl-toast-warning .esl-toast-icon {
     background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
 }
 
-.toast-info .toast-icon {
+.esl-toast-info .esl-toast-icon {
     background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
 }
 
-.toast-content {
+.esl-toast-content {
     flex: 1;
 }
 
-.toast-title {
+.esl-toast-title {
     font-size: 0.875rem;
     font-weight: 700;
     color: #1f2937;
     margin-bottom: 2px;
 }
 
-.toast-message {
+.esl-toast-message {
     font-size: 0.813rem;
     color: #6b7280;
     line-height: 1.4;
 }
 
-.toast-close {
+.esl-toast-close {
     background: none;
     border: none;
     color: #9ca3af;
@@ -1034,11 +1034,11 @@ body.dark .dropdown-item .material-symbols-outlined {
     transition: color 0.2s;
 }
 
-.toast-close:hover {
+.esl-toast-close:hover {
     color: #4b5563;
 }
 
-.toast-progress {
+.esl-toast-progress {
     position: absolute;
     bottom: 0;
     left: 0;
@@ -1047,7 +1047,7 @@ body.dark .dropdown-item .material-symbols-outlined {
     background: #e5e7eb;
 }
 
-.toast-progress-bar {
+. KEEPesl-toast-progress -bar {
     height: 100%;
     background: linear-gradient(90deg, #6b277e, #A67DB1);
     animation: progress 5s linear forwards;

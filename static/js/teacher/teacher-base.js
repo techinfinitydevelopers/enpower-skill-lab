@@ -158,7 +158,7 @@ function initializeToasts() {
 }
 
 function closeToast(button) {
-    const toast = button.closest('.toast');
+    const toast = button.closest('.esl-toast');
     dismissToast(toast);
 }
 

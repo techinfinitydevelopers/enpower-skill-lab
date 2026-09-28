@@ -122,7 +122,7 @@ body {
 }
 
 /* ===== TOAST NOTIFICATION ===== */
-.toast {
+.esl-toast {
     position: fixed;
     bottom: 24px;
     left: 50%;
@@ -140,9 +140,9 @@ body {
     align-items: center;
     gap: 8px;
 }
-.toast.show {
+.esl-toast.show {
     transform: translateX(-50%) translateY(0);
 }
-.toast .material-symbols-outlined {
+.esl-toast .material-symbols-outlined {
     color: #5A1F6E;
 }
