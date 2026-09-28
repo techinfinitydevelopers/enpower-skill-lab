@@ -19,10 +19,17 @@
             <p class="coord-dash-page-subtitle">Welcome back! Monitor and manage your assigned schools</p>
         </div>
         <div class="coord-dash-page-header-actions">
-            <button class="coord-dash-btn-secondary">
+            {% comment %}
+              This was a bare <button> with nothing behind it -- no handler,
+              no form, no link. It exports the table below it, scoped the way
+              the page is.
+            {% endcomment %}
+            <a href="{% url 'export_list' key='coordinator-dashboard' %}"
+               class="coord-dash-btn-secondary" style="text-decoration:none;"
+               title="Download this overview as Excel">
                 <span class="material-symbols-outlined">download</span>
                 Export Report
-            </button>
+            </a>
         </div>
     </div>
 
@@ -100,7 +107,7 @@
                                     {{ school.school_name }}
                                 </div>
                             </td>
-                            <td>{{ school.branch_city|default:"-" }}</td>
+                            <td>{{ school.city|default:"-" }}</td>
                             <td>{{ school.teacher_count }}</td>
                             <td>{{ school.student_count }}</td>
                             <td>

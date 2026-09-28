@@ -208,6 +208,9 @@ PAGES = {
     'coordinators':        ('SUPER_ADMIN', '/super-admin/coordinators/'),
     'school-admins':       ('SUPER_ADMIN', '/super-admin/school-admins/'),
     'coordinator-schools': ('PROGRAM_COORDINATOR', '/coordinator/school-list/'),
+    # The dashboard's Export Report was a bare <button> with no handler, no
+    # form and no link -- it did nothing at all when clicked.
+    'coordinator-dashboard': ('PROGRAM_COORDINATOR', '/coordinator/dashboard/'),
     'my-students':         ('SCHOOL_ADMIN', '/school-admin/students/'),
     'my-parents':          ('SCHOOL_ADMIN', '/school-admin/parents/'),
     'class-students':      ('THINKING_COACH', '/teacher/students/'),
@@ -273,6 +276,33 @@ for key, entry in registry.items():
     check(f'{key}: {got} row(s) written, {expected} in the queryset',
           got == expected,
           '' if got == expected else f'off by {abs(got - expected)}')
+
+# ── a column that reads a field that does not exist ─────────────────────
+# The coordinator dashboard's Location column read school.branch_city. There
+# is no such field -- it is `city` -- and a Django template renders a missing
+# attribute as nothing at all, so the column was blank on every row and looked
+# like missing data rather than a typo.
+print('\nCOLUMNS SHOW REAL VALUES, NOT SILENT BLANKS')
+
+if 'PROGRAM_COORDINATOR' in clients:
+    _c, _u = clients['PROGRAM_COORDINATOR']
+    from coordinator.views import _coordinator_schools
+
+    class _CoordReq:
+        pass
+
+    _req = _CoordReq()
+    _req.user = _u
+    _school = _coordinator_schools(_req).exclude(city='').first()
+    if _school:
+        _page = _c.get('/coordinator/dashboard/',
+                       follow=True).content.decode(errors='ignore')
+        _found = _school.city in _page
+        check('the coordinator dashboard prints the school city', _found,
+              '' if _found else f'{_school.city!r} is missing; the column may '
+                                'be reading a field that does not exist')
+    else:
+        print('  ..    no assigned school with a city to check against')
 
 _restore_passwords()
 

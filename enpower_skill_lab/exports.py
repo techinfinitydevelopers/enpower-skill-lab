@@ -21,6 +21,7 @@ Getters are called with the object and must return something Excel can hold;
 
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse
+from django.db.models import Count as _Count
 from django.utils import timezone
 
 
@@ -269,6 +270,29 @@ def _registry():
                 ('Status', _active),
             ],
         },
+        # The coordinator dashboard's own overview. Separate from
+        # 'coordinator-schools' because the two screens show different
+        # columns, and an export is meant to match the table above it.
+        # Avg. Performance is left out on purpose: it is a hardcoded '-' in
+        # the template, so a column of dashes is all it could carry.
+        'coordinator-dashboard': {
+            'roles': ('PROGRAM_COORDINATOR',),
+            'title': 'Assigned Schools Overview',
+            'rows': lambda r: _coordinator_schools(r).annotate(
+                teacher_count=_Count('teachers', distinct=True),
+                student_count=_Count('students', distinct=True),
+                class_count=_Count('classes', distinct=True),
+            ).order_by('school_name'),
+            'columns': [
+                ('School Name', lambda s: s.school_name),
+                ('Location', lambda s: ', '.join(p for p in (s.city, s.state) if p)),
+                ('Teachers', lambda s: s.teacher_count),
+                ('Students', lambda s: s.student_count),
+                ('Classes', lambda s: s.class_count),
+                ('Status', _active),
+            ],
+        },
+
         # ── Session feedback: same two roles as the screens ───────────
         # Both are readable by a Coordinator (their schools) and a Super
         # Admin (all of them). The export scopes itself the same way the
