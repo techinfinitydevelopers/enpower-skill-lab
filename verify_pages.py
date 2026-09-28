@@ -380,8 +380,40 @@ def run():
                    _re3.search(r'(?<![\w-])\.' + _cls + r'(?![\w-])', _text):
                     _clashes.append(
                         f'{os.path.relpath(_path, settings.BASE_DIR)}: .{_cls}')
+    _damaged = []
+    for _root, _dirs, _files in os.walk(settings.BASE_DIR):
+        if any(p in _root for p in ('venv', '.git', 'node_modules',
+                                    'staticfiles', '__pycache__')):
+            continue
+        for _f in _files:
+            if not _f.endswith(('.html', '.css', '.js', '.py')):
+                continue
+            _p = os.path.join(_root, _f)
+            _raw = open(_p, 'rb').read()
+            if bytes([0]) in _raw or b'KEEP' + b'esl-' in _raw:
+                _damaged.append(os.path.relpath(_p, settings.BASE_DIR))
+
     check('nothing uses a class name Bootstrap also styles', not _clashes,
           '; '.join(sorted(set(_clashes))[:3]))
+
+    # A bulk rename I ran wrote its own sentinel into twelve files -- NUL
+    # bytes and KEEP markers in the middle of class names and CSS variables.
+    # The toast still rendered, so every page check passed; the success
+    # colour just silently fell back to the base purple.
+    check('no source file carries a NUL byte or a leftover rename marker',
+          not _damaged, '; '.join(_damaged[:3]))
+
+    # Success is green and error is red. These were purple on screen because
+    # the variables they point at had been corrupted, which no amount of
+    # rendering the page would have revealed.
+    _toast_css = open(os.path.join(settings.BASE_DIR, 'static', 'css',
+                                   'common', 'toast.css'),
+                      encoding='utf-8', errors='ignore').read()
+    for _kind, _hex in (('success', '#16a34a'), ('error', '#dc2626')):
+        check(f'the {_kind} toast is defined as {_hex}',
+              f'--esl-toast-{_kind}: {_hex}' in _toast_css)
+        check(f'and its icon uses that colour, not a fallback',
+              f'.esl-toast-{_kind} .esl-toast-icon {{ background: var(--esl-toast-{_kind}); }}' in _toast_css)
 
     # ── adding a school says so, and shows you ──────────────────────────
     # It used to save the school, redirect silently to the dashboard, and

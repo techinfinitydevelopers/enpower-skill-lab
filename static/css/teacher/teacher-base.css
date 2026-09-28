@@ -1047,7 +1047,7 @@ body.dark .dropdown-item .material-symbols-outlined {
     background: #e5e7eb;
 }
 
-. KEEPesl-toast-progress -bar {
+.esl-toast-progress-bar {
     height: 100%;
     background: linear-gradient(90deg, #6b277e, #A67DB1);
     animation: progress 5s linear forwards;

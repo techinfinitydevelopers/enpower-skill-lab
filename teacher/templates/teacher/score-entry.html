@@ -722,7 +722,7 @@ function notify(message, type) {
         `<div class="esl-toast-message"></div></div>` +
         `<button class="esl-toast-close" onclick="this.closest('.esl-toast').remove()">` +
         `<span class="material-symbols-outlined">close</span></button>` +
-        `<div class="esl-toast-progress"><div class=" KEEPesl-toast-progress -bar"></div></div>`;
+        `<div class="esl-toast-progress"><div class="esl-toast-progress-bar"></div></div>`;
     el.querySelector('.esl-toast-message').textContent = message;
     box.appendChild(el);
     setTimeout(() => el.remove(), 3000);
