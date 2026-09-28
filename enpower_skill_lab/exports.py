@@ -75,6 +75,20 @@ def _children_grades(parent):
 
 # ── scoping ─────────────────────────────────────────────────────────────
 
+def _fb_coach(row):
+    user = getattr(row, 'thinking_coach', None)
+    if not user:
+        return ''
+    return user.get_full_name() or user.username
+
+
+def _fb_average(row):
+    """Mean of whichever of the four ratings were answered."""
+    scores = [row.rating_engagement, row.rating_delivery_ease,
+              row.rating_resources, row.rating_time_management]
+    scores = [s for s in scores if s is not None]
+    return round(sum(scores) / len(scores), 1) if scores else ''
+
 def _own_school(request):
     """The school this School Admin belongs to, or None."""
     profile = getattr(request.user, 'school_admin_profile', None)
@@ -255,7 +269,62 @@ def _registry():
                 ('Status', _active),
             ],
         },
+        # ── Session feedback: same two roles as the screens ───────────
+        # Both are readable by a Coordinator (their schools) and a Super
+        # Admin (all of them). The export scopes itself the same way the
+        # page does, from the request rather than the key.
+        'session-feedback-daily': {
+            'roles': ('SUPER_ADMIN', 'PROGRAM_COORDINATOR'),
+            'title': 'Daily Session Feedback',
+            'rows': lambda r: _feedback_daily(r),
+            'columns': [
+                ('Date', lambda f: f.date),
+                ('School', _school_name),
+                ('Grade', lambda f: f.grade),
+                ('Division', lambda f: f.division),
+                ('Session No', lambda f: f.session_number),
+                ('Session Title', lambda f: f.session_title),
+                ('Thinking Coach', _fb_coach),
+                ('Project', lambda f: f.project.title if f.project else ''),
+                ('Engagement', lambda f: f.rating_engagement),
+                ('Ease of Delivery', lambda f: f.rating_delivery_ease),
+                ('Resources', lambda f: f.rating_resources),
+                ('Time Management', lambda f: f.rating_time_management),
+                ('Average', _fb_average),
+                ('Project Completed', lambda f: f.is_project_completed),
+                ('Photos', lambda f: f.photos.count()),
+                ('What Happened', lambda f: f.session_description),
+            ],
+        },
+
+        'session-feedback-weekly': {
+            'roles': ('SUPER_ADMIN', 'PROGRAM_COORDINATOR'),
+            'title': 'Weekly Session Feedback',
+            'rows': lambda r: _feedback_weekly(r),
+            'columns': [
+                ('Week From', lambda f: f.date_from),
+                ('Week To', lambda f: f.date_to),
+                ('School', _school_name),
+                ('Thinking Coach', _fb_coach),
+                ('What Went Well', lambda f: f.went_well),
+                ('What Went Wrong', lambda f: f.went_wrong),
+                ('Something New Tried', lambda f: f.new_tried),
+                ('Lab Issue', lambda f: f.lab_issue),
+                ('Lab Issue Detail', lambda f: f.lab_issue_detail),
+                ('Submitted', lambda f: f.created_at.strftime('%d %b %Y, %H:%M')),
+            ],
+        },
     }
+
+
+def _feedback_daily(request):
+    from attendance.feedback_views import _daily_rows
+    return _daily_rows(request)
+
+
+def _feedback_weekly(request):
+    from attendance.feedback_views import _weekly_rows
+    return _weekly_rows(request)
 
 
 # ── the view ────────────────────────────────────────────────────────────

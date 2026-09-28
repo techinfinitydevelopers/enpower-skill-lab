@@ -1,0 +1,139 @@
+{% extends base_template %}
+{% load static %}
+
+{% block title %}Daily Session Feedback - {{ role_label }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .fd * { font-family:'Poppins',sans-serif; }
+    .fd .material-symbols-outlined { font-family:'Material Symbols Outlined'; }
+    .fd-card { background:#fff; border:1px solid #ede9f4; border-radius:14px;
+        box-shadow:0 1px 3px rgba(0,0,0,.05); padding:22px 24px; }
+    .fd-key { font-size:11px; font-weight:700; text-transform:uppercase;
+        letter-spacing:.06em; color:#94a3b8; margin-bottom:3px; }
+    .fd-val { font-size:14.5px; color:#1e1b4b; font-weight:600; }
+    .fd-body { font-size:14px; color:#374151; line-height:1.65; white-space:pre-wrap; }
+    .fd-muted { color:#94a3b8; font-weight:400; }
+    .fd-rate { display:flex; align-items:center; justify-content:space-between;
+        padding:12px 0; border-bottom:1px solid #f1f5f9; }
+    .fd-rate:last-child { border-bottom:none; }
+    .fd-dots { display:inline-flex; gap:5px; }
+    .fd-dot { width:22px; height:8px; border-radius:999px; background:#ede9f4; }
+    .fd-dot.on { background:#5A1F6E; }
+    .fd-pill { display:inline-block; padding:4px 12px; border-radius:999px;
+        font-size:12px; font-weight:700; }
+    .fd-pill-ok { background:#dcfce7; color:#166534; }
+    .fd-pill-no { background:#f1f5f9; color:#64748b; }
+    .fd-photo { border-radius:10px; border:1px solid #ede9f4; width:100%;
+        height:170px; object-fit:cover; }
+    .fd-back { display:inline-flex; align-items:center; gap:6px; color:#5A1F6E;
+        text-decoration:none; font-weight:600; font-size:14px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="fd py-4 py-lg-5">
+  <div class="container-xl" style="max-width:1080px;">
+
+    <a href="{% url urls.list %}" class="fd-back mb-3">
+      <span class="material-symbols-outlined">arrow_back</span> Back to Session Feedback
+    </a>
+
+    <header class="mb-4 mt-2">
+      <h1 class="h4 mb-1 fw-bold text-dark">
+        {% if row.session_number %}Session {{ row.session_number }}{% else %}Daily session{% endif %}
+        {% if row.session_title %}&mdash; {{ row.session_title }}{% endif %}
+      </h1>
+      <p class="mb-0 text-muted" style="font-size:0.875rem;">
+        {{ row.date|date:"d M Y" }} &middot; Grade {{ row.grade }}-{{ row.division }}
+        &middot; {{ row.school.school_name|default:"No school" }}
+      </p>
+    </header>
+
+    <div class="row g-3">
+      <div class="col-lg-7">
+        <div class="fd-card mb-3">
+          <div class="row g-3">
+            <div class="col-sm-6">
+              <div class="fd-key">Thinking Coach</div>
+              <div class="fd-val">{{ coach }}</div>
+            </div>
+            <div class="col-sm-6">
+              <div class="fd-key">Academic year</div>
+              <div class="fd-val">{{ row.academic_year|default:"—" }}</div>
+            </div>
+            <div class="col-sm-6">
+              <div class="fd-key">Project</div>
+              <div class="fd-val">
+                {% if row.project %}{{ row.project.title }}{% else %}<span class="fd-muted">Not linked</span>{% endif %}
+              </div>
+            </div>
+            <div class="col-sm-6">
+              <div class="fd-key">Project status</div>
+              <div class="fd-val">
+                {% if row.is_project_completed %}
+                  <span class="fd-pill fd-pill-ok">Completed</span>
+                {% else %}
+                  <span class="fd-pill fd-pill-no">In progress</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="fd-card">
+          <div class="fd-key mb-2">What happened in the session</div>
+          <div class="fd-body">{% if row.session_description %}{{ row.session_description }}{% else %}<span class="fd-muted">Nothing written.</span>{% endif %}</div>
+        </div>
+      </div>
+
+      <div class="col-lg-5">
+        <div class="fd-card">
+          <div class="d-flex align-items-baseline justify-content-between mb-2">
+            <div class="fd-key mb-0">How the session went</div>
+            <div>
+              {% if average %}
+                <span style="font-size:1.35rem; font-weight:700; color:#5A1F6E;">{{ average }}</span>
+                <span class="fd-muted" style="font-size:13px;">/ 5</span>
+              {% else %}
+                <span class="fd-muted" style="font-size:13px;">not rated</span>
+              {% endif %}
+            </div>
+          </div>
+          {% for label, score in ratings %}
+          <div class="fd-rate">
+            <span style="font-size:13.5px; color:#374151;">{{ label }}</span>
+            {% if score %}
+              <span class="fd-dots" title="{{ score }} out of 5">
+                {% for n in "12345" %}
+                  <span class="fd-dot {% if forloop.counter <= score %}on{% endif %}"></span>
+                {% endfor %}
+              </span>
+            {% else %}
+              <span class="fd-muted" style="font-size:13px;">not answered</span>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    {% if photos %}
+    <div class="fd-card mt-3">
+      <div class="fd-key mb-3">Session photos ({{ photos|length }})</div>
+      <div class="row g-3">
+        {% for p in photos %}
+        <div class="col-sm-6 col-lg-4">
+          <a href="{{ p.image.url }}" target="_blank" rel="noopener">
+            <img src="{{ p.image.url }}" alt="{{ p.caption|default:'Session photo' }}" class="fd-photo">
+          </a>
+          {% if p.caption %}<div class="mt-2" style="font-size:12.5px; color:#64748b;">{{ p.caption }}</div>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

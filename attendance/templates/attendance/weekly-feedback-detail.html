@@ -1,0 +1,101 @@
+{% extends base_template %}
+{% load static %}
+
+{% block title %}Weekly Session Feedback - {{ role_label }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .fw * { font-family:'Poppins',sans-serif; }
+    .fw .material-symbols-outlined { font-family:'Material Symbols Outlined'; }
+    .fw-card { background:#fff; border:1px solid #ede9f4; border-radius:14px;
+        box-shadow:0 1px 3px rgba(0,0,0,.05); padding:22px 24px; }
+    .fw-key { font-size:11px; font-weight:700; text-transform:uppercase;
+        letter-spacing:.06em; color:#94a3b8; margin-bottom:3px; }
+    .fw-val { font-size:14.5px; color:#1e1b4b; font-weight:600; }
+    .fw-body { font-size:14px; color:#374151; line-height:1.65; white-space:pre-wrap; }
+    .fw-muted { color:#94a3b8; font-weight:400; }
+    .fw-back { display:inline-flex; align-items:center; gap:6px; color:#5A1F6E;
+        text-decoration:none; font-weight:600; font-size:14px; }
+    .fw-issue { border:1px solid #fecaca; background:#fef2f2; border-radius:14px;
+        padding:20px 24px; }
+    .fw-issue-head { display:inline-flex; align-items:center; gap:8px;
+        color:#b91c1c; font-weight:700; font-size:14px; margin-bottom:8px; }
+    .fw-ok { border:1px solid #bbf7d0; background:#f0fdf4; border-radius:14px;
+        padding:16px 24px; color:#166534; font-size:13.5px; font-weight:600;
+        display:inline-flex; align-items:center; gap:8px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="fw py-4 py-lg-5">
+  <div class="container-xl" style="max-width:1080px;">
+
+    <a href="{% url urls.list %}?tab=weekly" class="fw-back mb-3">
+      <span class="material-symbols-outlined">arrow_back</span> Back to Session Feedback
+    </a>
+
+    <header class="mb-4 mt-2">
+      <h1 class="h4 mb-1 fw-bold text-dark">
+        Week of {{ row.date_from|date:"d M Y" }} &ndash; {{ row.date_to|date:"d M Y" }}
+      </h1>
+      <p class="mb-0 text-muted" style="font-size:0.875rem;">
+        {{ coach }} &middot; {{ row.school.school_name|default:"No school recorded" }}
+      </p>
+    </header>
+
+    {% if row.lab_issue %}
+    <div class="fw-issue mb-3">
+      <div class="fw-issue-head">
+        <span class="material-symbols-outlined">report</span> Lab issue reported
+      </div>
+      <div class="fw-body" style="color:#7f1d1d;">
+        {% if row.lab_issue_detail %}{{ row.lab_issue_detail }}{% else %}<span class="fw-muted">Flagged, but no detail written.</span>{% endif %}
+      </div>
+    </div>
+    {% else %}
+    <div class="fw-ok mb-3">
+      <span class="material-symbols-outlined">check_circle</span> No lab issue reported this week
+    </div>
+    {% endif %}
+
+    <div class="row g-3">
+      <div class="col-lg-4">
+        <div class="fw-card h-100">
+          <div class="fw-key mb-2">What went well</div>
+          <div class="fw-body">{% if row.went_well %}{{ row.went_well }}{% else %}<span class="fw-muted">Nothing written.</span>{% endif %}</div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="fw-card h-100">
+          <div class="fw-key mb-2">What went wrong</div>
+          <div class="fw-body">{% if row.went_wrong %}{{ row.went_wrong }}{% else %}<span class="fw-muted">Nothing written.</span>{% endif %}</div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="fw-card h-100">
+          <div class="fw-key mb-2">Something new tried</div>
+          <div class="fw-body">{% if row.new_tried %}{{ row.new_tried }}{% else %}<span class="fw-muted">Nothing written.</span>{% endif %}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fw-card mt-3">
+      <div class="row g-3">
+        <div class="col-sm-4">
+          <div class="fw-key">Thinking Coach</div>
+          <div class="fw-val">{{ coach }}</div>
+        </div>
+        <div class="col-sm-4">
+          <div class="fw-key">School</div>
+          <div class="fw-val">{{ row.school.school_name|default:"—" }}</div>
+        </div>
+        <div class="col-sm-4">
+          <div class="fw-key">Submitted</div>
+          <div class="fw-val">{{ row.created_at|date:"d M Y, H:i" }}</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,228 @@
+{% extends base_template %}
+{% load static %}
+
+{% block title %}Session Feedback - {{ role_label }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .sf * { font-family:'Poppins',sans-serif; }
+    .sf .material-symbols-outlined { font-family:'Material Symbols Outlined'; }
+    .sf-card { background:#fff; border:1px solid #ede9f4; border-radius:14px;
+        box-shadow:0 1px 3px rgba(0,0,0,.05); }
+    .sf-stat { display:flex; align-items:center; gap:14px; padding:18px 20px; }
+    .sf-stat-icon { width:46px; height:46px; border-radius:12px; display:inline-flex;
+        align-items:center; justify-content:center; flex-shrink:0; }
+    .sf-stat-n { font-size:1.5rem; font-weight:700; color:#1e1b4b; line-height:1.1; }
+    .sf-stat-l { font-size:.8rem; color:#64748b; }
+    .sf-tabs { display:flex; gap:6px; border-bottom:1px solid #ede9f4; padding:0 6px; }
+    .sf-tab { border:none; background:none; padding:12px 18px; font-size:14px;
+        font-weight:600; color:#94a3b8; border-bottom:2px solid transparent; cursor:pointer; }
+    .sf-tab.on { color:#5A1F6E; border-bottom-color:#5A1F6E; }
+    .sf-table { width:100%; border-collapse:collapse; min-width:820px; }
+    .sf-table thead th { font-size:11px; font-weight:700; text-transform:uppercase;
+        letter-spacing:.06em; color:#94a3b8; padding:13px 16px; text-align:left;
+        background:#faf8fc; border-bottom:1px solid #ede9f4; white-space:nowrap; }
+    .sf-table tbody td { padding:13px 16px; font-size:13.5px; color:#374151;
+        border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+    .sf-table tbody tr:hover { background:rgba(90,31,110,.05); }
+    .sf-muted { color:#94a3b8; }
+    .sf-pill { display:inline-block; padding:3px 10px; border-radius:999px;
+        font-size:11.5px; font-weight:700; }
+    .sf-pill-ok { background:#dcfce7; color:#166534; }
+    .sf-pill-no { background:#f1f5f9; color:#64748b; }
+    .sf-pill-warn { background:#fef2f2; color:#b91c1c; }
+    .sf-avg { font-weight:700; color:#5A1F6E; }
+    .sf-view { display:inline-flex; align-items:center; justify-content:center;
+        width:34px; height:34px; border-radius:8px; border:1.5px solid #e2e8f0;
+        background:#fff; color:#5A1F6E; text-decoration:none; }
+    .sf-view:hover { background:#5A1F6E; color:#fff; border-color:#5A1F6E; }
+    .sf-filters { display:flex; gap:10px; flex-wrap:wrap; align-items:end; padding:16px 20px; }
+    .sf-filters .sf-lbl { display:block; font-size:11px; font-weight:700; color:#94a3b8;
+        text-transform:uppercase; letter-spacing:.05em; margin-bottom:4px; }
+    .sf-filters select { border:1px solid #e2e8f0; border-radius:8px; padding:8px 10px;
+        font-size:13.5px; min-width:190px; }
+    .sf-go { background:#5A1F6E; color:#fff; border:none; border-radius:8px;
+        padding:9px 18px; font-weight:600; font-size:13.5px; cursor:pointer; }
+    .sf-clear { color:#64748b; font-size:13px; text-decoration:underline; padding:9px 4px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="sf py-4 py-lg-5">
+  <div class="container-xl" style="max-width:1280px;">
+
+    <header class="mb-4 d-flex flex-column flex-lg-row align-items-start align-items-lg-center justify-content-between gap-3">
+      <div>
+        <h1 class="h4 mb-1 fw-bold text-dark">Session Feedback</h1>
+        <p class="mb-0 text-muted" style="font-size:0.875rem;">
+          What Thinking Coaches reported after their sessions, across {{ scope_label }}
+        </p>
+      </div>
+      <div class="d-flex gap-2">
+        <a href="/exports/session-feedback-daily/" class="btn-gradient btn-gradient-export text-decoration-none"
+           style="background:linear-gradient(90deg,#475569,#334155); color:#fff; border-radius:0.5rem; padding:0.5rem 1rem; font-weight:600; font-size:13.5px; display:inline-flex; align-items:center; gap:6px;">
+          <span class="material-symbols-outlined" style="font-size:18px;">file_download</span>Daily
+        </a>
+        <a href="/exports/session-feedback-weekly/" class="btn-gradient btn-gradient-export text-decoration-none"
+           style="background:linear-gradient(90deg,#475569,#334155); color:#fff; border-radius:0.5rem; padding:0.5rem 1rem; font-weight:600; font-size:13.5px; display:inline-flex; align-items:center; gap:6px;">
+          <span class="material-symbols-outlined" style="font-size:18px;">file_download</span>Weekly
+        </a>
+      </div>
+    </header>
+
+    <div class="row g-3 mb-4">
+      <div class="col-sm-6 col-lg-4">
+        <div class="sf-card sf-stat">
+          <div class="sf-stat-icon" style="background:rgba(90,31,110,.1); color:#5A1F6E;">
+            <span class="material-symbols-outlined">rate_review</span>
+          </div>
+          <div><div class="sf-stat-n">{{ daily_total }}</div>
+               <div class="sf-stat-l">Daily session reports</div></div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-lg-4">
+        <div class="sf-card sf-stat">
+          <div class="sf-stat-icon" style="background:rgba(16,185,129,.1); color:#10b981;">
+            <span class="material-symbols-outlined">calendar_view_week</span>
+          </div>
+          <div><div class="sf-stat-n">{{ weekly_total }}</div>
+               <div class="sf-stat-l">Weekly write-ups</div></div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-lg-4">
+        <div class="sf-card sf-stat">
+          <div class="sf-stat-icon" style="background:rgba(220,38,38,.1); color:#dc2626;">
+            <span class="material-symbols-outlined">report</span>
+          </div>
+          <div><div class="sf-stat-n">{{ lab_issue_count }}</div>
+               <div class="sf-stat-l">Lab issues reported</div></div>
+        </div>
+      </div>
+    </div>
+
+    <main class="sf-card">
+      <form method="get" class="sf-filters">
+        <input type="hidden" name="tab" value="{{ active_tab }}">
+        <div>
+          <span class="sf-lbl">School</span>
+          <select name="school">
+            <option value="">All schools</option>
+            {% for s in schools %}
+              <option value="{{ s.id }}" {% if f_school == s.id|stringformat:"s" %}selected{% endif %}>{{ s.school_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <span class="sf-lbl">Thinking Coach</span>
+          <select name="coach">
+            <option value="">All coaches</option>
+            {% for c in coaches %}
+              <option value="{{ c.id }}" {% if f_coach == c.id|stringformat:"s" %}selected{% endif %}>{{ c.get_full_name|default:c.username }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <span class="sf-lbl">&nbsp;</span>
+          <label style="font-weight:500; color:#374151; font-size:13.5px; padding:8px 0; display:block;">
+            <input type="checkbox" name="lab" value="1" {% if f_lab %}checked{% endif %}> Lab issues only
+          </label>
+        </div>
+        <button type="submit" class="sf-go">Apply</button>
+        <a href="?" class="sf-clear">Clear</a>
+      </form>
+
+      <div class="sf-tabs">
+        <button type="button" class="sf-tab {% if active_tab != 'weekly' %}on{% endif %}" data-tab="daily">
+          Daily ({{ daily_total }})
+        </button>
+        <button type="button" class="sf-tab {% if active_tab == 'weekly' %}on{% endif %}" data-tab="weekly">
+          Weekly ({{ weekly_total }})
+        </button>
+      </div>
+
+      <div class="table-responsive" id="pane-daily" {% if active_tab == 'weekly' %}style="display:none;"{% endif %}>
+        <table class="sf-table">
+          <thead><tr>
+            <th>Date</th><th>School</th><th>Class</th><th>Session</th>
+            <th>Coach</th><th>Avg rating</th><th>Project</th><th style="text-align:right;">View</th>
+          </tr></thead>
+          <tbody>
+            {% for r in daily_rows %}
+            <tr>
+              <td>{{ r.obj.date|date:"d M Y" }}</td>
+              <td>{{ r.school }}</td>
+              <td>Grade {{ r.obj.grade }} - {{ r.obj.division }}</td>
+              <td>
+                {% if r.obj.session_number %}#{{ r.obj.session_number }} {% endif %}{{ r.obj.session_title|default:"" }}
+                {% if not r.obj.session_number and not r.obj.session_title %}<span class="sf-muted">&mdash;</span>{% endif %}
+              </td>
+              <td>{{ r.coach }}</td>
+              <td>{% if r.average %}<span class="sf-avg">{{ r.average }}</span> <span class="sf-muted">/ 5</span>{% else %}<span class="sf-muted">not rated</span>{% endif %}</td>
+              <td>{% if r.obj.is_project_completed %}<span class="sf-pill sf-pill-ok">Completed</span>{% else %}<span class="sf-pill sf-pill-no">In progress</span>{% endif %}</td>
+              <td style="text-align:right;">
+                <a href="{% url urls.daily_detail r.obj.id %}" class="sf-view" title="Open">
+                  <span class="material-symbols-outlined">visibility</span>
+                </a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="8" style="text-align:center; padding:44px 16px;" class="sf-muted">
+              No daily session feedback yet.
+            </td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="table-responsive" id="pane-weekly" {% if active_tab != 'weekly' %}style="display:none;"{% endif %}>
+        <table class="sf-table">
+          <thead><tr>
+            <th>Week</th><th>School</th><th>Coach</th>
+            <th>What went well</th><th>What went wrong</th><th>Lab issue</th>
+            <th style="text-align:right;">View</th>
+          </tr></thead>
+          <tbody>
+            {% for r in weekly_rows %}
+            <tr>
+              <td>{{ r.obj.date_from|date:"d M" }} &ndash; {{ r.obj.date_to|date:"d M Y" }}</td>
+              <td>{{ r.school }}</td>
+              <td>{{ r.coach }}</td>
+              <td>{{ r.obj.went_well|default:"—"|truncatechars:42 }}</td>
+              <td>{{ r.obj.went_wrong|default:"—"|truncatechars:42 }}</td>
+              <td>{% if r.obj.lab_issue %}<span class="sf-pill sf-pill-warn">Reported</span>{% else %}<span class="sf-pill sf-pill-no">None</span>{% endif %}</td>
+              <td style="text-align:right;">
+                <a href="{% url urls.weekly_detail r.obj.id %}" class="sf-view" title="Open">
+                  <span class="material-symbols-outlined">visibility</span>
+                </a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="7" style="text-align:center; padding:44px 16px;" class="sf-muted">
+              No weekly feedback yet.
+            </td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.querySelectorAll('.sf-tab').forEach(function (tab) {
+    tab.addEventListener('click', function () {
+        var want = tab.dataset.tab;
+        document.querySelectorAll('.sf-tab').forEach(function (t) {
+            t.classList.toggle('on', t === tab);
+        });
+        document.getElementById('pane-daily').style.display = want === 'daily' ? '' : 'none';
+        document.getElementById('pane-weekly').style.display = want === 'weekly' ? '' : 'none';
+        // Carried on the filter form, so Apply keeps you on the tab you were reading.
+        var carry = document.querySelector('.sf-filters input[name="tab"]');
+        if (carry) carry.value = want;
+    });
+});
+</script>
+{% endblock %}

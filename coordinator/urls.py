@@ -1,4 +1,5 @@
 from django.urls import path
+from attendance import feedback_views
 from . import views
 from . import reports
 
@@ -16,6 +17,14 @@ urlpatterns = [
     path('bulk-upload/<str:role>/sample/', views.download_sample_view, name='download_sample'),
     path('bulk-upload/<str:role>/', views.bulk_import_view, name='bulk_import'),
     path('bulk-upload/<str:role>/stream/', views.bulk_import_stream_view, name='bulk_import_stream'),
+    # Shared with the Super Admin; see attendance/feedback_views.py.
+    path('session-feedback/', feedback_views.session_feedback_list,
+         name='session_feedback_list'),
+    path('session-feedback/daily/<int:pk>/', feedback_views.daily_feedback_detail,
+         name='session_feedback_daily_detail'),
+    path('session-feedback/weekly/<int:pk>/', feedback_views.weekly_feedback_detail,
+         name='session_feedback_weekly_detail'),
+
     path('timetable/', views.timetable_list, name='timetable_list'),
     path('timetable/upload/', views.timetable_upload, name='timetable_upload'),
     path('timetable/<int:pk>/', views.timetable_detail, name='timetable_detail'),

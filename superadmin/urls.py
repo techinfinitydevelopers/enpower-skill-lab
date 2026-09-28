@@ -9,6 +9,7 @@ from . import reports
 # scoped their data correctly anyway.
 from django.contrib.auth.decorators import user_passes_test
 
+from attendance import feedback_views
 from coordinator import views as coordinator_views
 
 superadmin_only = user_passes_test(views.is_superadmin)
@@ -51,6 +52,17 @@ urlpatterns = [
     # Class Management URLs
     path('classes/', views.class_list, name='class_list'),
     path('add-class/', views.add_class, name='add_class'),
+
+    # Session feedback the coaches write. Same two views for both roles;
+    # scope and chrome come from the signed-in user, not the route.
+    path('session-feedback/', superadmin_only(feedback_views.session_feedback_list),
+         name='superadmin_session_feedback_list'),
+    path('session-feedback/daily/<int:pk>/',
+         superadmin_only(feedback_views.daily_feedback_detail),
+         name='superadmin_session_feedback_daily_detail'),
+    path('session-feedback/weekly/<int:pk>/',
+         superadmin_only(feedback_views.weekly_feedback_detail),
+         name='superadmin_session_feedback_weekly_detail'),
 
     path('timetable/', superadmin_only(coordinator_views.timetable_list),
          name='superadmin_timetable_list'),
