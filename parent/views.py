@@ -352,14 +352,17 @@ def parent_child_reports(request, student_id):
 def parent_child_report_detail(request, student_id, project_id):
     """One project report for the parent's child — same content the student sees."""
     from competencies.models import ProjectReport, Profile, StudentAssessmentFeedback
-    from competencies.engine import (attach_competency_descriptions,
+    from competencies.engine import (refresh_competency_labels,
                                      get_per_assessment_breakdown, group_by_sub_pillar)
 
     child = _child_or_404(request, student_id)
     report = get_object_or_404(ProjectReport, student=child, project_id=project_id)
 
     all_scores = report.all_competency_scores or []
-    attach_competency_descriptions(all_scores, report.skills_to_work_on, report.top_5_competencies)
+    # Every stored list that renders a competency name, so a rename shows the
+    # same way here as in the live per-assessment breakdown below.
+    refresh_competency_labels(all_scores, report.skills_to_work_on,
+                              report.top_5_competencies, report.common_strengths)
 
     def label(score):
         if score >= 8: return 'very_strong'
@@ -409,7 +412,7 @@ def parent_child_report_detail(request, student_id, project_id):
 @user_passes_test(is_parent)
 def parent_child_passport(request, student_id):
     """The child's Annual Skill Passport, as the student sees it."""
-    from competencies.engine import (generate_annual_passport,                                      get_top_project, attach_competency_descriptions,
+    from competencies.engine import (generate_annual_passport,                                      get_top_project, refresh_competency_labels,
                                      group_by_sub_pillar)
     from competencies.models import Profile
     from student.views import _build_passport_summary
@@ -445,8 +448,9 @@ def parent_child_passport(request, student_id):
 
     if data:
         all_scores = data.get('all_competency_scores') or []
-        attach_competency_descriptions(all_scores, data.get('top_5_competencies'),
-                                       data.get('skills_to_work_on'))
+        refresh_competency_labels(all_scores, data.get('top_5_competencies'),
+                                  data.get('skills_to_work_on'),
+                                  data.get('common_strengths'))
 
         def label(score):
             if score >= 8: return 'very_strong'

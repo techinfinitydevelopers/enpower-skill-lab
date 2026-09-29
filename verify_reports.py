@@ -239,6 +239,66 @@ def check_outdated_flag():
     check('regenerating clears the flag', report.is_outdated is False)
 
 
+def check_rename_reaches_stored_reports():
+    """A renamed competency must show its new name everywhere on a report.
+
+    `ProjectReport` freezes competency rows as JSON, while the per-assessment
+    breakdown on the same page reads them live. Before the fix a rename showed
+    up in one section and not the other, which is exactly what the client saw.
+    """
+    print()
+    print('9. renaming a competency reaches the stored report (client, 2026-09-29)')
+
+    target = None
+    for rep in ProjectReport.objects.select_related('student', 'project'):
+        live = {c['competency_id']
+                for a in engine.get_per_assessment_breakdown(rep.student, rep.project)
+                for c in a['competencies']}
+        for row in (rep.top_5_competencies or []):
+            if row.get('competency_id') in live:
+                target = (rep, row['competency_id'])
+                break
+        if target:
+            break
+
+    if not target:
+        check('a report shares a competency with its own breakdown', False,
+              'nothing to rename — seed the database first')
+        return
+
+    rep, comp_id = target
+    was = Competency.objects.get(id=comp_id).name
+    renamed = '[RENAMED] ' + was
+    Competency.objects.filter(id=comp_id).update(name=renamed)
+    try:
+        fresh = ProjectReport.objects.get(pk=rep.pk)
+        stored = [fresh.all_competency_scores or [], fresh.top_5_competencies or [],
+                  fresh.skills_to_work_on or [], fresh.common_strengths or []]
+        engine.refresh_competency_labels(*stored)
+
+        rows = [r for lst in stored for r in lst if r.get('competency_id') == comp_id]
+        check('the stored lists carry the new name', bool(rows) and
+              all(r.get('competency_name') == renamed for r in rows),
+              ', '.join(sorted({r.get('competency_name', '') for r in rows})))
+
+        breakdown = [c for a in engine.get_per_assessment_breakdown(rep.student, rep.project)
+                     for c in a['competencies'] if c['competency_id'] == comp_id]
+        check('the live breakdown carries the new name', bool(breakdown) and
+              all(c['competency_name'] == renamed for c in breakdown))
+
+        names = {r.get('competency_name') for r in rows} | {
+            c['competency_name'] for c in breakdown}
+        check('both sections agree on one name', len(names) == 1,
+              ' vs '.join(sorted(n or '(blank)' for n in names)))
+
+        comp = Competency.objects.get(id=comp_id)
+        check('code and description come back live too',
+              all(r.get('competency_code') == comp.code and
+                  r.get('competency_desc') == comp.description for r in rows))
+    finally:
+        Competency.objects.filter(id=comp_id).update(name=was)
+
+
 def run():
     generate_all()
     check_fsl_target_profiles()
@@ -249,6 +309,7 @@ def run():
     check_common_strengths()
     check_top5_and_bands()
     check_outdated_flag()
+    check_rename_reaches_stored_reports()
 
     print(f'\n{"="*60}\nPASS {len(PASS)}   FAIL {len(FAIL)}')
     for f in FAIL:

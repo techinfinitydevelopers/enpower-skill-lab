@@ -28,28 +28,49 @@ PROFILING_COMPETENCY_POOL   = 10
 PROFILE_SHORTLIST_COUNT     = 5
 
 
-def attach_competency_descriptions(*score_lists):
-    """Fill in `competency_desc` on competency-score dicts, in place.
+def refresh_competency_labels(*score_lists):
+    """Re-read name, code and description onto competency-score dicts, in place.
 
-    Reports generated before descriptions were stored have no `competency_desc`
-    key, so student-facing pages would silently show codes only. Looking the
-    descriptions up at render time means old reports display correctly without
-    having to be regenerated. One query covers every list passed in.
+    `ProjectReport` freezes its competency rows as JSON at generation time, so
+    renaming a competency afterwards left the report showing the old name --
+    while "Assessment by Assessment" on the same page reads the live rows
+    through `get_per_assessment_breakdown` and showed the new one. The client
+    saw both names on one screen.
+
+    Reading the labels back at render time means a rename reaches every report
+    immediately, including ones generated years ago, with no regeneration step
+    and nothing to keep in sync. Scores stay frozen -- those are the record.
+    One query covers every list passed in.
+
+    A competency that has since been deleted keeps whatever the report stored,
+    which is more use to the reader than a blank row.
     """
     from .models import Competency
 
     rows = [row for lst in score_lists if lst for row in lst]
-    missing = {row.get('competency_id') for row in rows if not row.get('competency_desc')}
-    missing.discard(None)
-    if not missing:
+    ids = {row.get('competency_id') for row in rows}
+    ids.discard(None)
+    if not ids:
         return
 
-    descriptions = dict(
-        Competency.objects.filter(id__in=missing).values_list('id', 'description')
-    )
+    live = {
+        c_id: (name, code, desc)
+        for c_id, name, code, desc in Competency.objects.filter(
+            id__in=ids).values_list('id', 'name', 'code', 'description')
+    }
     for row in rows:
-        if not row.get('competency_desc'):
-            row['competency_desc'] = descriptions.get(row.get('competency_id'), '')
+        found = live.get(row.get('competency_id'))
+        if not found:
+            row.setdefault('competency_desc', '')
+            continue
+        name, code, desc = found
+        row['competency_name'] = name
+        row['competency_code'] = code
+        row['competency_desc'] = desc
+
+
+# The old name, kept so nothing outside this repo breaks on the rename.
+attach_competency_descriptions = refresh_competency_labels
 
 
 # ─────────────────────────────────────────────

@@ -176,9 +176,12 @@ def student_report_detail(request, project_id):
     # Categorize competencies by score label
     all_scores = report.all_competency_scores or []
 
-    from competencies.engine import attach_competency_descriptions
-    attach_competency_descriptions(
-        all_scores, report.skills_to_work_on, report.top_5_competencies
+    # Every stored list that renders a competency name, so a rename shows the
+    # same way here as in the live per-assessment breakdown further down.
+    from competencies.engine import refresh_competency_labels
+    refresh_competency_labels(
+        all_scores, report.skills_to_work_on, report.top_5_competencies,
+        report.common_strengths
     )
 
     def get_label(score):
@@ -311,11 +314,12 @@ def student_annual_passport(request):
     if data:
         all_scores = data.get('all_competency_scores') or []
 
-        from competencies.engine import attach_competency_descriptions, group_by_sub_pillar
-        attach_competency_descriptions(
+        from competencies.engine import refresh_competency_labels, group_by_sub_pillar
+        refresh_competency_labels(
             all_scores,
             data.get('top_5_competencies'),
             data.get('skills_to_work_on'),
+            data.get('common_strengths'),
         )
 
         def get_label(score):
