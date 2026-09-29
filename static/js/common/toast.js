@@ -18,8 +18,8 @@
     var CLOSE_MS = 300;      // matches .closing animation
 
     var ICONS = {
-        success: 'check_circle',
-        error: 'cancel',
+        success: 'check',
+        error: 'close',
         warning: 'warning',
         info: 'info'
     };

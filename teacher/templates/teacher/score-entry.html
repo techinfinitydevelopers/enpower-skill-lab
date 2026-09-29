@@ -704,7 +704,7 @@ function notify(message, type) {
     if (window.showToast) return window.showToast(message, type || 'success');
 
     console.warn('showToast unavailable — using fallback toast');
-    const ICONS  = { success: 'check_circle', error: 'cancel', warning: 'warning', info: 'info' };
+    const ICONS  = { success: 'check', error: 'close', warning: 'warning', info: 'info' };
     const TITLES = { success: 'Success', error: 'Error', warning: 'Warning', info: 'Info' };
     const t = type || 'success';
 

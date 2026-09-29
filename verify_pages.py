@@ -473,6 +473,37 @@ def run():
     check('no script builds a toast with an unprefixed class', not _js_bare,
           '; '.join(sorted(set(_js_bare))[:2]))
 
+    # The badge is our own circle. A glyph that is itself a circle draws a
+    # second one inside the first, and two concentric circles make any
+    # offset at all look like a centring bug -- which is exactly how it was
+    # reported. A plain mark has nothing to be compared against.
+    _ROUND_GLYPHS = ('check_circle', 'cancel', 'error_circle', 'info')
+    _nested = []
+    for _root, _dirs, _files in os.walk(settings.BASE_DIR):
+        if any(p in _root for p in ('venv', '.git', 'node_modules',
+                                    'staticfiles', '__pycache__',
+                                    'skillpassport')):
+            continue
+        for _f in _files:
+            if not _f.endswith(('.html', '.js')):
+                continue
+            _p = os.path.join(_root, _f)
+            _txt = open(_p, encoding='utf-8', errors='ignore').read()
+            if 'esl-toast-icon' not in _txt and 'ICONS' not in _txt:
+                continue
+            for _g in _ROUND_GLYPHS:
+                if _re3.search(r"(success|error)'?\s*(%\}|:)\s*'?" + _g, _txt):
+                    _nested.append(
+                        f'{os.path.relpath(_p, settings.BASE_DIR)}: {_g}')
+    check('the toast badge holds a plain mark, not a second circle',
+          not _nested, '; '.join(sorted(set(_nested))[:2]))
+
+    # And the glyph must sit on its own line box, or the icon font's leading
+    # pushes it off the middle of the badge.
+    check('the toast glyph has line-height 1 so flex can centre it',
+          'line-height: 1;' in _toast_css
+          and 'display: block;' in _toast_css)
+
     # ── adding a school says so, and shows you ──────────────────────────
     # It used to save the school, redirect silently to the dashboard, and
     # leave the user thinking nothing had happened.
@@ -502,6 +533,21 @@ def run():
         check('with a success message', 'successfully onboarded' in _html)
         check('rendered in a toast Bootstrap will not hide',
               'esl-toast' in _html and 'class="toast' not in _html)
+
+        # An icon font renders its ligature from the span's text, so
+        # whitespace around the name is text too and the glyph stops sitting
+        # in the middle of the badge. Read from the response, because the
+        # template can look tidy and still emit it.
+        _ico = _re3.search(
+            r'<div class="esl-toast-icon">\s*<span[^>]*>(.*?)</span>',
+            _html, _re3.S)
+        check('the toast icon renders with no whitespace around its glyph',
+              _ico is not None and _ico.group(1) == _ico.group(1).strip(),
+              repr(_ico.group(1)) if _ico else 'no icon in the response')
+        check('and the glyph is a plain mark',
+              _ico is not None and _ico.group(1).strip() in
+              ('check', 'close', 'warning', 'info'),
+              _ico.group(1).strip() if _ico else '')
 
         # The one check that was missing every time. The base class was
         # renamed but the modifier is built from a template variable --
