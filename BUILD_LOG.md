@@ -2,6 +2,118 @@
 
 Chronological record of completed tasks (per org policy: log after each completed task).
 
+## 2026-09-29 — The toast, end to end: why it never appeared, and five wrong fixes
+
+Closes the entry marked **OPEN** below (2026-08-24). The leading hypothesis
+there — a browser extension stripping the children — was wrong. The fault was
+ours the whole time, in three layers stacked on top of each other.
+
+### Layer 1 — Bootstrap owned the class name
+
+Bootstrap 5.3.2 ships:
+
+    .toast:not(.show){display:none}
+
+That selector is (0,2,0). Our plain `.toast` rule is (0,1,0), so **Bootstrap
+wins no matter which stylesheet loads last** — load order was never the
+variable, which is why reordering the tags in August changed nothing. Our
+server-rendered toasts carry no `.show` class, so every one of them sat in the
+DOM fully built and `display:none`. Six of the seven role base templates load
+Bootstrap, so this hit every role but Parent.
+
+Fixed by renaming the whole family to `esl-toast*` — the prefix the keyframes
+and custom properties already used.
+
+### Layer 2 — my rename script corrupted twelve files
+
+The script protected already-prefixed names with a `\0KEEP<name>\0` sentinel,
+then replaced the bare names. A shorter name (`toast-icon`) matched *inside* a
+longer name's sentinel, so the sentinels were half-rewritten and never
+restored. Twelve files were left containing literal `\x00KEEP` bytes — and it
+was committed and deployed before I noticed. Repaired by stripping the
+sentinel bytes; longest-name-first ordering was already there but does not
+help once a name is a substring of a sentinel body.
+
+### Layer 3 — the modifier class came from a template variable
+
+The real reason the toast stayed purple after the colours were "fixed". The
+markup is:
+
+    <div class="esl-toast toast-{{ message.tags }}">
+
+`toast-{{ message.tags }}` is not a literal in the file, so the rename never
+touched it. Rendered markup said `esl-toast toast-success`; the CSS said
+`.esl-toast-success`. No match, so the base (purple) styling applied. The two
+teacher pages built theirs in JS as `` `toast toast-${t}` `` — both halves
+bare, so those were still `display:none` from layer 1.
+
+**The process failure worth keeping:** I checked the stylesheet on disk, the
+file contents, the asset served over HTTP, and the server's response — and
+never once read the rendered `class="..."` attribute. Four "it's fixed"
+reports went out on that basis. Server-side checks show that code reached the
+page; they do not show what the browser matched.
+
+### Smaller faults found on the way
+
+- **Cache**: fixed the CSS but left `?v=3`, so browsers kept the broken copy.
+  Bumped to `?v=4` across all seven templates (`login.html` had no version
+  at all).
+- **Stacking**: `z-index: 50` on the classroom card covered the profile menu.
+  The header is `position:sticky; z-index:10`, which is a stacking context, so
+  the menu's `z-index:1000` only counts *inside* the header. Card dropped to 5.
+- **Position**: container moved to `top: 84px` so it clears the sticky header.
+
+### The icon (today)
+
+Two causes, both real:
+
+1. `check_circle` and `cancel` **draw their own ring**. Inside our circular
+   badge that makes two concentric circles, and any offset in the glyph's own
+   box reads as the tick sitting off-centre. Swapped to bare `check` / `close`
+   across ten files.
+2. Super Admin's template had the ligature on its own line. Material Symbols
+   renders the element's text content as the glyph name, so the surrounding
+   newline and indentation became real spaces and nudged the glyph right. The
+   other six templates were already tight.
+
+Read back from a real POST: `glyph content = 'check'`, `whitespace around
+glyph? no`, class `esl-toast esl-toast-success`; the error path gives `close`
+and `esl-toast-error`.
+
+### Guards
+
+Four added to `verify_pages.py`: no ringed glyph in the badge; `line-height: 1`
+and `display: block` on the glyph rule; the rendered ligature has no
+surrounding whitespace; the glyph is one of the four we draw. Each was proven
+by putting its own bug back and watching it fail — the whitespace guard
+reported `'\n                            check'`.
+
+Full regression after the fix:
+
+    verify_pages 102   verify_bulk_delete 109   verify_exports 106
+    verify_bulk_import 98   verify_timetable 108   verify_session_feedback 35
+    verify_reports 49   verify_email 72   verify_password_reset 47
+    verify_html clean
+
+All zero failures.
+
+**Not verified by me:** how it looks on screen. Every check above reads the
+rendered HTML and the served CSS. The user confirmed green; the centring is
+theirs to confirm.
+
+### Also in this stretch
+
+- **Report names now match** between the student and parent sidebars
+  (`Project Report`, `Annual Skill Passport`, `Kaushal Bodh Report`).
+- **Kaushal Bodh hidden for FSL** via `Framework.has_kaushal_bodh`
+  (migration `0028`) and `competencies/framework_context.py`. FSL records no
+  KB scores, so the page opened empty there.
+- **Reverted**: hiding the Skill Passport from CSL students. I implemented it
+  from a message that was only informing me, not asking. It was also wrong —
+  it removed CSL students' valid competency reports, which six existing suite
+  failures caught. Open question for Ritu: is "Annual Skill Passport"
+  acceptable wording for CSL?
+
 ## 2026-09-23/24 — Timetable for the coach, and why Attendance showed nothing
 
 Client raised three things. All resolved; the last one took three attempts
@@ -407,9 +519,9 @@ anonymous POST.
 dialog were checked in the served HTML and by asserting the CSS/JS load,
 not by looking at the rendered page.
 
-## OPEN — Toasts still not visible on the teacher scoring page (2026-08-24)
+## CLOSED 2026-09-29 — Toasts still not visible on the teacher scoring page (2026-08-24)
 
-**Status: unresolved. Parked at the user's request.** Everything below is deployed and verified; the toast still does not appear on screen for the user.
+**Status: resolved 2026-09-29 — see the entry at the top. The extension hypothesis below was wrong.** Originally parked at the user's request. Everything below is deployed and verified; the toast still does not appear on screen for the user.
 
 Symptom: `showToast('TEST', 'success')` in the browser console returns
 `<div class="toast toast-success closing" data-toast></div>` — **with no children** — and nothing renders. The element is created and auto-dismisses on schedule.
