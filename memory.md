@@ -329,3 +329,31 @@ property so it updated to `Skills-SP1`, but `Competency.code` is a stored
 CharField (competencies/models.py:118) and did not. Client fixed the existing
 rows by SQL on 2026-09-05. **The underlying bug remains: editing a framework's
 prefix does not regenerate its competency codes.**
+
+### [2026-09-29] Toast: never name a class `.toast` again
+Bootstrap 5.3.2 ships `.toast:not(.show){display:none}` at specificity (0,2,0),
+which beats our plain `.toast` (0,1,0) **regardless of load order** — reordering
+the stylesheet tags in August was never going to help. Server-rendered toasts
+carry no `.show`, so every one sat in the DOM fully built and invisible from
+24 August to 29 September. Six of the seven role base templates load Bootstrap.
+
+The family is now `esl-toast*` everywhere. The subtle survivor of the rename was
+the modifier built from a template variable, `class="esl-toast toast-{{ message.tags }}"` —
+not a literal in any file, so it kept rendering `toast-success` against CSS that
+said `.esl-toast-success`, which is why the toast stayed purple after the colour
+"fix". Grep template-interpolated class names too.
+
+Badge glyphs are bare `check`/`close`/`warning`/`info`. `check_circle` and
+`cancel` draw their own ring, and a ring inside our circular badge makes any
+offset in the glyph box read as off-centre. Material Symbols renders the
+element's *text content*, so the ligature must sit tight against its tags — a
+newline and indent around it become real spaces and shift the glyph.
+
+Cache-buster: bump `?v=N` on all seven templates whenever toast.css/js changes.
+
+**Process note, and the expensive part:** four "it's fixed" reports went out on
+the strength of checking the stylesheet on disk, the file contents, the asset
+served over HTTP and the server's response. None of those show what the browser
+matched. Read the rendered `class="..."` attribute back from a real request.
+`verify_pages.py` now guards the prefix, the glyph set, the ring and the
+whitespace.
