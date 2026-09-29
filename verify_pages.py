@@ -445,6 +445,34 @@ def run():
           _top is not None and int(_top.group(1)) >= 70,
           f'top: {_top.group(1)}px' if _top else 'no top found')
 
+    # The sweep above only read class="..." attributes and CSS selectors, so
+    # it missed two pages that build their toast in JavaScript:
+    #     el.className = `toast toast-${t}`
+    # Those stayed bare and Bootstrap kept hiding them -- on exactly the two
+    # pages where the toast was first reported broken.
+    _js_bare = []
+    for _root, _dirs, _files in os.walk(settings.BASE_DIR):
+        if any(p in _root for p in ('venv', '.git', 'node_modules',
+                                    'staticfiles', '__pycache__')):
+            continue
+        for _f in _files:
+            if not _f.endswith(('.html', '.js')):
+                continue
+            _p = os.path.join(_root, _f)
+            _txt = open(_p, encoding='utf-8', errors='ignore').read()
+            _quotes = '[' + chr(96) + chr(39) + chr(34) + ']'
+            for _m in _re3.finditer(
+                    r'className\s*=\s*' + _quotes + '([^' + chr(96)
+                    + chr(39) + chr(34) + ']*)', _txt):
+                for _word in _m.group(1).split():
+                    _word = _word.split('$')[0].split('{')[0]
+                    if _word == 'toast' or (_word.startswith('toast-')
+                                            and 'esl-' not in _word):
+                        _js_bare.append(
+                            f'{os.path.relpath(_p, settings.BASE_DIR)}: className={_m.group(1)!r}')
+    check('no script builds a toast with an unprefixed class', not _js_bare,
+          '; '.join(sorted(set(_js_bare))[:2]))
+
     # ── adding a school says so, and shows you ──────────────────────────
     # It used to save the school, redirect silently to the dashboard, and
     # leave the user thinking nothing had happened.
@@ -474,6 +502,25 @@ def run():
         check('with a success message', 'successfully onboarded' in _html)
         check('rendered in a toast Bootstrap will not hide',
               'esl-toast' in _html and 'class="toast' not in _html)
+
+        # The one check that was missing every time. The base class was
+        # renamed but the modifier is built from a template variable --
+        # `toast-{{ message.tags }}` matched no literal, so the markup said
+        # `esl-toast toast-success` while the stylesheet said
+        # `.esl-toast-success`. The rule never applied and the icon kept the
+        # base purple. Reading the rendered class against the real stylesheet
+        # is the only thing that catches that.
+        _rendered = _re3.search(r'<div class="(esl-toast [^"]*)"', _html)
+        check('the toast carries a modifier class at all',
+              _rendered is not None,
+              '' if _rendered else 'no esl-toast element in the response')
+        if _rendered:
+            _classes = _rendered.group(1).split()
+            _unstyled = [c for c in _classes if f'.{c}' not in _toast_css]
+            check('every class on the rendered toast is one the stylesheet '
+                  'actually defines', not _unstyled,
+                  '' if not _unstyled else
+                  f'{_unstyled} rendered but not styled -- the colour falls back')
         check('and the new school is visibly in the list',
               _made is not None and _made.school_name in _html,
               'seeing the row is what actually reassures')

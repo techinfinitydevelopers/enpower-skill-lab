@@ -115,7 +115,7 @@ function showToast(message, type) {
     if (!toast) {
         toast = document.createElement('div');
         toast.id = 'app-toast';
-        toast.className = 'toast';
+        toast.className = 'esl-toast';
         document.body.appendChild(toast);
     }
     toast.innerHTML = `<span class="material-symbols-outlined">check_circle</span> ${message}`;

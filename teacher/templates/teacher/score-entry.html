@@ -715,7 +715,7 @@ function notify(message, type) {
         document.body.appendChild(box);
     }
     const el = document.createElement('div');
-    el.className = `toast toast-${t}`;
+    el.className = `esl-toast esl-toast-${t}`;
     el.innerHTML =
         `<div class="esl-toast-icon"><span class="material-symbols-outlined">${ICONS[t] || ICONS.info}</span></div>` +
         `<div class="esl-toast-content"><div class="esl-toast-title">${TITLES[t] || 'Info'}</div>` +

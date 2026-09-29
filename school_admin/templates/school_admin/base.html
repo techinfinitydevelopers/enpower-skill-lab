@@ -357,7 +357,7 @@
             {% if messages %}
             <div class="esl-toast-container">
                 {% for message in messages %}
-                <div class="esl-toast toast-{{ message.tags }}" data-toast>
+                <div class="esl-toast esl-toast-{{ message.tags }}" data-toast>
                     <div class="esl-toast-icon">
                         <span class="material-symbols-outlined">{% if message.tags == 'success' %}check_circle{% elif message.tags == 'error' %}cancel{% elif message.tags == 'warning' %}warning{% else %}info{% endif %}</span>
                     </div>
