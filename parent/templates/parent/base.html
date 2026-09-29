@@ -1106,16 +1106,18 @@
                     <div class="sidebar-dropdown-menu">
                         <a href="{% if sidebar_child_id %}{% url 'parent_child_reports' sidebar_child_id %}{% else %}{% url 'parent_dashboard' %}{% endif %}" id="nav-child-performance">
                             <span class="material-symbols-outlined">analytics</span>
-                            Project Reports
+                            Project Report
                         </a>
                         <a href="{% if sidebar_child_id %}{% url 'parent_child_passport' sidebar_child_id %}{% else %}{% url 'parent_dashboard' %}{% endif %}" id="nav-annual-skill-report">
                             <span class="material-symbols-outlined">workspace_premium</span>
-                            Annual Skill Report
+                            Annual Skill Passport
                         </a>
-                        <a href="{% if sidebar_child_id %}{% url 'parent_child_kb_report' sidebar_child_id %}{% else %}{% url 'parent_dashboard' %}{% endif %}" id="nav-kb-report">
+                        {% if show_kaushal_bodh %}
+<a href="{% if sidebar_child_id %}{% url 'parent_child_kb_report' sidebar_child_id %}{% else %}{% url 'parent_dashboard' %}{% endif %}" id="nav-kb-report">
                             <span class="material-symbols-outlined">handyman</span>
                             Kaushal Bodh Report
                         </a>
+{% endif %}
                     </div>
                 </div>
 

@@ -33,7 +33,7 @@ parent's view of their child's passport, so both stay identical.
             <div class="student-meta">
                 {% if student.student_class %}<span class="meta-chip"><span class="material-symbols-outlined">school</span> Grade {{ student.student_class }}{% if student.division %} – {{ student.division }}{% endif %}</span>{% endif %}
                 {% if student.skill_lab_reg_id %}<span class="meta-chip"><span class="material-symbols-outlined">badge</span> {{ student.skill_lab_reg_id }}</span>{% endif %}
-                {% if academic_year %}<span class="meta-chip"><span class="material-symbols-outlined">calendar_today</span> {{ academic_year }}</span>{% else %}<span class="meta-chip"><span class="material-symbols-outlined">verified</span> Skill Passport</span>{% endif %}
+                {% if academic_year %}<span class="meta-chip"><span class="material-symbols-outlined">calendar_today</span> {{ academic_year }}</span>{% else %}<span class="meta-chip"><span class="material-symbols-outlined">verified</span> Annual Skill Passport</span>{% endif %}
             </div>
         </div>
         <div class="stats-group">
@@ -283,7 +283,7 @@ parent's view of their child's passport, so both stay identical.
             <span class="material-symbols-outlined" style="font-size:32px; color:var(--purple);">verified</span>
         </div>
         <h3 style="font-size:18px; font-weight:900; color:var(--purple); margin:0 0 6px; font-family:'Fredoka One',sans-serif;">No Passport Yet</h3>
-        <p style="font-size:14px; color:var(--text-muted); margin:0; font-weight:700;">Your Skill Passport will appear here once your thinking coach has assessed your competencies.</p>
+        <p style="font-size:14px; color:var(--text-muted); margin:0; font-weight:700;">Your Annual Skill Passport will appear here once your thinking coach has assessed your competencies.</p>
     </div>
 
     {% endif %}

@@ -597,6 +597,14 @@ def student_kb_report(request):
     KB sits outside the Skill Passport calculation, so it gets its own report
     rather than a line inside the passport. Grouped by sub-pillar (KB1/KB2/KB3).
     """
+    # Kaushal Bodh applies to CSL, not FSL, where no KB score is ever
+    # recorded -- the page would open empty. Hiding the sidebar link is not
+    # enough on its own; a bookmark still reaches the URL.
+    from competencies.framework_context import framework_flags
+
+    if not framework_flags(request).get('show_kaushal_bodh'):
+        return redirect('student:student_dashboard')
+
     from competencies.engine import build_kb_report
     from django.utils import timezone
 

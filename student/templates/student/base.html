@@ -262,18 +262,20 @@
                 <!-- Reports -->
                 <a href="{% url 'student:student_reports' %}" id="nav-reports" class="student-sidebar-nav-link">
                     <span class="material-symbols-outlined">workspace_premium</span>
-                    Skill Passport
+                    Project Report
                 </a>
 
                 <!-- Annual Skill Passport -->
                 <a href="{% url 'student:student_annual_passport' %}" id="nav-annual-passport" class="student-sidebar-nav-link">
                     <span class="material-symbols-outlined">verified</span>
-                    Annual Passport
+                    Annual Skill Passport
                 </a>
-                <a href="{% url 'student:student_kb_report' %}" id="nav-kb-report" class="student-sidebar-nav-link">
+                {% if show_kaushal_bodh %}
+<a href="{% url 'student:student_kb_report' %}" id="nav-kb-report" class="student-sidebar-nav-link">
                     <span class="material-symbols-outlined">handyman</span>
                     Kaushal Bodh Report
                 </a>
+{% endif %}
 
                 <!-- Badges -->
                 <a href="{% url 'student:student_badges' %}" id="nav-badges" class="student-sidebar-nav-link">

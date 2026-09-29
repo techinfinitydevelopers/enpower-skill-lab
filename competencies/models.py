@@ -12,6 +12,13 @@ class Framework(models.Model):
     # carry profiling (that overload is what disabled profiling everywhere
     # once every framework was recreated through Manage Frameworks).
     has_profiling = models.BooleanField(default=False, help_text='Run profile mapping and Skill Passport for this framework')
+    # Whether Kaushal Bodh applies. It is a CSL idea -- FSL records no KB
+    # scores at all -- so the report is hidden where it does not apply.
+    # A flag of its own rather than reading `not has_profiling`: that
+    # overload is exactly what broke profiling once already, one comment up.
+    has_kaushal_bodh = models.BooleanField(
+        default=True,
+        help_text='Show the Kaushal Bodh report for this framework')
     order     = models.PositiveSmallIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 

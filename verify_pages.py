@@ -527,6 +527,79 @@ def run():
         if _made:
             _made.delete()
 
+    # ── the two dashboards name the same reports the same way ───────────
+    # The parent side said "Project Reports" and "Annual Skill Report" while
+    # the student side said "Skill Passport" and "Annual Passport" for the
+    # same three reports. And Kaushal Bodh is a CSL report -- FSL records no
+    # KB score at all (0 of 18 reports), so it opens empty there.
+    print(chr(10) + 'STUDENT AND PARENT NAME THE REPORTS ALIKE')
+    from competencies.models import Framework as _Fw
+    from parent.models import Parent as _Par
+
+    _WANTED = ('Project Report', 'Annual Skill Passport')
+    _RETIRED = ('Skill Passport<', 'Annual Passport<', 'Project Reports<',
+                'Annual Skill Report<')
+
+    for _label, _profiling in (('FSL', True), ('CSL', False)):
+        _fws = _Fw.objects.filter(has_profiling=_profiling)
+        _pupil = (Student.objects.select_related('school__framework_ref', 'user')
+                  .filter(user__isnull=False, school__framework_ref__in=_fws)
+                  .first())
+        if not _pupil:
+            print(f'  ..    no {_label} student with a login')
+            continue
+        _fw = _pupil.school.framework_ref
+        _c = login_as(_pupil.user)
+        if not _c:
+            check(f'{_label}: can sign in', False, _pupil.user.username)
+            continue
+
+        _side = _c.get('/student/dashboard/',
+                       follow=True).content.decode('utf-8', 'replace')
+        for _name in _WANTED:
+            check(f'{_label} student sidebar says "{_name}"', _name in _side)
+        _old = [o for o in _RETIRED if o in _side]
+        check(f'{_label} student sidebar drops the old names', not _old,
+              '; '.join(_old))
+
+        # Kaushal Bodh follows the framework, in the opposite direction to
+        # the passport: CSL yes, FSL no.
+        check(f'{_label} student: Kaushal Bodh '
+              f'{"shown" if not _profiling else "hidden"}',
+              ('Kaushal Bodh Report' in _side) != _profiling,
+              f'has_kaushal_bodh={_fw.has_kaushal_bodh}')
+        _kb = _c.get('/student/reports/kaushal-bodh/')
+        check(f'{_label} student: the KB url agrees with the sidebar',
+              (_kb.status_code == 200) != _profiling,
+              f'HTTP {_kb.status_code}')
+
+        # The parent of that same child must read the same words, and get the
+        # same answer about KB -- they were the two screens that disagreed.
+        _mum = _Par.objects.filter(students=_pupil, user__isnull=False).first()
+        if not _mum:
+            print(f'  ..    no parent linked to that {_label} student')
+            continue
+        _pc = login_as(_mum.user)
+        if not _pc:
+            continue
+        _pside = _pc.get('/parent/dashboard/',
+                         follow=True).content.decode('utf-8', 'replace')
+        for _name in _WANTED:
+            check(f'{_label} parent sidebar says "{_name}"', _name in _pside)
+        _oldp = [o for o in _RETIRED if o in _pside]
+        check(f'{_label} parent sidebar drops the old names', not _oldp,
+              '; '.join(_oldp))
+
+    # The flag itself, so a framework added later does not silently inherit
+    # the wrong answer.
+    check('FSL has Kaushal Bodh switched off',
+          not _Fw.objects.filter(has_profiling=True,
+                                 has_kaushal_bodh=True).exists(),
+          'FSL records no KB scores, so the report would open empty')
+    check('the CSL frameworks keep it',
+          not _Fw.objects.filter(has_profiling=False,
+                                 has_kaushal_bodh=False).exists())
+
     # ── nothing sends a user to the old droplet's domain ────────────────
     # enpower.techinfinity.link still resolves, to the destroyed droplet's
     # IP, and has no MX record -- so an address there cannot receive mail

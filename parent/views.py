@@ -578,6 +578,13 @@ def parent_projects(request):
 @user_passes_test(is_parent)
 def parent_child_kb_report(request, student_id):
     """The child's Kaushal Bodh report, as the student sees it."""
+    # Same rule as the student side: KB is a CSL report, and FSL records no
+    # KB scores, so there is nothing for an FSL parent to read here.
+    from competencies.framework_context import framework_flags
+
+    if not framework_flags(request).get('show_kaushal_bodh'):
+        return redirect('parent_dashboard')
+
     from competencies.engine import build_kb_report
     from django.utils import timezone
 

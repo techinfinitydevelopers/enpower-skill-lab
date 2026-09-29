@@ -1,6 +1,6 @@
 {% extends 'student/base.html' %}
 {% load static %}
-{% block title %}Skill Passport — Student{% endblock %}
+{% block title %}Project Report — Student{% endblock %}
 
 {% block extra_css %}
 {% include 'student/_passport_styles.html' %}
@@ -63,14 +63,14 @@
     <div class="student-header">
         <div class="avatar" onclick="spBurst(this,'⭐')">{{ student.first_name|slice:":1" }}{{ student.last_name|slice:":1" }}</div>
         <div class="student-info">
-            <div class="academic-year">Skill Passport</div>
+            <div class="academic-year">Project Report</div>
             <div class="student-name-wrap">
                 <span class="student-name" id="spName">{{ student.full_name|default:user.get_full_name|default:user.username }}</span>
             </div>
             <div class="student-meta">
                 {% if student.student_class %}<span class="meta-chip"><span class="material-symbols-outlined">school</span> Grade {{ student.student_class }}{% if student.division %} – {{ student.division }}{% endif %}</span>{% endif %}
                 {% if student.skill_lab_reg_id %}<span class="meta-chip"><span class="material-symbols-outlined">badge</span> {{ student.skill_lab_reg_id }}</span>{% endif %}
-                <span class="meta-chip"><span class="material-symbols-outlined">verified</span> Project Reports</span>
+                <span class="meta-chip"><span class="material-symbols-outlined">verified</span> Project Report</span>
             </div>
         </div>
         <div class="stats-group">
@@ -126,7 +126,7 @@
     <!-- Footer Nav -->
     <div class="footer-nav">
         <a class="sp-btn sp-btn-outline" href="{% url 'student:student_annual_passport' %}">
-            <span class="material-symbols-outlined">verified</span> Annual Passport
+            <span class="material-symbols-outlined">verified</span> Annual Skill Passport
         </a>
         <a class="sp-btn sp-btn-primary" href="{% url 'student:student_dashboard' %}" onclick="spConfettiFire()">
             <span class="material-symbols-outlined">home</span> Dashboard 🏠
@@ -140,7 +140,7 @@
             <span class="material-symbols-outlined" style="font-size:32px; color:var(--purple);">workspace_premium</span>
         </div>
         <h3 style="font-size:18px; font-weight:900; color:var(--purple); margin:0 0 6px; font-family:'Fredoka One',sans-serif;">No Reports Yet</h3>
-        <p style="font-size:14px; color:var(--text-muted); margin:0; font-weight:700;">Your Skill Passport reports will appear here once your teacher generates them.</p>
+        <p style="font-size:14px; color:var(--text-muted); margin:0; font-weight:700;">Your project reports will appear here once your teacher generates them.</p>
     </div>
     {% endif %}
 
