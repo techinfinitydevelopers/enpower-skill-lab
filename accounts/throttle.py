@@ -18,6 +18,7 @@ from datetime import timedelta
 from django.conf import settings
 from django.utils import timezone
 
+from .logins import normalise_login
 from .models import LoginAttempt
 
 # Ten wrong guesses inside the window locks that pair out for the same window.
@@ -38,9 +39,20 @@ def client_ip(request):
     return (request.META.get('REMOTE_ADDR') or '')[:45]
 
 
+def _key(username):
+    """One counter per person, not one per way of spelling their address.
+
+    Sign-in now accepts any capitalisation of an address. Counting attempts
+    under the raw string would hand back the guesses that lock-out is meant to
+    take away: ten as a@b.com, ten more as A@b.com, and so on through every
+    combination. The counter keys on the same shape sign-in resolves to.
+    """
+    return normalise_login(username)[:150]
+
+
 def recent_failures(username, ip):
     return LoginAttempt.objects.filter(
-        username=username[:150], ip_address=ip,
+        username=_key(username), ip_address=ip,
         created_at__gte=timezone.now() - WINDOW,
     ).count()
 
@@ -53,18 +65,18 @@ def is_locked(username, ip):
 
 
 def record_failure(username, ip):
-    LoginAttempt.objects.create(username=(username or '')[:150], ip_address=ip)
+    LoginAttempt.objects.create(username=_key(username), ip_address=ip)
 
 
 def clear(username, ip):
     """Drop the record after a correct password, so the count starts fresh."""
-    LoginAttempt.objects.filter(username=(username or '')[:150], ip_address=ip).delete()
+    LoginAttempt.objects.filter(username=_key(username), ip_address=ip).delete()
 
 
 def minutes_remaining(username, ip):
     """How long until the oldest attempt in the window falls out of it."""
     oldest = LoginAttempt.objects.filter(
-        username=username[:150], ip_address=ip,
+        username=_key(username), ip_address=ip,
         created_at__gte=timezone.now() - WINDOW,
     ).order_by('created_at').first()
     if not oldest:

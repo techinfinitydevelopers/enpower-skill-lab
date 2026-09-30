@@ -1245,10 +1245,17 @@ def _active_projects_for_teacher(user):
 
 
 def _class_students(school, grade, division):
-    """Active students for a school + numeric grade + division."""
+    """Active students for a school + numeric grade + division.
+
+    The section is compared without regard to case. It used to be exact,
+    and one school whose sheet spelt it 'c' against a timetable holding
+    'C' showed its coach an empty class of 41 students. Sections are
+    normalised on the way in now, but old rows predate that and a page
+    that silently shows nobody is the worst way to find out.
+    """
     qs = Student.objects.filter(
-        student_class=str(grade),
-        division=division,
+        student_class=str(grade).strip(),
+        division__iexact=str(division).strip(),
         is_active=True,
     )
     if school:

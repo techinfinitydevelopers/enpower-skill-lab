@@ -12,6 +12,7 @@ from datetime import date, datetime
 from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import get_user_model
+from accounts.logins import login_exists, normalise_login
 from django.conf import settings
 from django.db import transaction
 from openpyxl import Workbook
@@ -1307,7 +1308,7 @@ def _process_school_admin(row, created_by):
     if SchoolAdmin.objects.filter(school=school, is_active=True).exists():
         raise ValueError(f'School "{school_name}" already has an active admin')
 
-    if User.objects.filter(username=email).exists():
+    if login_exists(email):
         raise ValueError(f'Email "{email}" already exists')
 
     password = generate_password()
@@ -1315,7 +1316,8 @@ def _process_school_admin(row, created_by):
 
     with transaction.atomic():
         user = User.objects.create_user(
-            username=email, email=email, password=password,
+            username=normalise_login(email), email=normalise_login(email),
+            password=password,
             first_name=name_parts[0],
             last_name=name_parts[1] if len(name_parts) > 1 else '',
             role='SCHOOL_ADMIN',
@@ -1356,7 +1358,7 @@ def _process_teacher(row, created_by):
     _require(row, required, 'teacher')
 
     email = row['official_email']
-    if User.objects.filter(username=email).exists():
+    if login_exists(email):
         raise ValueError(f'Email "{email}" already exists')
 
     school = None
@@ -1371,7 +1373,8 @@ def _process_teacher(row, created_by):
 
     with transaction.atomic():
         user = User.objects.create_user(
-            username=email, email=email, password=password,
+            username=normalise_login(email), email=normalise_login(email),
+            password=password,
             first_name=name_parts[0],
             last_name=name_parts[1] if len(name_parts) > 1 else '',
             role='THINKING_COACH',
@@ -1487,6 +1490,13 @@ def _process_student(row, created_by):
     if school_name:
         school = _school_by_name(school_name)
 
+    # The attendance roster matches the section exactly against the timetable's,
+    # and timetables hold it in capitals. One school's sheet came in with a
+    # lowercase 'c' and its coach saw an empty class for 41 students, so the
+    # sheet's spelling is settled here rather than trusted.
+    row['division'] = (row.get('division') or '').strip().upper()
+    row['student_class'] = (row.get('student_class') or '').strip()
+
     from accounts.onboarding_ids import student_id_for
     dob = _parse_date(row['date_of_birth'])
     # Structured onboarding ID (e.g. SV-RG-6A-222-26-stu) doubles as the login
@@ -1500,7 +1510,8 @@ def _process_student(row, created_by):
 
     with transaction.atomic():
         user = User.objects.create_user(
-            username=reg_id, email=email, password=password,
+            username=reg_id,   # a reg ID, left as it is
+            email=normalise_login(email), password=password,
             first_name=row['first_name'],
             last_name=row['last_name'],
             role='STUDENT',
@@ -1646,7 +1657,7 @@ def _process_parent(row, created_by):
     _require(row, required, 'parent')
 
     email = _opt(row.get('email'))
-    if email and (User.objects.filter(email=email).exists()
+    if email and (login_exists(email)
                   or Parent.objects.filter(email__iexact=email).exists()):
         raise ValueError(f'Email "{email}" already exists')
 
@@ -1703,7 +1714,8 @@ def _process_parent(row, created_by):
 
     with transaction.atomic():
         user = User.objects.create_user(
-            username=username, email=email, password=password,
+            username=normalise_login(username),
+            email=normalise_login(email), password=password,
             first_name=name_parts[0],
             last_name=name_parts[1] if len(name_parts) > 1 else '',
             role='PARENT',
@@ -1782,7 +1794,7 @@ def _process_coordinator(row, created_by):
     _require(row, required, 'coordinator')
 
     email = row['official_email']
-    if User.objects.filter(username=email).exists():
+    if login_exists(email):
         raise ValueError(f'Email "{email}" already exists')
 
     # Aadhaar and PAN are unique on the model. Without these checks the importer
@@ -1804,7 +1816,8 @@ def _process_coordinator(row, created_by):
 
     with transaction.atomic():
         user = User.objects.create_user(
-            username=email, email=email, password=password,
+            username=normalise_login(email), email=normalise_login(email),
+            password=password,
             first_name=name_parts[0],
             last_name=name_parts[1] if len(name_parts) > 1 else '',
             role='PROGRAM_COORDINATOR',

@@ -7,6 +7,7 @@ from django.db import models, transaction
 from django.db.models import Q
 from django.contrib.auth import get_user_model, logout
 from django.contrib.auth.hashers import make_password
+from accounts.logins import login_exists, normalise_login
 from competencies.emails import send_notice, send_onboarding
 # Shared with the select-and-delete endpoint so a row goes the same way
 # whether it is removed one at a time or in a batch.
@@ -1053,7 +1054,8 @@ def onboard_student(request):
             student.school_name = request.POST.get('school_name', '')
             student.school_branch = request.POST.get('school_branch', '')
             student.student_class = request.POST.get('student_class', '')
-            student.division = request.POST.get('division', '')
+            # Capitals, to match the timetable the roster is compared against.
+            student.division = request.POST.get('division', '').strip().upper()
             student.roll_number = request.POST.get('roll_number', '')
             student.academic_year = request.POST.get('academic_year', '')
             # NULL not '' — `unique` permits many NULLs but only one ''
@@ -1133,8 +1135,8 @@ def onboard_student(request):
             with transaction.atomic():
                 # Create User with STUDENT role (login by the structured ID)
                 user = User.objects.create_user(
-                    username=skill_lab_reg_id,
-                    email=email,
+                    username=skill_lab_reg_id,   # a reg ID, left as it is
+                    email=normalise_login(email),
                     password=temp_password,
                     first_name=student.first_name,
                     last_name=student.last_name,
@@ -1226,7 +1228,8 @@ def edit_student(request, student_id):
             student.gender = request.POST.get('gender', student.gender)
             student.date_of_birth = request.POST.get('date_of_birth', student.date_of_birth)
             student.student_class = request.POST.get('student_class', student.student_class)
-            student.division = request.POST.get('division', student.division)
+            student.division = request.POST.get(
+                'division', student.division).strip().upper()
             student.attendance_status = request.POST.get('attendance_status', student.attendance_status)
             student.save()
             
@@ -1364,7 +1367,7 @@ def onboard_teacher(request):
             email = teacher.official_email
             
             # Check if user already exists
-            if User.objects.filter(email=email).exists():
+            if login_exists(email):
                 messages.error(request, f'A user with email {email} already exists.')
                 return redirect('onboard_teacher')
             
@@ -1375,8 +1378,8 @@ def onboard_teacher(request):
             with transaction.atomic():
                 # Create User with THINKING_COACH role
                 user = User.objects.create_user(
-                    username=email,
-                    email=email,
+                    username=normalise_login(email),
+                    email=normalise_login(email),
                     password=temp_password,
                     first_name=teacher.full_name.split()[0] if teacher.full_name else '',
                     last_name=' '.join(teacher.full_name.split()[1:]) if len(teacher.full_name.split()) > 1 else '',
@@ -1647,7 +1650,7 @@ def onboard_parent(request):
             email = parent.email
             
             # Check if user already exists
-            if email and User.objects.filter(email=email).exists():
+            if email and login_exists(email):
                 messages.error(request, f'A user with email {email} already exists.')
                 return redirect('onboard_parent')
             # Resolve linked students first so the parent ID mirrors the child's
@@ -1674,8 +1677,8 @@ def onboard_parent(request):
             with transaction.atomic():
                 # Create User with PARENT role
                 user = User.objects.create_user(
-                    username=username,
-                    email=email,
+                    username=normalise_login(username),
+                    email=normalise_login(email),
                     password=temp_password,
                     first_name=parent.full_name.split()[0] if parent.full_name else '',
                     last_name=' '.join(parent.full_name.split()[1:]) if len(parent.full_name.split()) > 1 else '',
@@ -1873,15 +1876,15 @@ def onboard_coordinator(request):
             
             # Check if email already exists
             User = get_user_model()
-            if User.objects.filter(email=coordinator_email).exists():
+            if login_exists(coordinator_email):
                 messages.error(request, f'A user with email {coordinator_email} already exists.')
                 schools = School.objects.filter(is_active=True).order_by('school_name')
                 return render(request, 'superadmin/onboard-pc.html', {'schools': schools})
             
             # Create User account for the coordinator
             user = User.objects.create_user(
-                username=coordinator_email,
-                email=coordinator_email,
+                username=normalise_login(coordinator_email),
+                email=normalise_login(coordinator_email),
                 password=temp_password,
                 first_name=data.get('fullName', '').split()[0] if data.get('fullName') else '',
                 last_name=' '.join(data.get('fullName', '').split()[1:]) if len(data.get('fullName', '').split()) > 1 else '',

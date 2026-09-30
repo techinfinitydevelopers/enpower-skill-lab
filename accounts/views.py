@@ -3,6 +3,7 @@ from django.contrib.auth import authenticate, login
 from django.shortcuts import redirect, render
 
 from . import throttle
+from .logins import resolve_login
 
 # Where each role lands after signing in. Kept as one table because two places
 # need it: the login view, and `home` below.
@@ -49,7 +50,15 @@ def login_view(request):
                 f"Forgot Password.")
             return redirect('login')
 
+        # What someone types and what we stored can differ only by case: an
+        # address saved in capitals is unreachable from a keyboard that types
+        # it in lower case. resolve_login tries the exact spelling first, so
+        # nothing that works today changes, and only falls back for addresses.
         user = authenticate(request, username=username, password=password)
+        if user is None:
+            stored = resolve_login(username)
+            if stored and stored != username:
+                user = authenticate(request, username=stored, password=password)
 
         if user is not None:
             if user.role != role:
