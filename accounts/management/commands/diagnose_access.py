@@ -51,6 +51,11 @@ class Command(BaseCommand):
             '--sweep', action='store_true',
             help='Find every account and every classroom with the same fault, '
                  'and say whether lowercasing the logins would collide.')
+        parser.add_argument(
+            '--recent', nargs='?', const=6, type=int, metavar='HOURS',
+            help='Every username anyone has failed to sign in with lately. '
+                 'Use when a person says they cannot get in but nothing is '
+                 'recorded against the address you were given.')
 
     def handle(self, *args, **opts):
         for spec in opts['account']:
@@ -60,8 +65,57 @@ class Command(BaseCommand):
             self.classroom(spec)
         if opts['sweep']:
             self.sweep()
-        if not any((opts['account'], opts['classroom'], opts['sweep'])):
+        if opts['recent']:
+            self.recent(opts['recent'])
+        if not any((opts['account'], opts['classroom'], opts['sweep'],
+                    opts['recent'])):
             print('  Nothing asked for. See --help.')
+
+    # ---------------------------------------------------------------- recent
+
+    def recent(self, hours):
+        """What is actually being typed into the form.
+
+        An address with no failures against it, belonging to someone who says
+        they cannot get in, means one of two things: they are typing a
+        different address, or they are picking the wrong role -- which the
+        view rejects before it records anything, so it leaves no trace at all.
+        This separates the two by showing every spelling that has been tried.
+        """
+        from accounts.models import LoginAttempt
+
+        rule(f'RECENT  everything typed in the last {hours} hour(s)')
+
+        since = timezone.now() - timedelta(hours=hours)
+        rows = (LoginAttempt.objects.filter(created_at__gte=since)
+                .order_by('-created_at'))
+        if not rows.exists():
+            print('  Nothing at all. Either everyone got in first time, or '
+                  'whoever is stuck is being turned away by the role check, '
+                  'which records nothing.')
+            return
+
+        grouped = (rows.values('username')
+                   .annotate(n=Count('id'))
+                   .order_by('-n'))
+        print(f'  {rows.count()} failed attempt(s) across '
+              f'{grouped.count()} spelling(s)\n')
+        for g in grouped:
+            same = rows.filter(username=g['username'])
+            ips = sorted(set(same.values_list('ip_address', flat=True)))
+            first = same.order_by('created_at').first()
+            last = same.order_by('-created_at').first()
+            known = U.objects.filter(username=g['username']).exists()
+            print(f'    {g["username"]!r}  x{g["n"]}')
+            print(f'      {first.created_at:%d %b %H:%M} -> '
+                  f'{last.created_at:%d %b %H:%M}   from {", ".join(ips)}')
+            print(f'      an account with this exact username exists: {known}')
+            if not known:
+                near = U.objects.filter(
+                    username__icontains=g['username'].split('@')[0][:6])[:3]
+                for u in near:
+                    print(f'        did they mean {u.username!r}? '
+                          f'role={u.role}')
 
     # ----------------------------------------------------------------- sweep
 
