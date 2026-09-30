@@ -387,11 +387,15 @@ Two read-only commands now exist: `diagnose_access` (`--account`,
 `--classroom`, `--sweep`) and `fix_case_drift` (dry run unless `--apply`,
 never touches `skill_lab_reg_id`).
 
-**Still open:** lowercase the address at account creation; case-insensitive
-sign-in as exact-first-then-fallback with the throttle keyed on the normalised
-name; normalise `division` on import; `division__iexact` in `_class_students`.
-Not doing a custom auth backend — it would let anyone walk around the lockout
-by varying case.
+**Fixed the same day** (`accounts/logins.py` holds the rule): sign-in tries
+the exact spelling first and falls back case-insensitively only for
+addresses; throttle keyed on the normalised name so the lockout cannot be
+walked around; accounts created lowercased with case-insensitive duplicate
+checks; sections uppercased on import and both student forms, plus
+`division__iexact` in `_class_students`. No custom auth backend — it would
+have opened the throttle hole. Guarded by `verify_case_handling.py` (18
+checks, transaction rolled back). Verified on production: Sujeet signs in
+with lowercase and with CAPS, wrong passwords still refused.
 
 **Also open, deliberately untouched:** those 6,266 reg-ID logins fail the same
 way if typed in lowercase. Nobody has reported it.
