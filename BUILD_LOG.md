@@ -91,26 +91,50 @@ with capitals and the client has been told to; lowercasing his username before
 case-insensitive sign-in ships would take that away. It sits behind `--logins`
 and moves the username, the email and the coach profile together.
 
-### Still to do — the part that stops it recurring
+### The part that stops it recurring — done the same day
 
-Both faults came in through human-filled sheets, so both will recur:
+Both faults came in through human-filled sheets, so both would have come back.
+`accounts/logins.py` holds the one rule: trim, and lowercase only what looks
+like an address. Registration IDs are left exactly as they are.
 
-1. lowercase the address when an account is created (onboarding forms and bulk
-   import — the duplicate check is `username=email`, exact, so `Foo@x.com` can
-   be created alongside `foo@x.com` right now);
-2. case-insensitive sign-in, as **exact match first, case-insensitive
-   fallback** — nothing that works today can break — and the throttle keyed on
-   the normalised name, or the lockout can be walked around by varying case;
-3. normalise `division` on student import;
-4. `division__iexact` in `_class_students`, so existing drift cannot empty a
-   page again.
+1. **Sign-in tries the exact spelling first**, and only falls back to a
+   case-insensitive lookup for addresses. Nothing that works today can start
+   behaving differently. Two rows differing only in case would make the
+   fallback ambiguous, so `resolve_login` gives up rather than pick one.
+2. **The lock-out counts a person, not a spelling.** This is the part a custom
+   auth backend would have got wrong: accepting any capitalisation while
+   counting attempts under the raw string hands back exactly the guesses
+   lock-out takes away — ten as `a@b.com`, ten more as `A@b.com`. Existing
+   `LoginAttempt` rows were written under the raw string, so counters for
+   mixed-case addresses restart from zero. They are a 15-minute window, not a
+   log.
+3. **Accounts are created lowercased and the duplicate checks are
+   case-insensitive.** They were exact, which is how `Foo@x.com` could be
+   created while `foo@x.com` already existed.
+4. **Sections are uppercased on import and on both student forms**, and
+   `_class_students` compares them with `__iexact` — normalising handles new
+   rows, the `iexact` handles the ones that predate it.
 
-Not done: a custom auth backend. It would open the throttle hole above, cannot
-use the username index, and is not needed for any of this.
+No custom auth backend. It would have opened the throttle hole above and could
+not use the username index.
 
-**Also open:** 6,266 students and parents whose login is an uppercase
-registration ID will fail the same way if they type it in lowercase. Nobody has
-reported it. Left alone on purpose — it is a separate decision.
+`verify_case_handling.py` — 18 checks, inside a transaction that is rolled
+back, and it checks that too. Each fix was proven by removing it: without the
+fallback, lower case lands back on `/login/`; without the normalised throttle
+key, twelve attempts across three spellings count as four and the account never
+locks; without `iexact`, students holding `'c'` vanish from a timetable asking
+for `'C'`.
+
+Read back from production after the deploy:
+
+    Sujeet, lowercase -> /teacher/dashboard/   signed in
+    Sujeet, CAPS      -> /teacher/dashboard/   signed in
+    Sujeet, wrong pw  -> /login/               Invalid credentials
+    nobody            -> /login/               Invalid credentials
+
+**Still open, deliberately untouched:** 6,266 students and parents whose login
+is an uppercase registration ID will fail the same way if they type it in
+lowercase. Nobody has reported it, and it is a separate decision.
 
 ### Separate finding
 
