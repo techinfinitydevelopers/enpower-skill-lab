@@ -2,6 +2,123 @@
 
 Chronological record of completed tasks (per org policy: log after each completed task).
 
+## 2026-09-30 — Three coaches, one fault: a value stored in the wrong case
+
+The client raised three things the morning the Thinking Coaches were due to
+start using the dashboard. Two of them turned out to be the same bug in
+different columns, and the third turned out not to be a bug at all.
+
+### What was actually wrong
+
+**Sujeet could not log in.** His account exists and is active, but the address
+was saved as `SUJITKUMAR5305@GMAIL.COM`. Django's `ModelBackend` matches
+`username` exactly, and on Postgres that is case-sensitive, so typing it in
+lowercase never matched. `authenticate()` returned None and the form said
+"Invalid credentials" — the same words it uses for a wrong password and for a
+deactivated account, which is why nobody could tell the three apart from
+outside.
+
+Verified against production: the same password with the address **in capitals**
+signs straight in to `/teacher/dashboard/`. So he was never blocked; he just
+had no way to know.
+
+**Prabhu and Snigdha saw no students in Grade 6 C.** BKG GLOBAL SCHOOL's 41
+students hold `division='c'`; the timetable holds `'C'`. `_class_students`
+filters `division=division` exactly, so the roster came back empty. Every
+other class at that school, and Grade 6 C at every other school, is stored in
+capitals — 62 of 63 classrooms were already fine.
+
+**Sakshi's account had nothing wrong with it.** Active, right role, Teacher row
+linked, and the password the client sent us signs in — we tested it. On 30
+September there is **no failed attempt recorded against her address at all**
+except our own deliberate wrong-password test.
+
+The failures at 07:49–07:51 IST — the exact minutes on the clock in the
+screenshot the client attributed to her — are recorded against **Sujeet's**
+address. The screenshot was Sujeet's attempt.
+
+### How it was found
+
+`accounts/management/commands/diagnose_access.py`, read-only, no `save`,
+`update` or `delete`, so it runs on production while people are working.
+
+- `--account EMAIL[=PASSWORD]` — exists, active, does the password we were
+  handed match, is there a Teacher row, and has anyone actually submitted that
+  username lately (failed attempts carry an IP, so a person typing into the
+  wrong place leaves no rows).
+- `--classroom PROGRAM:GRADE:DIV` — the roster the attendance API builds, next
+  to the `student_class` and `division` the students at that school really
+  hold.
+- `--sweep` — how wide the fault is, and whether normalising would collide.
+
+The sweep is what made the fix safe to size:
+
+    email-shaped logins carrying capitals : 1   (Sujeet)
+    collisions if lowercased              : 0
+    coach profiles disagreeing with login : 0
+    classrooms with an empty roster       : 1 of 63
+
+**The split that mattered:** 6,266 usernames carry capitals, and almost all of
+them are students and parents whose login *is* their registration ID —
+`BI-RM-8A-235-25-stu`, uppercase by design. Lowercasing those would have
+broken the very logins the change was meant to fix. The sweep counts the two
+kinds apart and only offers the email-shaped ones.
+
+### The repair
+
+`accounts/management/commands/fix_case_drift.py`. Dry run unless `--apply`.
+
+Applied on production: 41 students at BKG GLOBAL SCHOOL, `division 'c' -> 'C'`.
+The command read the roster back itself — `roster now 41 (expected 41) OK`.
+Their registration IDs already said `6C`, so the column now agrees with the ID.
+
+It refuses rather than guess in two places:
+
+1. two timetables asking for the same students in different cases;
+2. a student already matched by a timetable that works today — moving them
+   would empty that roster to fill this one.
+
+**The second guard was missing from my first version**, and a seeded case where
+a working `'c'` timetable would have been emptied went straight through and
+changed the row. The first pass only looked at rosters that were already empty,
+so a roster that was about to break was invisible to it.
+
+`skill_lab_reg_id` is never touched. `Student` has no `save()` override and no
+signal, so updating `division` cannot regenerate it by accident either.
+
+Logins were deliberately **not** included in this run. Sujeet can sign in today
+with capitals and the client has been told to; lowercasing his username before
+case-insensitive sign-in ships would take that away. It sits behind `--logins`
+and moves the username, the email and the coach profile together.
+
+### Still to do — the part that stops it recurring
+
+Both faults came in through human-filled sheets, so both will recur:
+
+1. lowercase the address when an account is created (onboarding forms and bulk
+   import — the duplicate check is `username=email`, exact, so `Foo@x.com` can
+   be created alongside `foo@x.com` right now);
+2. case-insensitive sign-in, as **exact match first, case-insensitive
+   fallback** — nothing that works today can break — and the throttle keyed on
+   the normalised name, or the lockout can be walked around by varying case;
+3. normalise `division` on student import;
+4. `division__iexact` in `_class_students`, so existing drift cannot empty a
+   page again.
+
+Not done: a custom auth backend. It would open the throttle hole above, cannot
+use the username index, and is not needed for any of this.
+
+**Also open:** 6,266 students and parents whose login is an uppercase
+registration ID will fail the same way if they type it in lowercase. Nobody has
+reported it. Left alone on purpose — it is a separate decision.
+
+### Separate finding
+
+`enpowerskilllab.com/login/` (no `www`) returns **404**. Only the bare apex
+redirects to `www`; no path under it does. Not the cause of anything above —
+Chrome hides `www.` in the address bar, and the screenshots show our own
+toast, so those users had reached the app.
+
 ## 2026-09-29 — The toast, end to end: why it never appeared, and five wrong fixes
 
 Closes the entry marked **OPEN** below (2026-08-24). The leading hypothesis

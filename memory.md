@@ -357,3 +357,41 @@ served over HTTP and the server's response. None of those show what the browser
 matched. Read the rendered `class="..."` attribute back from a real request.
 `verify_pages.py` now guards the prefix, the glyph set, the ring and the
 whitespace.
+
+### [2026-09-30] Case drift: logins and rosters both match exactly
+Three client tickets, two of them the same bug in different columns.
+
+**Sign-in** has no custom `AUTHENTICATION_BACKENDS`, so Django's `ModelBackend`
+matches `username` exactly — case-sensitive on Postgres. An account saved as
+`SUJITKUMAR5305@GMAIL.COM` is unreachable by typing it lowercase, and the form
+says "Invalid credentials" — the same words it uses for a wrong password and
+for `is_active=False`. A wrong role dropdown says "Invalid role for this
+account." and a lockout says "Too many failed sign-in attempts", so the message
+itself rules those two out.
+
+**`teacher/views.py:_class_students`** filters `student_class=` and `division=`
+exactly. BKG GLOBAL SCHOOL's 41 Grade 6 C students held `'c'` against a
+timetable holding `'C'` — empty roster, coach could not mark attendance. 62 of
+63 classrooms were already fine. Fixed with `fix_case_drift --apply`.
+
+**The rule that must not be broken:** students and parents log in with a
+generated registration ID (`BI-RM-8A-235-25-stu`), uppercase by design, ~6,266
+of them. Any normalisation must apply only to email-shaped usernames
+(`'@' in username`). Lowercasing reg IDs breaks the logins the change is meant
+to fix.
+
+`accounts/password_reset.py` already uses `email__iexact`, so forgot-password
+finds an account that sign-in then refuses. That inconsistency is live.
+
+Two read-only commands now exist: `diagnose_access` (`--account`,
+`--classroom`, `--sweep`) and `fix_case_drift` (dry run unless `--apply`,
+never touches `skill_lab_reg_id`).
+
+**Still open:** lowercase the address at account creation; case-insensitive
+sign-in as exact-first-then-fallback with the throttle keyed on the normalised
+name; normalise `division` on import; `division__iexact` in `_class_students`.
+Not doing a custom auth backend — it would let anyone walk around the lockout
+by varying case.
+
+**Also open, deliberately untouched:** those 6,266 reg-ID logins fail the same
+way if typed in lowercase. Nobody has reported it.
