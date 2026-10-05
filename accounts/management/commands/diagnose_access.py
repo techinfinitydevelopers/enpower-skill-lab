@@ -56,6 +56,10 @@ class Command(BaseCommand):
             help='Every username anyone has failed to sign in with lately. '
                  'Use when a person says they cannot get in but nothing is '
                  'recorded against the address you were given.')
+        parser.add_argument(
+            '--uploads', nargs='?', const=10, type=int, metavar='COUNT',
+            help='The latest student project uploads, and whether each one '
+                 'actually reached a student who can sign in and see it.')
 
     def handle(self, *args, **opts):
         for spec in opts['account']:
@@ -67,9 +71,72 @@ class Command(BaseCommand):
             self.sweep()
         if opts['recent']:
             self.recent(opts['recent'])
+        if opts['uploads']:
+            self.uploads(opts['uploads'])
         if not any((opts['account'], opts['classroom'], opts['sweep'],
-                    opts['recent'])):
+                    opts['recent'], opts['uploads'])):
             print('  Nothing asked for. See --help.')
+
+    # --------------------------------------------------------------- uploads
+
+    def uploads(self, count):
+        """Did the coach's upload actually reach a student's dashboard?
+
+        The student dashboard shows `student.project_uploads`, so an upload
+        with nobody tagged reaches nobody. The form drops any student who does
+        not belong to the coach's own school, and it does so silently -- the
+        coach still sees "uploaded successfully" and the row still appears
+        under Recent Uploads. That is the one way this can look fine from the
+        coach's side and be empty from the student's.
+        """
+        from attendance.models import StudentProjectUpload
+        from student.models import Student
+
+        rule(f'UPLOADS  the latest {count} student project upload(s)')
+
+        rows = (StudentProjectUpload.objects
+                .select_related('school', 'created_by')
+                .prefetch_related('students')
+                .order_by('-created_at')[:count])
+        if not rows:
+            print('  None recorded at all.')
+            return
+
+        for up in rows:
+            tagged = list(up.students.all())
+            print(f'\n  #{up.id}  {up.title!r}')
+            print(f'    uploaded {up.created_at:%d %b %Y %H:%M} by '
+                  f'{up.created_by.username if up.created_by else "(unknown)"}')
+            print(f'    school {up.school.school_name!r}  '
+                  f'grade {up.grade!r} division {up.division!r}')
+            print(f'    file: {up.file.name or "(none)" if up.file else "(none)"}'
+                  f'   video: {up.video_link or "(none)"}')
+            print(f'    students tagged: {len(tagged)}')
+
+            if not tagged:
+                # Nobody tagged still shows for the whole class, so say whether
+                # that fallback finds anyone before calling it lost.
+                fallback = Student.objects.filter(
+                    school=up.school, student_class=str(up.grade),
+                    division=up.division, is_active=True).count()
+                print(f'      NOBODY TAGGED. The dashboard falls back to the '
+                      f'whole class, which matches {fallback} student(s).')
+                if not fallback:
+                    print('      So this upload reaches no one. The coach was '
+                          'still told it succeeded.')
+                continue
+
+            for s in tagged[:6]:
+                reachable = bool(s.user_id) and s.is_active
+                same_school = s.school_id == up.school_id
+                print(f'      {s.full_name}  {s.skill_lab_reg_id!r}  '
+                      f'class {s.student_class!r}{s.division!r}  '
+                      f'has login: {bool(s.user_id)}  active: {s.is_active}'
+                      f'{"" if same_school else "   DIFFERENT SCHOOL"}')
+                if not reachable:
+                    print('        -> cannot sign in, so cannot see it')
+            if len(tagged) > 6:
+                print(f'      ... and {len(tagged) - 6} more')
 
     # ---------------------------------------------------------------- recent
 
