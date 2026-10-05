@@ -60,6 +60,10 @@ class Command(BaseCommand):
             '--uploads', nargs='?', const=10, type=int, metavar='COUNT',
             help='The latest student project uploads, and whether each one '
                  'actually reached a student who can sign in and see it.')
+        parser.add_argument(
+            '--student', action='append', default=[], metavar='REG_ID',
+            help='What this student\'s own dashboard would list under View '
+                 'Projects. Answers "is it there" without signing in as them.')
 
     def handle(self, *args, **opts):
         for spec in opts['account']:
@@ -73,9 +77,58 @@ class Command(BaseCommand):
             self.recent(opts['recent'])
         if opts['uploads']:
             self.uploads(opts['uploads'])
+        for reg_id in opts['student']:
+            self.student_view(reg_id.strip())
         if not any((opts['account'], opts['classroom'], opts['sweep'],
-                    opts['recent'], opts['uploads'])):
+                    opts['recent'], opts['uploads'], opts['student'])):
             print('  Nothing asked for. See --help.')
+
+    # --------------------------------------------------------- student's view
+
+    def student_view(self, reg_id):
+        """Exactly what this student's dashboard puts under View Projects.
+
+        Calls the same function the view calls, so it answers the client's
+        question -- "it is not showing for the student" -- without signing in
+        as a child.
+        """
+        from attendance.services import student_project_uploads
+        from student.models import Student
+
+        rule(f'STUDENT VIEW  {reg_id}')
+
+        pupil = Student.objects.filter(skill_lab_reg_id__iexact=reg_id).first()
+        if pupil is None:
+            print('  No student with that registration ID.')
+            return
+
+        print(f'  {pupil.full_name}   class {pupil.student_class!r}'
+              f'{pupil.division!r}   school {pupil.school.school_name!r}')
+        print(f'  has a login: {bool(pupil.user_id)}   active: {pupil.is_active}')
+
+        tagged = pupil.project_uploads.count()
+        rows = student_project_uploads(pupil)
+        print(f'\n  tagged directly to this student : {tagged}')
+        print(f'  what the dashboard would list   : {len(rows)}')
+        if not rows:
+            print('    -> "No projects uploaded yet." is what they see.')
+        for up in rows:
+            has_file = bool(up.file and up.file.name)
+            print(f'\n    {up.title!r}  uploaded {up.created_at:%d %b %Y}')
+            print(f'      file attached : {has_file}'
+                  f'{"  — shown as a View File link, not as a picture" if has_file else ""}')
+            print(f'      video link    : {up.video_link or "(none)"}')
+            if not has_file and not up.video_link:
+                print('      nothing to open — only a title and description')
+
+        # The parent sees none of this: parent/views.py imports the function
+        # and never calls it, and no parent template renders it.
+        from parent.models import Parent
+
+        parents = Parent.objects.filter(students=pupil, user__isnull=False)
+        print(f'\n  parents with a login: {parents.count()} — '
+              f'their dashboard shows none of the above, the screen was '
+              f'never built')
 
     # --------------------------------------------------------------- uploads
 
