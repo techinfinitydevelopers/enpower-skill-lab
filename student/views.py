@@ -97,6 +97,10 @@ def student_dashboard(request):
         # Project completion report + uploads (slide 46)
         context['sessions_completed'] = sessions_completed(student)
         context['project_uploads'] = student_project_uploads(student)
+        # The dashboard is where the uploads are listed, so reading it
+        # is what clears the bell.
+        from attendance.notifications import mark_seen
+        mark_seen(request.user)
     else:
         context['attendance'] = {
             'total_sessions': 0, 'attended': 0, 'percent': 0,

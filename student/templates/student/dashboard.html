@@ -294,8 +294,21 @@
                 {% if upload.description %}
                 <p style="color:#4b5563;font-size:0.875rem;margin-bottom:0.5rem;">{{ upload.description }}</p>
                 {% endif %}
+                {% comment %}
+                    Coaches upload photographs of the work. Showing those as a
+                    "View File" link meant the dashboard looked empty to anyone
+                    expecting to see the project, which is how this was
+                    reported. Pictures are shown as pictures; anything else
+                    (a PDF, a slide deck) still gets a link.
+                {% endcomment %}
+                {% if upload.is_picture %}
+                <a href="{{ upload.file.url }}" target="_blank" rel="noopener">
+                    <img src="{{ upload.file.url }}" alt="{{ upload.title }}"
+                         style="width:100%;max-width:320px;border-radius:0.5rem;margin-bottom:0.5rem;display:block;">
+                </a>
+                {% endif %}
                 <div style="display:flex;gap:1rem;flex-wrap:wrap;">
-                    {% if upload.file %}
+                    {% if upload.file and not upload.is_picture %}
                     <a href="{{ upload.file.url }}" target="_blank" rel="noopener" style="color:#6b277e;font-size:0.875rem;display:inline-flex;align-items:center;gap:4px;">
                         <span class="material-symbols-outlined">attach_file</span>View File
                     </a>

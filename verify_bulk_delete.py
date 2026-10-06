@@ -403,8 +403,29 @@ check('their login accounts are gone',
       not U.objects.filter(id__in=herd_uids).exists())
 # A per-row loop was several queries each; the point of the bulk path is
 # that the query count stops tracking the row count.
-check('it does not run a transaction per row', queries < 6 * 8,
-      f'{queries} queries for 6 rows')
+#
+# Measured as a slope, not a ceiling. A fixed budget here is really a
+# count of how many models point at User, so it breaks the day one is
+# added -- which is how adding ProjectUploadSeen took it from 47 to 48
+# against a limit of 48, with nothing about the delete having changed.
+# Deleting three times the rows and comparing is the thing the comment
+# above actually claims, and it catches a per-row loop at any constant.
+big = [make_student(f'bulk2{i}') for i in range(18)]
+big_ids = [s.id for s in big]
+_s.DEBUG = True
+reset_queries()
+admin.post('/bulk-delete/students/', json.dumps({'ids': big_ids}),
+           content_type='application/json')
+queries_big = len(connection.queries)
+_s.DEBUG = was_debug
+
+check('eighteen rows delete too',
+      not Student.objects.filter(id__in=big_ids).exists())
+# Three times the rows may cost a few more statements; it must not cost
+# three times as many.
+check('it does not run a transaction per row',
+      queries_big - queries < 12,
+      f'{queries} queries for 6 rows, {queries_big} for 18')
 
 # -- the fallback names the row that would not go -----------------------
 # When the bulk statement fails the whole batch rolls back, so the view

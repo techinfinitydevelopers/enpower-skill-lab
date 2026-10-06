@@ -159,9 +159,15 @@ def student_project_uploads(student):
         qs = student.project_uploads.all()
         if qs.exists():
             return list(qs)
-        # fall back to class-level uploads if none tagged individually
+        # Fall back to class-level uploads when none are tagged
+        # individually. Matched without regard to case: sections are
+        # normalised on the way in now, but uploads made before that
+        # are not, and one of them reached nobody because it was filed
+        # under '6 b' while the class holds 'B'.
         from .models import StudentProjectUpload
-        return list(StudentProjectUpload.objects.filter(**_class_filter(student)))
+        return list(StudentProjectUpload.objects.filter(
+            school=student.school, grade=str(student.student_class),
+            division__iexact=student.division))
     except Exception:
         return []
 

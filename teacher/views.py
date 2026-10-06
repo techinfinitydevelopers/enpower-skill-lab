@@ -1594,7 +1594,10 @@ def daily_feedback(request):
             return redirect('teacher:daily_feedback')
 
         grade    = request.POST.get('grade', '').strip()
-        division = request.POST.get('division', '').strip()
+        # Capitals, like every other section. The student and parent
+        # dashboards count these rows by matching the section exactly
+        # against the child's own, so a lower-case one is not counted.
+        division = request.POST.get('division', '').strip().upper()
         date     = request.POST.get('date', '').strip()
         if not (grade and division and date):
             messages.error(request, 'Grade, division and date are required.')
@@ -1703,7 +1706,10 @@ def student_project_upload(request):
             return redirect('teacher:student_project_upload')
 
         grade    = request.POST.get('grade', '').strip()
-        division = request.POST.get('division', '').strip()
+        # Capitals, like every other section. One upload came in as
+        # '6 b' and reached nobody: the student dashboard matches an
+        # upload's section against the student's own, and theirs is 'B'.
+        division = request.POST.get('division', '').strip().upper()
         title    = request.POST.get('title', '').strip()
         if not (grade and division and title):
             messages.error(request, 'Grade, division and title are required.')

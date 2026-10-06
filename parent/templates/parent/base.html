@@ -1159,15 +1159,34 @@
                         <button id="notificationToggle">
                             <span class="material-symbols-outlined">notifications</span>
                         </button>
-                        {% if nav_announcement_count %}<span class="notification-badge">{{ nav_announcement_count }}</span>{% endif %}
+                        {% with up_count=nav_project_upload_count|default:0 %}
+                        {% with bell_total=nav_announcement_count|add:up_count %}
+                        {% if bell_total %}<span class="notification-badge">{{ bell_total }}</span>{% endif %}
 
                         <!-- Notification Dropdown Menu -->
                         <div class="notification-dropdown-menu" id="notificationDropdownMenu">
                             <div class="notification-dropdown-header">
                                 <h4 class="notification-dropdown-title">Notifications</h4>
-                                <span class="notification-count">{{ nav_announcement_count }} new</span>
+                                <span class="notification-count">{{ bell_total }} new</span>
                             </div>
                             <div class="notification-dropdown-body">
+                                {% comment %}
+                                    A coach tags an upload to the children who did the work, so
+                                    it cannot ride on Announcement, which targets a whole grade.
+                                    A parent of two sees one entry per upload, not one per child.
+                                {% endcomment %}
+                                {% for upload in nav_project_uploads %}
+                                <a href="{% url 'parent_dashboard' %}#view-projects" class="notification-item unread">
+                                    <div class="notification-icon bg-green">
+                                        <span class="material-symbols-outlined">photo_library</span>
+                                    </div>
+                                    <div class="notification-content">
+                                        <p class="notification-text"><strong>{{ upload.title }}</strong></p>
+                                        <p class="notification-description">Added to your child's projects by their coach</p>
+                                        <span class="notification-time">{{ upload.created_at|timesince }} ago</span>
+                                    </div>
+                                </a>
+                                {% endfor %}
                                 {% for ann in nav_announcements %}
                                 <a href="{% url 'parent_dashboard' %}" class="notification-item unread">
                                     <div class="notification-icon {% if ann.announcement_type == 'event' %}bg-orange{% elif ann.announcement_type == 'newsletter' %}bg-blue{% else %}bg-green{% endif %}">
@@ -1179,14 +1198,16 @@
                                         <span class="notification-time">{{ ann.created_at|timesince }} ago</span>
                                     </div>
                                 </a>
-                                {% empty %}
-                                <p style="padding:24px;text-align:center;color:#9ca3af;font-size:0.875rem;">No new notifications.</p>
                                 {% endfor %}
+                                {% if not nav_project_uploads and not nav_announcements %}
+                                <p style="padding:24px;text-align:center;color:#9ca3af;font-size:0.875rem;">No new notifications.</p>
+                                {% endif %}
                             </div>
                             <div class="notification-dropdown-footer">
                                 <a href="{% url 'parent_dashboard' %}" class="notification-footer-link">View All Notifications</a>
                             </div>
                         </div>
+                        {% endwith %}{% endwith %}
                     </div>
                     <div class="user-info-wrapper">
                         <div class="user-info" id="userInfoToggle">

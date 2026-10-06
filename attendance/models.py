@@ -227,3 +227,47 @@ class StudentProjectUpload(models.Model):
 
     def __str__(self):
         return f"{self.title} (G{self.grade}{self.division})"
+
+    PICTURE_SUFFIXES = ('.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.heic')
+
+    @property
+    def is_picture(self):
+        """Can this be shown on the page, rather than linked to?
+
+        Coaches upload photographs of the work far more often than documents,
+        and a photograph behind a "View File" link looks to the reader like
+        nothing arrived at all.
+        """
+        name = getattr(self.file, 'name', '') or ''
+        return name.lower().endswith(self.PICTURE_SUFFIXES)
+
+
+# ============================================================
+# Project uploads: "has this person seen the new ones yet?"
+# ============================================================
+class ProjectUploadSeen(models.Model):
+    """When a student or parent last looked at their project notifications.
+
+    A coach uploads a project and tags the students who did it. Slide 47 asks
+    for that to reach the student and the parent with a notification, and the
+    bell could not carry it: Announcement targets a role, a programme, a school
+    and a grade, never an individual, so "your project is up" would have gone
+    to the whole year group instead of the two children who built it.
+
+    The uploads themselves already know who they belong to, so all that was
+    missing was a mark for how far each person had read. Anything newer than
+    this is counted as new; opening the dashboard, which is where the projects
+    are listed, moves the mark forward.
+    """
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='project_upload_seen')
+    last_seen_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'Project Upload — Last Seen'
+        verbose_name_plural = 'Project Uploads — Last Seen'
+
+    def __str__(self):
+        return f"{self.user} last saw uploads at {self.last_seen_at}"

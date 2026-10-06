@@ -16,6 +16,7 @@ from attendance.services import (
     sessions_completed,
     student_project_uploads,
 )
+from attendance.notifications import mark_seen
 import json
 
 
@@ -242,6 +243,27 @@ def parent_dashboard(request):
     except Exception:
         pass
 
+    # Projects the coach uploaded (slide 47 point 6). student_project_uploads
+    # was imported here from the start and never called, so this half of the
+    # feature reached the student and stopped. A parent of two sees one entry
+    # per upload, not one per child, which is why this de-duplicates.
+    project_uploads, seen = [], set()
+    try:
+        for child in Parent.objects.get(user=request.user).students.filter(
+                is_active=True):
+            for upload in student_project_uploads(child):
+                if upload.pk in seen:
+                    continue
+                seen.add(upload.pk)
+                project_uploads.append(upload)
+        project_uploads.sort(key=lambda u: u.created_at, reverse=True)
+    except Parent.DoesNotExist:
+        pass
+
+    # The dashboard is where the uploads are listed, so reading it is what
+    # clears the bell.
+    mark_seen(request.user)
+
     context = {
         'children': children_data,
         'children_json': json.dumps(children_data),
@@ -249,6 +271,7 @@ def parent_dashboard(request):
         'events': events,
         'newsletters': newsletters,
         'success_stories': success_stories,
+        'project_uploads': project_uploads,
     }
     return render(request, 'parent/dashboard.html', context)
 

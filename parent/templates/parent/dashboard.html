@@ -119,6 +119,50 @@
         </div>
     </div>
 
+    {% comment %}
+        What the coach uploaded, with the children tagged on it. The student
+        dashboard has carried this since it was built; the parent side was
+        left out, which is what the client reported. Photographs are shown as
+        photographs -- a picture behind a "View File" link reads as nothing
+        having arrived.
+    {% endcomment %}
+    <div class="card-custom" id="view-projects">
+        <div class="card-header-custom">
+            <h3 class="card-title-custom">Project Uploads</h3>
+        </div>
+        <div>
+            {% for upload in project_uploads %}
+            <div style="border:1px solid #e5e7eb;border-radius:.5rem;padding:1rem;margin-top:.75rem;">
+                <h4 style="font-size:1rem;font-weight:600;color:#1f2937;margin-bottom:.25rem;">{{ upload.title }}</h4>
+                {% if upload.description %}
+                <p style="color:#4b5563;font-size:.875rem;margin-bottom:.5rem;">{{ upload.description }}</p>
+                {% endif %}
+                {% if upload.is_picture %}
+                <a href="{{ upload.file.url }}" target="_blank" rel="noopener">
+                    <img src="{{ upload.file.url }}" alt="{{ upload.title }}"
+                         style="width:100%;max-width:320px;border-radius:.5rem;margin-bottom:.5rem;display:block;">
+                </a>
+                {% endif %}
+                <div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:center;">
+                    {% if upload.file and not upload.is_picture %}
+                    <a href="{{ upload.file.url }}" target="_blank" rel="noopener" style="color:#6b277e;font-size:.875rem;display:inline-flex;align-items:center;gap:4px;">
+                        <span class="material-symbols-outlined">attach_file</span>View File
+                    </a>
+                    {% endif %}
+                    {% if upload.video_link %}
+                    <a href="{{ upload.video_link }}" target="_blank" rel="noopener" style="color:#6b277e;font-size:.875rem;display:inline-flex;align-items:center;gap:4px;">
+                        <span class="material-symbols-outlined">play_circle</span>Watch Video
+                    </a>
+                    {% endif %}
+                    <span style="font-size:.72rem;color:#9ca3af;">{{ upload.created_at|date:"d M Y" }}</span>
+                </div>
+            </div>
+            {% empty %}
+            <div style="text-align:center;padding:1.5rem;color:#7c6882;">No projects uploaded yet.</div>
+            {% endfor %}
+        </div>
+    </div>
+
     <!-- Main Content Grid -->
     <div class="content-grid">
         <!-- Left Column (Data & Charts) -->

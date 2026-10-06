@@ -311,13 +311,34 @@
                 <div class="student-header-right">
                     <div class="student-notification-wrapper">
                         <button id="studentNotificationToggle"><span class="material-symbols-outlined">notifications</span></button>
-                        {% if nav_announcement_count %}<span class="student-notification-badge">{{ nav_announcement_count }}</span>{% endif %}
+                        {% with up_count=nav_project_upload_count|default:0 %}
+                        {% with bell_total=nav_announcement_count|add:up_count %}
+                        {% if bell_total %}<span class="student-notification-badge">{{ bell_total }}</span>{% endif %}
                         <div class="student-notification-dropdown-menu" id="studentNotificationDropdownMenu">
                             <div class="student-notification-dropdown-header">
                                 <h4 class="student-notification-dropdown-title"><span class="material-symbols-outlined">notifications</span>Notifications</h4>
-                                <span class="student-notification-count">{{ nav_announcement_count }} new</span>
+                                <span class="student-notification-count">{{ bell_total }} new</span>
                             </div>
                             <div class="student-notification-dropdown-body">
+                                {% comment %}
+                                    A coach's upload is tagged to the children who
+                                    did the work, so it cannot ride on Announcement,
+                                    which targets a whole grade. It is listed here
+                                    first because it is the newest thing and the
+                                    thing the student actually did.
+                                {% endcomment %}
+                                {% for upload in nav_project_uploads %}
+                                <a href="{% url 'student:student_dashboard' %}#view-projects" class="student-notification-item unread">
+                                    <div class="student-notification-icon bg-green">
+                                        <span class="material-symbols-outlined">photo_library</span>
+                                    </div>
+                                    <div class="student-notification-content">
+                                        <p class="student-notification-text"><strong>{{ upload.title }}</strong></p>
+                                        <p class="student-notification-description">Your coach added this to your projects</p>
+                                        <span class="student-notification-time">{{ upload.created_at|timesince }} ago</span>
+                                    </div>
+                                </a>
+                                {% endfor %}
                                 {% for ann in nav_announcements %}
                                 <a href="{% url 'student:student_announcements' %}" class="student-notification-item unread">
                                     <div class="student-notification-icon {% if ann.announcement_type == 'event' %}bg-orange{% elif ann.announcement_type == 'newsletter' %}bg-blue{% else %}bg-green{% endif %}">
@@ -329,14 +350,16 @@
                                         <span class="student-notification-time">{{ ann.created_at|timesince }} ago</span>
                                     </div>
                                 </a>
-                                {% empty %}
-                                <p style="padding:24px;text-align:center;color:#9ca3af;font-size:0.875rem;">No new notifications.</p>
                                 {% endfor %}
+                                {% if not nav_project_uploads and not nav_announcements %}
+                                <p style="padding:24px;text-align:center;color:#9ca3af;font-size:0.875rem;">No new notifications.</p>
+                                {% endif %}
                             </div>
                             <div class="student-notification-dropdown-footer">
                                 <a href="{% url 'student:student_announcements' %}" class="student-notification-footer-link">View All Notifications</a>
                             </div>
                         </div>
+                        {% endwith %}{% endwith %}
                     </div>
                     <div class="student-user-info-wrapper">
                         <div class="student-user-info" id="studentUserInfoToggle">
