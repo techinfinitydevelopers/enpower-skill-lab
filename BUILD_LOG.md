@@ -2,6 +2,108 @@
 
 Chronological record of completed tasks (per org policy: log after each completed task).
 
+## 2026-10-05/06 — The coach's upload, and the half of it that was never built
+
+The client reported that a Thinking Coach can upload a project, tag a student,
+see it under Recent Uploads — and nothing appears for the student. Slide 47
+point 6 asks for it to reach the student *and* the parent, with a notification.
+
+### What was actually true
+
+Three separate things, and only one of them was a fault in working code.
+
+**The student dashboard was fine.** `diagnose_access --student
+AV-RS-6A-219-32-stu` — a read-only call to the same
+`attendance.services.student_project_uploads` the view uses, so no child's
+password had to be guessed — showed both uploads reaching Rohit Sharma, tagged,
+with logins, active.
+
+**What made it look broken:** coaches upload *photographs* of the work, and the
+dashboard rendered them as a `View File` link. To the reader that is
+indistinguishable from nothing having arrived. That is the whole of the
+"not reflecting" report.
+
+**The parent side was never built.** `parent/views.py` imported
+`student_project_uploads` from the start and never called it, and no parent
+template rendered it. Half the feature was written and the import left behind.
+
+**There was no notification anywhere**, and the existing bell could not carry
+one: `Announcement` targets a role, a programme, a school and a grade, never an
+individual, so "your project is up" would have gone to the whole year group
+instead of the two children who built it.
+
+### A fourth case-drift, found while looking
+
+Upload `#1` (`AI image scanner`, Shiv Vani) was filed under division `'b'`
+while the class holds `'B'`, so it reached nobody — and its coach was told it
+had succeeded. The upload form never settled the section's case; the student
+and parent forms and the importer were fixed on 30 September and this one was
+missed. `daily_feedback` had the same gap.
+
+### Built
+
+- `StudentProjectUpload.is_picture` decides what can be shown rather than
+  linked. Pictures render inline on both dashboards; a PDF or a deck still gets
+  the link.
+- The parent dashboard has a Project Uploads card. A parent of two sees one
+  entry per upload, not one per child.
+- `ProjectUploadSeen` holds how far each person has read; anything newer counts
+  as new. Opening the dashboard — which is where the projects are listed —
+  moves the mark. `attendance/notifications.py` feeds the bell for students and
+  parents.
+- The upload form and `daily_feedback` upper-case the section, and the
+  whole-class fallback matches it with `__iexact` so uploads filed before this
+  still arrive.
+
+### Two things the work turned up about itself
+
+**A fixed query budget was measuring the wrong thing.** Adding
+`ProjectUploadSeen` took `verify_bulk_delete`'s count from 47 to 48 against a
+ceiling of 48, with nothing about the delete having changed — a fixed ceiling
+there is really a count of how many models point at `User`. Measured properly
+it is flat: 48 queries for 3 rows, 6, 12 and 24 alike. The check now deletes
+six rows and eighteen and compares, which is what its own comment always
+claimed. Proven by restoring the per-row loop: 248 queries for six and 728 for
+eighteen.
+
+**My own sabotage found a fault I had just introduced.** Unregistering the
+context processor did not empty the bell — it took the page down with
+`VariableDoesNotExist`. A filter *argument* that resolves to nothing raises,
+where a filter's *input* falls back to the empty string. The processor now
+always answers and both templates degrade instead of breaking.
+
+I also edited the wrong function the first time: the section-uppercasing went
+into `daily_feedback`, which shares the two lines verbatim with the upload
+view. The suite's source check caught it. Both are fixed; the change was
+correct in both places, only the comment was wrong in one.
+
+### Verified
+
+`verify_project_uploads`, 23 checks, inside a transaction that is rolled back —
+the uploaded file lands outside that transaction, so it is removed by hand and
+the suite checks that too. Every piece proven by removing it: without
+`is_picture` the photo comes back as a link, without the parent context the
+card empties, without `iexact` the drifted upload vanishes, without the
+processor both bells go quiet.
+
+Two of the checks were too loose on the first pass and were rewritten rather
+than trusted: one searched the page in a way that could pass without testing
+anything, and the parent checks read the whole page, where the bell names the
+upload too, so they passed with the dashboard card removed.
+
+Full regression, all zero failures:
+
+    verify_pages 102  verify_bulk_delete 110  verify_exports 106
+    verify_bulk_import 98  verify_timetable 108  verify_session_feedback 35
+    verify_reports 53  verify_email 72  verify_password_reset 47
+    verify_case_handling 18  verify_project_uploads 23  verify_html clean
+
+**Not verified by me:** how it looks on a real student's screen. I have no
+credentials for one and did not guess any. The migration runs on deploy
+(`migrate --noinput` is in the start command), and the two live uploads are
+`.jpeg`, so `is_picture` is true for both — but the browser confirmation is the
+client's.
+
 ## 2026-09-30 — Three coaches, one fault: a value stored in the wrong case
 
 The client raised three things the morning the Thinking Coaches were due to

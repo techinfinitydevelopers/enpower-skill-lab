@@ -399,3 +399,35 @@ with lowercase and with CAPS, wrong passwords still refused.
 
 **Also open, deliberately untouched:** those 6,266 reg-ID logins fail the same
 way if typed in lowercase. Nobody has reported it.
+
+### [2026-10-05] Coach project uploads: student, parent, and the bell
+Client said uploads were "not reflecting on the Student Dashboard". The student
+side was working the whole time — `diagnose_access --student REG_ID` showed both
+uploads reaching Rohit Sharma, tagged and active. What made it look broken:
+coaches upload **photographs**, and the dashboard rendered them as a `View File`
+link, which reads as nothing having arrived.
+
+Genuinely missing: the **parent** side (`parent/views.py` imported
+`student_project_uploads` from the start and never called it) and **any
+notification at all**.
+
+`Announcement` could not carry the notification — it targets a role, a
+programme, a school and a grade, **never one child**, so it would have told the
+whole year group. The uploads already know who they belong to, so only a read
+mark was missing: `attendance.ProjectUploadSeen`, moved forward when the
+dashboard is opened. `attendance/notifications.py` feeds the bell.
+
+`StudentProjectUpload.is_picture` now decides inline-vs-link. Upload form and
+`daily_feedback` upper-case `division`, and the whole-class fallback uses
+`__iexact` — one upload filed under `'6 b'` against a class holding `'B'`
+reached nobody while its coach was told it succeeded.
+
+**Two traps:** a filter *argument* that resolves to nothing **raises** (a
+filter's input does not), so an absent `nav_project_upload_count` took the whole
+page down rather than just the badge. And `verify_bulk_delete`'s fixed query
+ceiling was really a count of how many models point at `User` — adding one model
+broke it with nothing about the delete having changed; it now compares six rows
+against eighteen.
+
+Guarded by `verify_project_uploads.py` (23 checks). Not verified in a browser —
+no student credentials, and none guessed.
