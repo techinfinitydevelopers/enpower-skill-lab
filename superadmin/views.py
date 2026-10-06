@@ -2189,25 +2189,55 @@ def class_list(request):
     """View to display all classes"""
     from schools.models import Class
     
-    classes = Class.objects.select_related('school', 'thinking_coach').all()
+    classes = Class.objects.select_related(
+        'school', 'thinking_coach', 'thinking_coach__teacher_profile').all()
     schools = School.objects.filter(is_active=True)
-    
+
     # Get unique locations
     locations = School.objects.filter(is_active=True).values_list('city', flat=True).distinct()
-    
+
     # Get coaches (teachers)
     User = get_user_model()
     coaches = User.objects.filter(role='THINKING_COACH', is_active=True)
-    
+
     # Grade choices for the edit drawer
     grade_choices = Class.GRADE_CHOICES
-    
+
+    # A coach's photograph is on their Teacher row, not on their login. This
+    # screen read the login's picture, which is never set for a coach, and fell
+    # through to a stock-photo service -- so every row showed a stranger's face
+    # where the coach's should be. The Thinking Coaches list already resolves
+    # it this way; this one was missed.
+    for row in classes:
+        row.coach_photo = None
+        row.coach_initials = ''
+        coach = row.thinking_coach
+        if not coach:
+            continue
+        profile = getattr(coach, 'teacher_profile', None)
+        if profile and profile.profile_photo:
+            row.coach_photo = profile.profile_photo
+        elif coach.profile_picture:
+            row.coach_photo = coach.profile_picture
+        if profile and profile.initials:
+            row.coach_initials = profile.initials
+        else:
+            name = (coach.get_full_name() or coach.username or '').strip()
+            parts = name.split()
+            row.coach_initials = (
+                (parts[0][0] + parts[1][0]).upper() if len(parts) > 1
+                else name[:2].upper())
+
     context = {
         'classes': classes,
         'schools': schools,
         'locations': locations,
         'coaches': coaches,
         'grade_choices': grade_choices,
+        # Rendered from the model so the list cannot fall behind it. Both
+        # dropdowns on this page were typed out by hand and stopped at
+        # 2025-2026, while Class.ACADEMIC_YEAR_CHOICES already had 2026-2027.
+        'academic_years': Class.ACADEMIC_YEAR_CHOICES,
     }
     return render(request, 'superadmin/class-list.html', context)
 
@@ -2289,6 +2319,9 @@ def add_class(request):
     context = {
         'schools': schools,
         'coaches': coaches,
+        # From the model, so this form cannot fall behind it the way
+        # the Class List's two dropdowns did.
+        'academic_years': Class.ACADEMIC_YEAR_CHOICES,
     }
     return render(request, 'superadmin/add-class.html', context)
 

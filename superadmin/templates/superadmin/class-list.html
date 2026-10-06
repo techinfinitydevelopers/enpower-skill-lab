@@ -66,9 +66,13 @@
                     <label class="form-label-custom">Year</label>
                     <select class="form-select form-select-custom" id="yearFilter">
                         <option value="">All Years</option>
-                        <option value="2023-2024">2023-2024</option>
-                        <option value="2024-2025">2024-2025</option>
-                        <option value="2025-2026">2025-2026</option>
+                        {% comment %}From Class.ACADEMIC_YEAR_CHOICES. Typed out by hand,
+                        this stopped at 2025-2026 while the model already had
+                        2026-2027, so the year the schools are actually in could
+                        not be filtered for.{% endcomment %}
+                        {% for value, label in academic_years %}
+                        <option value="{{ value }}">{{ label }}</option>
+                        {% endfor %}
                     </select>
                 </div>
 
@@ -129,7 +133,21 @@
                             <td>
                                 <div class="teacher-cell">
                                     {% if class.thinking_coach %}
-                                    <img src="{% if class.thinking_coach.profile_picture %}{{ class.thinking_coach.profile_picture.url }}{% else %}https://i.pravatar.cc/32?u={{ class.thinking_coach.id }}{% endif %}" class="teacher-avatar" alt="{{ class.thinking_coach.get_full_name }}">
+                                    {% comment %}
+                                        The coach's photograph lives on their
+                                        Teacher row, not on their login. This
+                                        read the login's picture, which a coach
+                                        never has, and fell through to a
+                                        stock-photo service -- so the column
+                                        showed strangers' faces. Initials when
+                                        there is no photograph, as the Thinking
+                                        Coaches list already does.
+                                    {% endcomment %}
+                                    {% if class.coach_photo %}
+                                    <img src="{{ class.coach_photo.url }}" class="teacher-avatar" alt="{{ class.thinking_coach.get_full_name }}">
+                                    {% else %}
+                                    <div class="teacher-avatar teacher-avatar-initials">{{ class.coach_initials }}</div>
+                                    {% endif %}
                                     <span>{{ class.thinking_coach.get_full_name|default:class.thinking_coach.username }}</span>
                                     {% else %}
                                     <span class="text-muted">Not Assigned</span>
@@ -258,9 +276,9 @@
                 <div class="drawer-form-group">
                     <label class="drawer-form-label">Academic Year <span class="required">*</span></label>
                     <select class="drawer-form-select" id="editAcademicYear" name="academic_year">
-                        <option value="2025-2026">2025-2026</option>
-                        <option value="2024-2025">2024-2025</option>
-                        <option value="2023-2024">2023-2024</option>
+                        {% for value, label in academic_years %}
+                        <option value="{{ value }}">{{ label }}</option>
+                        {% endfor %}
                     </select>
                 </div>
             </div>

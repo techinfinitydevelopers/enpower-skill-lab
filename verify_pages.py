@@ -36,6 +36,10 @@ PASSWORD = 'SeedCheck!2026'
 PASS, FAIL = [], []
 
 
+class _ProbeDone(Exception):
+    """Raised to roll back a probe that had to write to check itself."""
+
+
 def check(label, ok, detail=''):
     (PASS if ok else FAIL).append(f'{label}{("  — " + detail) if detail else ""}')
     print(f'  {"PASS" if ok else "FAIL"}  {label}{("  — " + detail) if detail else ""}')
@@ -671,6 +675,82 @@ def run():
                 _guilty.append(os.path.relpath(_path, settings.BASE_DIR))
     check('no template links to enpower.techinfinity.link', not _guilty,
           '; '.join(_guilty))
+
+    # ---- Class List: the coach's own face, and a year list that keeps up ----
+    # The column read the login's picture, which a coach never has, and fell
+    # through to a stock-photo service -- so every row showed a stranger's
+    # face. The year dropdowns were typed out by hand and stopped one year
+    # short of the model, so the year the schools are actually in could not be
+    # chosen.
+    from django.core.files.base import ContentFile
+    from django.db import transaction as _tx
+    from schools.models import Class as _Class
+    from teacher.models import Teacher as _Teacher
+
+    print(chr(10) + 'CLASS LIST SHOWS THE COACH, NOT A STOCK PHOTO')
+    _boss = User.objects.filter(role='SUPER_ADMIN', is_active=True).first()
+    if not _boss:
+        check('a Super Admin exists to read the class list with', False)
+    else:
+        _admin = login_as(_boss)
+
+        def _markup(url):
+            """Raw HTML. fetch() strips tags, and these checks read
+            attributes -- an <option value> and an <img src>."""
+            return _admin.get(url, follow=True).content.decode(
+                'utf-8', 'replace')
+
+        _body = _markup('/super-admin/classes/')
+        check('the class list serves no stock-photo avatars',
+              'i.pravatar.cc' not in _body)
+
+        _years = set(_re2.findall(r'<option value="(\d{4}-\d{4})"', _body))
+        _want = {v for v, _ in _Class.ACADEMIC_YEAR_CHOICES}
+        check('every academic year the model offers is on the page',
+              _want <= _years, 'missing ' + str(sorted(_want - _years)))
+
+        _assigned = (_Class.objects.filter(thinking_coach__isnull=False)
+                     .select_related('thinking_coach').first())
+        if not _assigned:
+            check('some class has a coach, to test the avatar with', False)
+        else:
+            _profile = _Teacher.objects.filter(
+                user=_assigned.thinking_coach).first()
+            if not _profile:
+                check('that coach has a Teacher row, which is where the '
+                      'photograph lives', False,
+                      _assigned.thinking_coach.username)
+            else:
+                _had = _profile.profile_photo.name
+                _path = None
+                try:
+                    with _tx.atomic():
+                        _profile.profile_photo.save(
+                            'zz_pages_probe.jpg',
+                            ContentFile(b'probe, not a real image'), save=True)
+                        _path = _profile.profile_photo.path
+                        _shown = _markup('/super-admin/classes/')
+                        check('a coach with a photograph has it shown',
+                              _profile.profile_photo.url in _shown)
+                        check('and no initials stand in for it',
+                              _shown.count('teacher-avatar-initials')
+                              < _body.count('teacher-avatar-initials'),
+                              str(_body.count('teacher-avatar-initials')) +
+                              ' -> ' + str(_shown.count('teacher-avatar-initials')))
+                        raise _ProbeDone
+                except _ProbeDone:
+                    pass
+                finally:
+                    # The row rolls back; the file does not.
+                    if _path:
+                        try:
+                            os.remove(_path)
+                        except OSError:
+                            pass
+                _profile.refresh_from_db()
+                check('the probe left the coach as it found them',
+                      _profile.profile_photo.name == _had,
+                      _profile.profile_photo.name)
 
     restore_passwords()
 

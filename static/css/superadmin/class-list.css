@@ -250,6 +250,22 @@ table.dataTable thead .sorting_desc {
     background-color: #e5e7eb;
 }
 
+/* Shown when the coach has no photograph. Drawn here rather than
+   fetched from an avatar service: the column used to pull stock
+   photographs of strangers, which read as the wrong person rather
+   than as a placeholder. */
+.teacher-avatar-initials {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    background-color: #ede9fe;
+    color: #5A1F6E;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .02em;
+}
+
 .status-badge {
     display: inline-block;
     padding: 4px 12px;
