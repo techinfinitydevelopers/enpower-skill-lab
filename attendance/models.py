@@ -13,14 +13,14 @@ from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 
+from enpower_skill_lab.academic_year import (
+    academic_year_choices, current_academic_year)
+
 GRADE_CHOICES = [(str(i), f'Grade {i}') for i in range(1, 13)]
 
-ACADEMIC_YEAR_CHOICES = [
-    ('2023-2024', '2023-2024'),
-    ('2024-2025', '2024-2025'),
-    ('2025-2026', '2025-2026'),
-    ('2026-2027', '2026-2027'),
-]
+# Generated around today rather than typed out. A hand-written list is a
+# list that stops: this one ran out while the schools had moved on.
+ACADEMIC_YEAR_CHOICES = academic_year_choices()
 
 DAY_CHOICES = [
     ('mon', 'Monday'), ('tue', 'Tuesday'), ('wed', 'Wednesday'),
@@ -41,7 +41,7 @@ class Timetable(models.Model):
     )
     grade = models.CharField(max_length=2, choices=GRADE_CHOICES)
     division = models.CharField(max_length=5)
-    academic_year = models.CharField(max_length=9, choices=ACADEMIC_YEAR_CHOICES, default='2025-2026')
+    academic_year = models.CharField(max_length=9, choices=ACADEMIC_YEAR_CHOICES, default=current_academic_year)
     program = models.CharField(max_length=50, blank=True, help_text='Program name (FSL / CSL plus / CSL foundation) — replaces "instrument"')
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
@@ -88,7 +88,7 @@ class AttendanceSession(models.Model):
     school = models.ForeignKey('schools.School', on_delete=models.CASCADE, related_name='attendance_sessions')
     grade = models.CharField(max_length=2, choices=GRADE_CHOICES)
     division = models.CharField(max_length=5)
-    academic_year = models.CharField(max_length=9, choices=ACADEMIC_YEAR_CHOICES, default='2025-2026')
+    academic_year = models.CharField(max_length=9, choices=ACADEMIC_YEAR_CHOICES, default=current_academic_year)
     date = models.DateField()
     start_time = models.TimeField(null=True, blank=True)
     timetable = models.ForeignKey('Timetable', on_delete=models.SET_NULL, null=True, blank=True, related_name='attendance_sessions')
@@ -143,7 +143,7 @@ class DailySessionFeedback(models.Model):
     school = models.ForeignKey('schools.School', on_delete=models.CASCADE, related_name='daily_feedbacks')
     grade = models.CharField(max_length=2, choices=GRADE_CHOICES)
     division = models.CharField(max_length=5)
-    academic_year = models.CharField(max_length=9, choices=ACADEMIC_YEAR_CHOICES, default='2025-2026')
+    academic_year = models.CharField(max_length=9, choices=ACADEMIC_YEAR_CHOICES, default=current_academic_year)
     date = models.DateField()
     project = models.ForeignKey('competencies.Project', on_delete=models.SET_NULL, null=True, blank=True, related_name='daily_feedbacks')
     session_number = models.PositiveSmallIntegerField(null=True, blank=True)
@@ -209,7 +209,7 @@ class StudentProjectUpload(models.Model):
     school = models.ForeignKey('schools.School', on_delete=models.CASCADE, related_name='student_project_uploads')
     grade = models.CharField(max_length=2, choices=GRADE_CHOICES)
     division = models.CharField(max_length=5)
-    academic_year = models.CharField(max_length=9, choices=ACADEMIC_YEAR_CHOICES, default='2025-2026')
+    academic_year = models.CharField(max_length=9, choices=ACADEMIC_YEAR_CHOICES, default=current_academic_year)
     project = models.ForeignKey('competencies.Project', on_delete=models.SET_NULL, null=True, blank=True, related_name='student_uploads')
     title = models.CharField(max_length=200)
     file = models.FileField(upload_to='student_projects/', blank=True, null=True, help_text='image/ppt/pdf/doc')

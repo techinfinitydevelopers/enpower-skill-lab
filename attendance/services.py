@@ -10,10 +10,6 @@ from datetime import date
 
 from django.db.models import Count
 
-# Projects/levels a student is expected to complete in a year
-# (PPT slide 45: "3 of 12 projects/levels annually, Grades 6-9").
-DEFAULT_PROJECTS_PER_YEAR = 12
-
 # Attendance status values counted as "attended".
 ATTENDED = ('present', 'late')
 
@@ -132,16 +128,100 @@ def _class_filter(student):
     return dict(school=student.school, grade=str(student.student_class), division=student.division)
 
 
-def projects_completed(student):
-    """(completed_count, total) of distinct projects completed for the student's class."""
-    from .models import DailySessionFeedback
+def program_for(student):
+    """Programme the student is enrolled in — FSL, CSL Plus and so on.
+
+    Comes from the school's linked framework, which is what school onboarding
+    sets; falls back to the legacy framework_type field.
+    """
+    school = getattr(student, 'school', None)
+    if not school:
+        return '—'
+    framework = getattr(school, 'framework_ref', None)
+    if framework and getattr(framework, 'name', ''):
+        return framework.name
+    return getattr(school, 'framework_type', '') or '—'
+
+
+def student_projects(student):
+    """The projects actually available to this student's class.
+
+    Primary source is the ESL Product catalogue: the programme's grade-wise
+    ProductProjects. Falls back to the assessment projects running for the
+    grade and framework, so the card still says something while the catalogue
+    is being filled in.
+
+    Returns [{'name', 'description', 'sessions', 'completed'}].
+    """
+    grade = str(getattr(student, 'student_class', '') or '')
+    programme = program_for(student)
+    projects = []
+
     try:
-        completed = (DailySessionFeedback.objects
-                     .filter(is_project_completed=True, **_class_filter(student))
-                     .values('project').distinct().count())
+        from competencies.models import ESLProduct, ProjectReport
+
+        product = ESLProduct.objects.filter(name__iexact=programme).first()
+        if product:
+            for pp in product.projects.filter(grade=grade).order_by(
+                    'project_number', 'order'):
+                projects.append({
+                    'name': pp.name,
+                    'description': (pp.description or '').strip(),
+                    'sessions': pp.sessions.count(),
+                    'completed': False,
+                })
+
+        if not projects:
+            from django.db.models import Q
+
+            from competencies.models import Project
+
+            done = set(ProjectReport.objects.filter(student=student)
+                       .values_list('project_id', flat=True))
+            qs = (Project.objects.filter(grade=grade, status='Active')
+                  .exclude(project_type='Plug In'))
+            framework = getattr(getattr(student, 'school', None),
+                                'framework_ref', None)
+            if framework:
+                qs = qs.filter(Q(framework_ref=framework)
+                               | Q(framework_ref__isnull=True,
+                                   framework=framework.name))
+            for pr in qs.order_by('sequence_number', 'title'):
+                projects.append({
+                    'name': pr.title,
+                    'description': pr.project_type,
+                    'sessions': pr.assessments.count(),
+                    'completed': pr.id in done,
+                })
     except Exception:
-        completed = 0
-    return completed, DEFAULT_PROJECTS_PER_YEAR
+        projects = []
+
+    return projects
+
+
+def projects_completed(student):
+    """(completed, total) projects for this student.
+
+    The total used to be DEFAULT_PROJECTS_PER_YEAR, a flat 12 from the deck.
+    A school with nothing set up yet therefore read "0 of 12", which the
+    client asked for as 0 of 0 -- a target nobody has agreed to is worse than
+    no target. It is now the projects actually available to the class, which
+    is what the parent app has counted since it was built; both screens now
+    answer the same way for the same child.
+
+    Completed is a generated report, not a flagged session feedback. A child
+    could finish a project, have a full report, and still see "0 of 12".
+    """
+    from competencies.models import ProjectReport
+
+    try:
+        completed = (ProjectReport.objects.filter(student=student)
+                     .values('project').distinct().count())
+        total = len(student_projects(student))
+    except Exception:
+        return 0, 0
+    # Never "3 of 0": a report exists, so the project did.
+    return completed, max(total, completed)
 
 
 def sessions_completed(student):
@@ -219,8 +299,15 @@ def grade_wise_attendance(school, year=None, month=None):
 
 
 def grade_wise_project_completion(school):
-    """[{'grade','completed','total'}] distinct completed projects per grade."""
+    """[{'grade','completed','total'}] distinct completed projects per grade.
+
+    The total is the projects actually set up for that grade, not the flat 12
+    the deck quotes -- same reason as projects_completed above.
+    """
+    from student.models import Student
+
     from .models import DailySessionFeedback
+
     try:
         rows = (DailySessionFeedback.objects
                 .filter(school=school, is_project_completed=True)
@@ -228,8 +315,18 @@ def grade_wise_project_completion(school):
         per_grade = {}
         for r in rows:
             per_grade.setdefault(r['grade'], set()).add(r['project'])
-        return [{'grade': g, 'completed': len(p), 'total': DEFAULT_PROJECTS_PER_YEAR}
-                for g, p in sorted(per_grade.items())]
+
+        out = []
+        for grade, projects in sorted(per_grade.items()):
+            # One student from the grade stands for the grade: the project
+            # list is resolved from school, grade and framework, which they
+            # share.
+            sample = Student.objects.filter(
+                school=school, student_class=str(grade), is_active=True).first()
+            total = len(student_projects(sample)) if sample else 0
+            out.append({'grade': grade, 'completed': len(projects),
+                        'total': max(total, len(projects))})
+        return out
     except Exception:
         return []
 

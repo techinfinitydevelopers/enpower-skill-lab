@@ -62,20 +62,13 @@ def _coach_for(child):
 def _projects_progress(child):
     """(completed, total) projects for this child.
 
-    Replaces attendance.services.projects_completed, which counted
-    DailySessionFeedback rows flagged is_project_completed and compared them
-    against a fixed DEFAULT_PROJECTS_PER_YEAR constant. A child could finish a
-    project, have a full report generated, and still see "0 of 12".
-
-    Completed = projects with a generated report. Total = projects actually
-    available to the child's class, falling back to completed so the label can
-    never read "3 of 0".
+    Kept as a name the rest of this file already uses; the counting itself is
+    attendance.services.projects_completed, which the student dashboard calls
+    too, so the two screens cannot drift apart again.
     """
-    from competencies.models import ProjectReport
+    from attendance.services import projects_completed
 
-    completed = ProjectReport.objects.filter(student=child).values('project').distinct().count()
-    total = len(_child_projects(child))
-    return completed, max(total, completed)
+    return projects_completed(child)
 
 
 def _sessions_attended(child):
@@ -94,67 +87,23 @@ def _sessions_attended(child):
 
 
 def _program_for(child):
-    """Program the child is enrolled in — FSL / CSL Plus etc (PPT slide 47).
+    """Programme the child is enrolled in. Shared with the student dashboard."""
+    from attendance.services import program_for
 
-    Comes from the school's linked framework, which is what school onboarding
-    sets. Falls back to the legacy framework_type CharField.
-    """
-    school = getattr(child, 'school', None)
-    if not school:
-        return '—'
-    fw = getattr(school, 'framework_ref', None)
-    if fw and getattr(fw, 'name', ''):
-        return fw.name
-    return getattr(school, 'framework_type', '') or '—'
+    return program_for(child)
 
 
 def _child_projects(child):
-    """Projects for the child's grade in the current year (PPT slide 49).
+    """Projects for the child's grade. Shared with the student dashboard.
 
-    Primary source is the ESL Product catalogue (slide 7): the program's
-    grade-wise ProductProjects, with their descriptions and session counts.
-    This replaces the old DailySessionFeedback lookup, which meant a parent saw
-    nothing at all until the coach happened to submit a daily feedback form.
-
-    Falls back to the assessment projects actually running for the child's
-    grade + framework, so the card still says something while the product
-    catalogue is being filled in.
+    This used to be the only correct version: the student side compared
+    against a flat DEFAULT_PROJECTS_PER_YEAR of 12, so the same child read
+    "0 of 12" on their own dashboard and "0 of 0" on their parent's. Both read
+    attendance.services.student_projects now.
     """
-    grade = str(child.student_class)
-    program = _program_for(child)
-    projects = []
+    from attendance.services import student_projects
 
-    try:
-        from competencies.models import ESLProduct, ProjectReport
-        product = ESLProduct.objects.filter(name__iexact=program).first()
-        if product:
-            for pp in product.projects.filter(grade=grade).order_by('project_number', 'order'):
-                projects.append({
-                    'name': pp.name,
-                    'description': (pp.description or '').strip(),
-                    'sessions': pp.sessions.count(),
-                    'completed': False,
-                })
-
-        if not projects:
-            from competencies.models import Project
-            done = set(ProjectReport.objects.filter(student=child).values_list('project_id', flat=True))
-            qs = Project.objects.filter(grade=grade, status='Active').exclude(project_type='Plug In')
-            fw = getattr(getattr(child, 'school', None), 'framework_ref', None)
-            if fw:
-                from django.db.models import Q
-                qs = qs.filter(Q(framework_ref=fw) | Q(framework_ref__isnull=True, framework=fw.name))
-            for pr in qs.order_by('sequence_number', 'title'):
-                projects.append({
-                    'name': pr.title,
-                    'description': pr.project_type,
-                    'sessions': pr.assessments.count(),
-                    'completed': pr.id in done,
-                })
-    except Exception:
-        projects = []
-
-    return projects
+    return student_projects(child)
 
 
 def is_parent(user):

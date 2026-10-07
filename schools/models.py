@@ -1,4 +1,6 @@
 from django.db import models
+from enpower_skill_lab.academic_year import (
+    academic_year_choices, current_academic_year)
 from django.core.validators import MinValueValidator, MaxValueValidator, RegexValidator
 from django.utils import timezone
 from django.conf import settings
@@ -790,12 +792,9 @@ class Class(models.Model):
         ('12', 'Standard 12'),
     ]
     
-    ACADEMIC_YEAR_CHOICES = [
-        ('2023-2024', '2023-2024'),
-        ('2024-2025', '2024-2025'),
-        ('2025-2026', '2025-2026'),
-        ('2026-2027', '2026-2027'),
-    ]
+    # Generated around today rather than typed out. Both Class List
+    # dropdowns read this, and a hand-written list is a list that stops.
+    ACADEMIC_YEAR_CHOICES = academic_year_choices()
     
     # ==================== SCHOOL RELATIONSHIP ====================
     school = models.ForeignKey(
@@ -836,7 +835,7 @@ class Class(models.Model):
     academic_year = models.CharField(
         max_length=9,
         choices=ACADEMIC_YEAR_CHOICES,
-        default='2024-2025',
+        default=current_academic_year,
         verbose_name="Academic Year",
         help_text="Academic year for this class"
     )

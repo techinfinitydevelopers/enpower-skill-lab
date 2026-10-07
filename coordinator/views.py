@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect
+from enpower_skill_lab.academic_year import current_academic_year
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.contrib.auth import logout, update_session_auth_hash
@@ -507,7 +508,7 @@ def timetable_edit(request, pk):
             timetable.thinking_coach = coach
             timetable.grade = grade
             timetable.division = division
-            timetable.academic_year = academic_year or '2025-2026'
+            timetable.academic_year = academic_year or current_academic_year()
             timetable.program = program
             timetable.start_date = start_date
             timetable.end_date = end_date
@@ -626,7 +627,7 @@ def timetable_upload(request):
                 thinking_coach=coach,
                 grade=grade,
                 division=division,
-                academic_year=academic_year or '2025-2026',
+                academic_year=academic_year or current_academic_year(),
                 program=program,
                 start_date=start_date,
                 end_date=end_date,

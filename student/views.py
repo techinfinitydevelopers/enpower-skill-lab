@@ -108,7 +108,10 @@ def student_dashboard(request):
             'current_streak': 0, 'badge': None,
         }
         context['projects_completed'] = 0
-        context['projects_total'] = 12
+        # Nobody is signed in as a student here, so there are no projects to
+        # count. It used to say 12, which put a target on a screen that had no
+        # student behind it.
+        context['projects_total'] = 0
         context['sessions_completed'] = 0
         context['project_uploads'] = []
 

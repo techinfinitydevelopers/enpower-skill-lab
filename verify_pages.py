@@ -752,6 +752,125 @@ def run():
                       _profile.profile_photo.name == _had,
                       _profile.profile_photo.name)
 
+    # ---- The year it actually is, and a target nobody invented -------------
+    # Four model fields and two views each carried the literal '2025-2026', so
+    # everything made after April 2026 was stamped a year behind: the Super
+    # Admin's 2026-2027 filter found nothing and School Admin still read
+    # 2025-2026. And the projects target was a flat 12 from the deck, so a
+    # school with nothing set up read "0 of 12" -- a target nobody agreed to.
+    import datetime as _dt
+
+    from enpower_skill_lab.academic_year import current_academic_year
+    from attendance.services import projects_completed, student_projects
+
+    print(chr(10) + 'THE YEAR IT ACTUALLY IS')
+    for _when, _want in ((_dt.date(2026, 3, 31), '2025-2026'),
+                         (_dt.date(2026, 4, 1), '2026-2027'),
+                         (_dt.date(2026, 6, 10), '2026-2027'),
+                         (_dt.date(2027, 1, 15), '2026-2027'),
+                         (_dt.date(2027, 4, 1), '2027-2028')):
+        check(f'{_when} falls in {_want}',
+              current_academic_year(_when) == _want,
+              current_academic_year(_when))
+
+    check('today has a year, and it is this one',
+          current_academic_year() == current_academic_year(_dt.date.today()))
+
+    # A default that is a string is a default that goes stale. These must be
+    # callables, or we are back to stamping last year onto this year's rows.
+    _hardcoded = []
+    for _f in ('attendance/models.py', 'schools/models.py',
+               'coordinator/views.py'):
+        _src = open(os.path.join(settings.BASE_DIR, _f),
+                    encoding='utf-8', errors='ignore').read()
+        for _line in _src.splitlines():
+            if 'academic_year' not in _line or _line.lstrip().startswith('#'):
+                continue
+            if _re2.search(r"=\s*'20\d\d-20\d\d'", _line):
+                _hardcoded.append(f'{_f}: {_line.strip()[:70]}')
+    check('no academic year is typed into a default', not _hardcoded,
+          '; '.join(_hardcoded))
+
+    # The Class List's dropdowns read the model, so the current year reaching
+    # the page is the same question as the model knowing it.
+    from schools.models import Class as _Cls
+
+    check('the model offers the year we are actually in',
+          current_academic_year() in {v for v, _ in _Cls.ACADEMIC_YEAR_CHOICES},
+          str([v for v, _ in _Cls.ACADEMIC_YEAR_CHOICES]))
+
+    print(chr(10) + 'THE PROJECTS TARGET IS A COUNT, NOT A CONSTANT')
+    _pupil = (Student.objects.select_related('school', 'user')
+              .filter(user__isnull=False, school__isnull=False, is_active=True)
+              .first())
+    if not _pupil:
+        check('a student with a login exists to count projects for', False)
+    else:
+        _done, _total = projects_completed(_pupil)
+        _real = len(student_projects(_pupil))
+        check('the total is the projects the class actually has',
+              _total == max(_real, _done), f'{_total} vs {_real}')
+        check('it is never the flat 12 unless the class really has 12',
+              _total != 12 or _real == 12, str(_total))
+
+        _stu = login_as(_pupil.user)
+        _body = _stu.get('/student/dashboard/', follow=True).content.decode(
+            'utf-8', 'replace')
+        _ring = _re2.search(r'stud-dash-chart-percent">(\d+)/(\d+)<', _body)
+        check('the dashboard ring quotes that same total',
+              bool(_ring) and int(_ring.group(2)) == _total,
+              _ring.group(0) if _ring else '(ring not found)')
+        check('no "of 12" is left on the page unless 12 is the real number',
+              'of 12' not in _body or _real == 12)
+
+        # A school with nothing set up must read 0 of 0, which is what the
+        # client asked for: a target nobody has agreed to is worse than none.
+        # Build the case rather than hunt for one: on a database where
+        # every class has projects this check would quietly skip itself,
+        # and 0 of 0 is the thing the client actually asked for.
+        _zero = Student.objects.filter(pk=_pupil.pk).first()
+        _zero.student_class = '99'          # in memory only, never saved
+        check('a class with no projects has none to count',
+              student_projects(_zero) == [])
+        # The total collapses to what the student has actually finished,
+        # never to an invented target. A student holding three reports
+        # reads 3 of 3, not 3 of 0 and not 3 of 12.
+        _reports = ProjectReport.objects.filter(
+            student=_zero).values('project').distinct().count()
+        check('its total falls back to work actually done',
+              projects_completed(_zero) == (_reports, _reports),
+              str(projects_completed(_zero)))
+        check('the probe saved nothing',
+              Student.objects.get(pk=_pupil.pk).student_class
+              == _pupil.student_class)
+
+        # And the case the client actually raised: a school with nothing
+        # set up and a child who has finished nothing reads 0 of 0.
+        # Made, not found: on a seeded database every student already has
+        # reports, and this check would skip itself on the one case the
+        # client actually raised.
+        import datetime as _d2
+
+        from django.db import transaction as _tx2
+
+        try:
+            with _tx2.atomic():
+                _fresh = Student.objects.create(
+                    first_name='ZZ', last_name='Fresh',
+                    school=_pupil.school, date_of_birth=_d2.date(2014, 5, 1),
+                    enrollment_date=_d2.date(2025, 6, 1),
+                    student_class='99', division='Z', is_active=True,
+                    skill_lab_reg_id='ZZ-PAGES-FRESH')
+                check('nothing set up and nothing done reads 0 of 0',
+                      projects_completed(_fresh) == (0, 0),
+                      str(projects_completed(_fresh)))
+                raise _ProbeDone
+        except _ProbeDone:
+            pass
+        check('that probe student is gone',
+              not Student.objects.filter(
+                  skill_lab_reg_id='ZZ-PAGES-FRESH').exists())
+
     restore_passwords()
 
     print(f'\n{"="*60}\nPASS {len(PASS)}   FAIL {len(FAIL)}')
