@@ -2,6 +2,82 @@
 
 Chronological record of completed tasks (per org policy: log after each completed task).
 
+## 2026-10-07 — Nothing knew what year it was, and the target was invented
+
+Three client reports, two causes.
+
+### The year
+
+Four model fields and two views each carried the literal string `'2025-2026'`
+as their default, and no function anywhere computed one. So every class,
+timetable and session created after April 2026 was stamped a year behind.
+
+That is why the Super Admin's 2026-2027 filter found nothing, why the School
+Admin's Class Overview still read 2025-2026, and why the class codes say
+`CLS-2025-6A-775`. The dropdowns fixed the day before were right; **the rows
+were not** — fixing the dropdown is what made the empty filter visible.
+
+`enpower_skill_lab/academic_year.py` works it out, April to March. The defaults
+are callables now, so they are evaluated when a row is made rather than when
+the module is imported, and the choices lists are generated around today for
+the same reason the dropdowns were: a hand-written list is a list that stops.
+
+**Assumption stated to the user, not yet confirmed by the client:** the year
+turns in **April**. Their sessions start in June, so today both answers agree;
+the difference only shows in April and May.
+
+`fix_academic_year` re-stamps what is already stored, dry run unless
+`--apply`. It never guesses — each row is judged against a date it carries
+itself:
+
+    Timetable             its start_date
+    AttendanceSession     the session date
+    DailySessionFeedback  the feedback date
+    StudentProjectUpload  when it was uploaded
+    Class                 the timetable it mirrors (school + grade + division)
+
+A row with no date, a class with no timetable behind it, and a class whose
+timetables disagree are all left alone and reported, because there is nothing
+to judge them by.
+
+### The target
+
+`DEFAULT_PROJECTS_PER_YEAR = 12`, lifted from the deck. A school with nothing
+set up read "0 of 12" — a target nobody had agreed to, which is what the client
+asked to remove.
+
+The parent app had already solved this properly and said so in its own
+docstring, so **the same child read "0 of 12" on their dashboard and "0 of 0"
+on their parent's**. Both now call `attendance.services.projects_completed`;
+the duplicate helpers in `parent/views.py` delegate to the shared ones and
+cannot drift again. The total falls back to work actually done, so a child with
+three reports reads 3 of 3 — never 3 of 0, never an invented number.
+
+### Guards, and one I got wrong first
+
+`verify_pages` 107 → 124: the April boundary in both directions, no year typed
+into a default, the model offering the year we are in, the dashboard ring
+quoting the real count, and 0 of 0 for a school with nothing set up.
+
+Two things worth keeping:
+
+**I wrote the 0-of-0 check lazily and it caught me.** I asserted `(0, 0)` for a
+child whose class had no projects — but that child held three reports, and the
+honest answer is `(3, 3)`. The fallback was right and my test was wrong. The
+check now asserts what the code actually promises, and the client's real case
+is built in a rolled-back transaction rather than hunted for: on a seeded
+database every student has reports, so the hunt would have skipped itself on
+the one case that was reported.
+
+**Proven by restoring both faults.** The hard-coded default is reported with
+the line it sits on; the flat 12 reports five failures.
+
+Full regression, all zero failures.
+
+**Not done yet:** the stored rows. `fix_academic_year` has been written and
+tested on seeded data covering every shape, but the dry run has not been read
+on production.
+
 ## 2026-10-05/06 — The coach's upload, and the half of it that was never built
 
 The client reported that a Thinking Coach can upload a project, tag a student,

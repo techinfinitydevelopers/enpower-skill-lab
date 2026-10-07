@@ -431,3 +431,33 @@ against eighteen.
 
 Guarded by `verify_project_uploads.py` (23 checks). Not verified in a browser —
 no student credentials, and none guessed.
+
+### [2026-10-07] Nothing knew what year it was
+Four model fields and two views carried the literal `'2025-2026'` as their
+default, and no function computed one. Everything created after April 2026 was
+stamped a year behind — Super Admin's 2026-2027 filter found nothing, School
+Admin read 2025-2026, class codes say `CLS-2025-…`. The dropdowns fixed the day
+before were right; the rows were not, and fixing the dropdown is what made the
+empty filter visible.
+
+`enpower_skill_lab/academic_year.py` is now the only place a year is decided —
+April to March, defaults are the **callable** `current_academic_year`, and the
+choices lists are generated around today. **Never type a year into a default, a
+dropdown or a fallback**: all three hand-written lists had run out.
+
+April is an assumption, not client-confirmed. Their sessions start in June so
+today both answers agree; `START_MONTH` is the one line to change.
+
+`python manage.py fix_academic_year` (dry run unless `--apply`) re-stamps
+stored rows, judging each by a date it carries itself and leaving alone
+anything with no date or no timetable. **Production dry run not read yet.**
+
+**Project totals are counted now.** `DEFAULT_PROJECTS_PER_YEAR = 12` is gone;
+`attendance.services.projects_completed` serves both student and parent, which
+used to disagree about the same child ("0 of 12" vs "0 of 0"). The total falls
+back to work actually done — three reports read 3 of 3, never 3 of 0.
+
+**Process note:** I wrote the 0-of-0 guard lazily and it caught me — I asserted
+`(0,0)` for a child holding three reports. The code was right, the test was
+wrong. And a check that *hunts* for a case skips itself when the database has
+none; build the case instead.
