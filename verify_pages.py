@@ -871,6 +871,89 @@ def run():
               not Student.objects.filter(
                   skill_lab_reg_id='ZZ-PAGES-FRESH').exists())
 
+    # ---- Class List: the Actions column does something ---------------------
+    # All three buttons were markup only. Edit opened the drawer with every
+    # field blank -- its handler carried a comment saying the data "would
+    # typically" be fetched and then opened it anyway -- Update Class closed
+    # the drawer and saved nothing, and View and Delete had no handler at all.
+    # edit_class and delete_class existed the whole time with nothing wired to
+    # them, so a Super Admin pressed Update and believed it had saved.
+    from django.db import transaction as _tx3
+    from schools.models import Class as _Cl2, School as _Sch2
+
+    print(chr(10) + 'CLASS LIST ACTIONS REACH THE SERVER')
+    _boss2 = User.objects.filter(role='SUPER_ADMIN', is_active=True).first()
+    if not _boss2:
+        check('a Super Admin exists to press the buttons', False)
+    else:
+        _ad = login_as(_boss2)
+
+        _js = open(os.path.join(settings.BASE_DIR,
+                                'static/js/superadmin/class-list.js'),
+                   encoding='utf-8', errors='ignore').read()
+        check('the edit handler no longer just opens an empty drawer',
+              'would typically fetch data from the server' not in _js)
+        for _needed, _what in (
+                ('fillDrawerFrom', 'the drawer is filled from the row'),
+                ('.view-class-btn', 'View has a handler'),
+                ('.delete-class-btn', 'Delete has a handler'),
+                ("$form.trigger('submit')", 'Update Class submits the form')):
+            check(_what, _needed in _js)
+
+        try:
+            with _tx3.atomic():
+                _sch = _Sch2.objects.first()
+                _row = _Cl2.objects.create(
+                    school=_sch, grade='6', division='A', class_name='Std 6A',
+                    class_code='ZZ-PAGES-ACTIONS', academic_year='2026-2027',
+                    total_sessions=48, is_active=True,
+                    student_visibility=True, parent_visibility=False)
+
+                _html = _ad.get('/super-admin/classes/',
+                                follow=True).content.decode('utf-8', 'replace')
+                _missing = [a for a in (
+                    'data-class-id', 'data-school-id', 'data-grade',
+                    'data-division', 'data-class-code', 'data-academic-year',
+                    'data-coach-id', 'data-total-sessions', 'data-is-active',
+                    'data-student-visibility', 'data-parent-visibility',
+                    'data-delete-url') if a not in _html]
+                check('the row carries everything the drawer needs',
+                      not _missing, ', '.join(_missing))
+                check('there is a delete form with a CSRF token',
+                      'deleteClassForm' in _html
+                      and 'csrfmiddlewaretoken' in _html)
+                check('the edit form knows where to post',
+                      'id="editClassForm"' in _html)
+
+                _r = _ad.post(f'/super-admin/class/{_row.id}/edit/', {
+                    'school': _sch.id, 'grade': '7', 'division': 'b',
+                    'class_name': '', 'academic_year': '2026-2027',
+                    'total_sessions': '30', 'thinking_coach': '',
+                    'is_active': 'true', 'student_visibility': 'false',
+                    'parent_visibility': 'true'}, follow=True)
+                _row.refresh_from_db()
+                check('editing actually saves',
+                      (_row.grade, _row.division, _row.total_sessions)
+                      == ('7', 'B', 30),
+                      f'{_row.grade} {_row.division} {_row.total_sessions}')
+                check('the class name follows grade and division',
+                      _row.class_name == 'Std 7B', _row.class_name)
+                check('the toggles are saved, not just drawn',
+                      _row.student_visibility is False
+                      and _row.parent_visibility is True)
+
+                check('delete refuses a GET',
+                      _ad.get(f'/super-admin/class/{_row.id}/delete/'
+                              ).status_code == 405)
+                _ad.post(f'/super-admin/class/{_row.id}/delete/', follow=True)
+                check('and a POST removes the row',
+                      not _Cl2.objects.filter(id=_row.id).exists())
+                raise _ProbeDone
+        except _ProbeDone:
+            pass
+        check('the probe class is gone',
+              not _Cl2.objects.filter(class_code='ZZ-PAGES-ACTIONS').exists())
+
     restore_passwords()
 
     print(f'\n{"="*60}\nPASS {len(PASS)}   FAIL {len(FAIL)}')
