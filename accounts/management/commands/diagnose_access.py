@@ -386,19 +386,40 @@ class Command(BaseCommand):
             else:
                 print('  password    : not tested (pass --account "email=pw")')
 
-            teacher = getattr(user, 'teacher_profile', None)
-            if teacher is None:
-                from teacher.models import Teacher
-                teacher = Teacher.objects.filter(user=user).first()
-            if teacher is None:
-                print('  Teacher row : MISSING — this is an orphan coach login. '
-                      'check_coach_accounts --fix-orphan-logins deactivates these.')
+            # Only a coach is supposed to have a Teacher row. This used to call
+            # every other role an "orphan coach login" and point at a command
+            # that deactivates accounts -- said of a Super Admin that was
+            # working perfectly well.
+            if user.role != 'THINKING_COACH':
+                print(f'  Teacher row : not expected for {user.role}')
             else:
-                print(f'  Teacher row : {teacher.full_name}  '
-                      f'active={teacher.is_active}  '
-                      f'official_email={teacher.official_email!r}')
-                if (teacher.official_email or '').strip().lower() != email.lower():
-                    print('    -> the profile holds a different address than the login.')
+                from teacher.models import Teacher
+
+                teacher = (getattr(user, 'teacher_profile', None)
+                           or Teacher.objects.filter(user=user).first())
+                if teacher is None:
+                    print('  Teacher row : MISSING — this is an orphan coach '
+                          'login. check_coach_accounts --fix-orphan-logins '
+                          'deactivates these.')
+                else:
+                    print(f'  Teacher row : {teacher.full_name}  '
+                          f'active={teacher.is_active}  '
+                          f'official_email={teacher.official_email!r}')
+                    if (teacher.official_email or '').strip().lower() != email.lower():
+                        print('    -> the profile holds a different address '
+                              'than the login.')
+
+            # Whether forgot-password will do anything for this person at all.
+            from accounts.password_reset import RESET_ALLOWED_ROLES
+
+            allowed = user.role in RESET_ALLOWED_ROLES
+            print(f'  forgot-password: '
+                  f'{"sends a link" if allowed else "sends NOTHING for this role"}')
+            if not allowed:
+                print(f'    only {", ".join(RESET_ALLOWED_ROLES)} are mailed. '
+                      f'The page says a link is on its way either way, so that '
+                      f'the form cannot be used to discover which addresses '
+                      f'are registered.')
 
         window = timezone.now() - timedelta(days=3)
         rows = (LoginAttempt.objects
