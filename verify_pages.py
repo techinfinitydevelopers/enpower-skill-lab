@@ -954,6 +954,63 @@ def run():
         check('the probe class is gone',
               not _Cl2.objects.filter(class_code='ZZ-PAGES-ACTIONS').exists())
 
+    # ---- Report section titles, as the client asked for them ---------------
+    # "Assessment by Assessment" said the same word twice and meant nothing to
+    # a reader, and the feedback card said "Coach's" where everything else in
+    # the product says Thinking Coach. Student and parent share one partial,
+    # so both are checked: the point of the partial is that they cannot
+    # disagree, and that only holds while both are read.
+    from competencies.models import ProjectReport as _PR2
+    from parent.models import Parent as _Par2
+
+    print(chr(10) + 'THE REPORT SECTIONS ARE NAMED AS ASKED')
+
+    def _heading(html, icon):
+        found = _re2.search(
+            r'material-symbols-outlined">' + icon
+            + r'</span>\s*</div>\s*([^<]+)', html)
+        return found.group(1).strip() if found else None
+
+    _pair = None
+    for _rep in _PR2.objects.select_related('student__user')[:200]:
+        _mum = _Par2.objects.filter(students=_rep.student,
+                                    user__isnull=False).first()
+        if _rep.student.user_id and _mum:
+            _pair = (_rep, _mum)
+            break
+
+    _own = next((r for r in _PR2.objects.select_related('student__user')[:200]
+                 if r.student.user_id), None)
+    if not _own:
+        check('a student with a login has a report to read', False)
+    else:
+        _page = login_as(_own.student.user).get(
+            f'/student/reports/{_own.project_id}/',
+            follow=True).content.decode('utf-8', 'replace')
+        check("the student's section is called Assessment",
+              _heading(_page, 'timeline') == 'Assessment',
+              str(_heading(_page, 'timeline')))
+        check("and the feedback is the Thinking Coach's",
+              _heading(_page, 'rate_review') == "Thinking Coach's Feedback",
+              str(_heading(_page, 'rate_review')))
+        check('the doubled-up wording is gone',
+              'Assessment by Assessment' not in _page)
+
+    if not _pair:
+        check('a parent can be read to confirm both pages agree', False,
+              'no report belongs to a child with a parent login')
+    else:
+        _rep2, _mum2 = _pair
+        _ppage = login_as(_mum2.user).get(
+            f'/parent/child/{_rep2.student_id}/reports/{_rep2.project_id}/',
+            follow=True).content.decode('utf-8', 'replace')
+        check("the parent's copy says Assessment too",
+              _heading(_ppage, 'timeline') == 'Assessment',
+              str(_heading(_ppage, 'timeline')))
+        check("and the Thinking Coach's Feedback too",
+              _heading(_ppage, 'rate_review') == "Thinking Coach's Feedback",
+              str(_heading(_ppage, 'rate_review')))
+
     restore_passwords()
 
     print(f'\n{"="*60}\nPASS {len(PASS)}   FAIL {len(FAIL)}')

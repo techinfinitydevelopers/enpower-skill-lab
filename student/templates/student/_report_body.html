@@ -213,7 +213,7 @@ parent's view of their child's report, so both stay identical.
     <div class="section-block">
         <div class="section-title">
             <div class="section-icon"><span class="material-symbols-outlined">timeline</span></div>
-            Assessment by Assessment
+            Assessment
             <span class="section-badge">🗓 {{ assessment_breakdown|length }} Assessment{{ assessment_breakdown|length|pluralize }}</span>
         </div>
         <div class="asmt-grid">
@@ -280,11 +280,11 @@ parent's view of their child's report, so both stay identical.
             </div>
             {% endif %}
 
-            <!-- Teacher's Feedback -->
+            <!-- Thinking Coach's Feedback -->
             <div class="summary-card">
                 <div class="section-title" style="font-size:18px; margin-bottom:16px;">
                     <div class="section-icon"><span class="material-symbols-outlined">rate_review</span></div>
-                    Coach's Feedback
+                    Thinking Coach's Feedback
                 </div>
                 {# Coach's note on the whole project — sits above the per-assessment notes. #}
                 {% if project_feedback.feedback %}

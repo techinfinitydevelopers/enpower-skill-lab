@@ -33,7 +33,7 @@ def refresh_competency_labels(*score_lists):
 
     `ProjectReport` freezes its competency rows as JSON at generation time, so
     renaming a competency afterwards left the report showing the old name --
-    while "Assessment by Assessment" on the same page reads the live rows
+    while the "Assessment" section on the same page reads the live rows
     through `get_per_assessment_breakdown` and showed the new one. The client
     saw both names on one screen.
 
