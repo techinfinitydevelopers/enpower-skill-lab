@@ -678,6 +678,46 @@ if _kid and _tc:
     check('and it is shorter than the open-ended one',
           len(_bs) < len(_generate_sessions(_open)))
 
+    # The cap used to be taken from the start of the year, so a class meeting
+    # four times a week ran out fifteen weeks in: Grade 6A began on 25 June
+    # and its list stopped dead on 7 October, and its coach could not mark
+    # that Friday's attendance or any after it. The classes that still worked
+    # were the ones whose first sixty had not run out yet, which is why it
+    # looked like one broken class rather than a broken rule.
+    _long = Timetable.objects.create(
+        school=_kid.school, thinking_coach=_tc.user, grade=_kid.student_class,
+        division=_kid.division, academic_year='2026-2027', program='FSL',
+        start_date=date(2026, 6, 25), end_date=None,
+        notes=f'{MARKER} four days a week')
+    for _d in ('tue', 'wed', 'thu', 'fri'):
+        _Slot.objects.create(timetable=_long, day_of_week=_d, period_number=1,
+                             start_time='09:00', end_time='10:00')
+
+    # Well past the old cut-off, and far enough in that the first sixty are
+    # long gone.
+    _when = date(2026, 11, 20)
+    _rows = _generate_sessions(_long, today=_when)
+    _dates = [r['date'] for r in _rows]
+    check('a class running since June still lists sessions in November',
+          bool(_rows), 'none at all')
+    check('and they reach the date being asked about',
+          _dates and _dates[-1] >= _when.isoformat(),
+          _dates[-1] if _dates else 'no sessions')
+    check('it still shows something to come',
+          sum(1 for d in _dates if d > _when.isoformat()) > 0)
+    check('and something recent to go back and fill in',
+          sum(1 for d in _dates if d < _when.isoformat()) > 0)
+    check('the cap is still a cap', len(_rows) <= 60, str(len(_rows)))
+
+    # Early in the run there is barely any past, and the room should go
+    # forward rather than come back as a short list.
+    _early = _generate_sessions(_long, today=date(2026, 7, 2))
+    check('early in the year the window fills forward instead',
+          len(_early) == 60, str(len(_early)))
+    check('and it starts at the beginning, having nothing before it',
+          _early[0]['date'] == '2026-06-25', _early[0]['date'])
+
+
     _cc2 = sign_in(_tc.user)
     if _cc2:
         _s = _cc2.get(f'/teacher/api/attendance-sessions/?classroom={_open.id}')

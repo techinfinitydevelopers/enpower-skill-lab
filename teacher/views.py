@@ -1306,7 +1306,7 @@ def _resolve_teacher_timetable(user, tt_id):
     return tt if tt.thinking_coach_id == user.id else None
 
 
-def _generate_sessions(tt, cap=60):
+def _generate_sessions(tt, cap=60, upcoming=10, today=None):
     """Build session dicts (one per matching weekday date x slot).
 
     The end date is optional on the form that creates a schedule, and 49 of
@@ -1317,7 +1317,19 @@ def _generate_sessions(tt, cap=60):
 
     Without an end date the run is bounded by an academic year and then by
     `cap`, which already limited how many sessions are listed anyway.
+
+    `cap` is applied **around today**, not from the start of the year. It used
+    to take the first 60, which for a class meeting four times a week ran out
+    fifteen weeks after it started: Grade 6A began on 25 June and its list
+    stopped dead on 7 October, so its coach could not mark that Friday's
+    class, or any other, ever again. The classes that still worked were
+    simply the ones whose first sixty had not run out yet.
+
+    So the window is the most recent sessions up to and including today, plus
+    a few that are still to come. A coach marks today's class and backfills
+    the ones they missed; next March is of no use to them.
     """
+    import datetime as _dt
     from datetime import timedelta
     if not tt or not tt.start_date:
         return []
@@ -1348,8 +1360,21 @@ def _generate_sessions(tt, cap=60):
             })
         cur += timedelta(days=1)
     sessions.sort(key=lambda s: s['_sort'])
+
     if len(sessions) > cap:
-        sessions = sessions[:cap]
+        # Anchor the window on today rather than on the start of the year.
+        # Taking the first `cap` is what stranded Grade 6A on 7 October.
+        stamp = (today or _dt.date.today()).isoformat()
+        split = sum(1 for s in sessions if s['date'] <= stamp)
+        ahead = min(upcoming, len(sessions) - split)
+        behind = cap - ahead
+        if behind > split:
+            # Early in the year there is little past to show, so spend the
+            # spare room on what is coming instead of returning a short list.
+            ahead = min(cap - split, len(sessions) - split)
+            behind = split
+        sessions = sessions[max(0, split - behind):split + ahead]
+
     for s in sessions:
         s.pop('_sort', None)
     return sessions
