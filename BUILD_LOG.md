@@ -2,6 +2,77 @@
 
 Chronological record of completed tasks (per org policy: log after each completed task).
 
+## 2026-10-15 — Grades, and the project that belongs to no school
+
+The client sent the bands and asked for a switch on the coach's marks-entry
+screen between an average out of ten and a letter grade, with that choice
+carrying through to the report. Ritu had asked twice whether grades were in the
+Skill Passport yet. The honest answer was no: there was no letter grade
+anywhere in the repo, so there was nothing for her to verify.
+
+    9 - 10     A+        7 - 8.9    A        5 - 6.9    B
+    3 - 4.9    C         0 - 2.9    D
+
+### The gaps
+
+Written as ranges, the bands do not touch. 8.95 belongs to neither "7 - 8.9"
+nor "9 - 10". Averages render to one decimal so it would never have surfaced
+in front of anybody, but the function has to answer for every number it is
+handed. Each band is a floor, read from the top down, and the gaps close.
+
+A blank stays a blank. `grade_for(None)` returns `None`, not a D — a D is
+something a child earned, and an unassessed child has earned nothing.
+
+### The part that mattered
+
+`Project` has no school column. It is matched to classes by grade and
+framework, so one Project — and every Assessment hanging off it — runs in every
+school on that framework at once.
+
+A `show_grade` boolean on `Assessment` was the obvious shape and would have
+meant a coach in one school silently rewriting what another school's parents
+read on their own children's reports. `AssessmentGradeDisplay` is keyed by
+school as well, and `verify_grading.py` proves the separation rather than
+asserting it: two schools, the same assessment, one switches to grades and the
+other is read again and still shows marks out of ten.
+
+### Nothing is stored as a letter
+
+The number is turned into one as the page is drawn. A school changing its mind
+reaches every report it has already published, with no regeneration and no
+backfill — which is also why the question of what to do about existing reports
+never arose.
+
+### Also
+
+- The Overall Level card shows the grade in place of the mark, settled by the
+  user. The count-up animation would have written `0` over the letter, because
+  `parseFloat(null) || 0` is a perfectly good zero; it now skips an element
+  with no `data-target`.
+- The Class Avg card on the marks-entry screen read "out of 4", left from the
+  scale before this one.
+- Score cells are untouched. The coach types scores into them and a letter
+  cannot be typed back.
+
+### Proof
+
+`verify_grading.py`, 54 checks. Each guard was shown to catch its own bug:
+dropping the school key fails 5, including the leak itself; reading the bands
+as the client wrote them fails 3 at the boundaries; letting a blank come back
+as a D fails 1. Everything else unchanged — verify_security's 8 are the known
+local DEBUG settings.
+
+### Still open with the client
+
+Whether the grade belongs against individual competency scores as well as
+averages, and which of the remaining screens want it: the KB report, the
+parent's report list, and the coach's own Score Viewing and Analytics, where
+the recommendation is to leave numbers because `7.8 vs 8.2` compares and
+`A vs A` does not.
+
+Not verified in a browser: the switch renders and the endpoint answers, but
+nobody has clicked it on the live site.
+
 ## 2026-10-07 — Nothing knew what year it was, and the target was invented
 
 Three client reports, two causes.
