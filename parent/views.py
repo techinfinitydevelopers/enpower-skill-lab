@@ -353,6 +353,17 @@ def parent_child_report_detail(request, student_id, project_id):
         p['match_percent'] = int(round((p.get('score') or 0) * 10))
         p['tags'] = prof_tags.get(p.get('profile_id'), [])
 
+    # Letter grades, read the same way as on the student's own copy: the two
+    # pages share one partial, so they have to be handed the same fields.
+    from competencies.grading import grade_for, grade_display_map
+    breakdown = get_per_assessment_breakdown(child, report.project)
+    graded = grade_display_map([a['assessment_id'] for a in breakdown],
+                               child.school)
+    for a in breakdown:
+        a['show_grade'] = graded.get(a['assessment_id'], False)
+        a['grade'] = grade_for(a['average'])
+    overall = round(sum(values) / len(values), 1) if values else 0
+
     return render(request, 'parent/child-report-detail.html', {
         'child': child,
         'student': child,                     # shared passport partials read `student`
@@ -368,9 +379,10 @@ def parent_child_report_detail(request, student_id, project_id):
         'project_feedback': StudentProjectFeedback.objects.filter(
             student=child, project_id=project_id
         ).select_related('entered_by').first(),
-        'overall_score': round(sum(values) / len(values), 1) if values else 0,
+        'overall_score': overall,
+        'overall_grade': grade_for(overall) if values else None,
         'best_match': profiles[0]['match_percent'] if profiles else 0,
-        'assessment_breakdown': get_per_assessment_breakdown(child, report.project),
+        'assessment_breakdown': breakdown,
         'sub_pillar_groups': group_by_sub_pillar(all_scores),
         # Footer nav — the shared partial defaults to student URLs, which a
         # parent cannot open (they were bounced to /login).
@@ -433,6 +445,8 @@ def parent_child_passport(request, student_id):
         values = [c['score'] for c in all_scores if c.get('score') is not None]
         overall = round(sum(values) / len(values), 1) if values else 0
 
+        from competencies.grading import grade_for
+
         profiles = data.get('top_3_profiles') or []
         prof_tags = {}
         prof_ids = [p['profile_id'] for p in profiles if p.get('profile_id')]
@@ -458,6 +472,7 @@ def parent_child_passport(request, student_id):
             'emerging': [c for c in all_scores if label(c['score']) == 'emerging'],
             'work_on': [c for c in all_scores if label(c['score']) == 'work_on'],
             'overall_score': overall,
+            'overall_grade': grade_for(overall) if values else None,
             'summary_paragraphs': _build_passport_summary(child, all_scores,
                                                           very_strong + strong, overall),
             'sub_pillar_groups': group_by_sub_pillar(all_scores),

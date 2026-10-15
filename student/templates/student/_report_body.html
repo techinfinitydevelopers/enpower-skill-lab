@@ -46,8 +46,13 @@ parent's view of their child's report, so both stay identical.
             <div class="stat-card">
                 <div class="stat-emoji">⚡</div>
                 <div class="stat-label">Overall Level</div>
-                <div class="stat-value" id="spLevel" data-target="{{ overall_score }}" data-decimals="1">0.0</div>
-                <div class="stat-sub">out of 10.0</div>
+                {% comment %}
+                  The grade replaces the mark here, as the client asked. A
+                  letter cannot count up, so it is written out rather than
+                  animated; spCountUp skips an element with no data-target.
+                {% endcomment %}
+                <div class="stat-value" id="spLevel">{{ overall_grade|default:"—" }}</div>
+                <div class="stat-sub">grade</div>
             </div>
             <div class="stat-card">
                 <div class="stat-emoji">🎯</div>
@@ -226,7 +231,11 @@ parent's view of their child's report, so both stay identical.
                     </div>
                     <div class="asmt-avg-wrap">
                         {% if a.average is not None %}
+                        {% if a.show_grade %}
+                        <div class="asmt-avg">{{ a.grade }}</div>
+                        {% else %}
                         <div class="asmt-avg">{{ a.average }}<span>/10</span></div>
+                        {% endif %}
                         <div class="asmt-sub">{{ a.scored_count }} of {{ a.total_count }} scored</div>
                         {% else %}
                         <div class="asmt-avg asmt-pending">—</div>

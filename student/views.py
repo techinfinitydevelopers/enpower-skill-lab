@@ -235,6 +235,16 @@ def student_report_detail(request, project_id):
     assessment_breakdown = get_per_assessment_breakdown(student, report.project)
     sub_pillar_groups = group_by_sub_pillar(all_scores)
 
+    # Letter grades. Nothing is stored as a letter -- the number is turned into
+    # one as the page is drawn, so a school changing its mind reaches every
+    # report it has already published without regenerating any of them.
+    from competencies.grading import grade_for, grade_display_map
+    graded = grade_display_map(
+        [a['assessment_id'] for a in assessment_breakdown], student.school)
+    for a in assessment_breakdown:
+        a['show_grade'] = graded.get(a['assessment_id'], False)
+        a['grade'] = grade_for(a['average'])
+
     return render(request, 'student/report-detail.html', {
         'student':     student,
         'report':      report,
@@ -244,6 +254,7 @@ def student_report_detail(request, project_id):
         'feedbacks':   feedbacks,
         'project_feedback': project_feedback,
         'overall_score': overall,
+        'overall_grade': grade_for(overall) if vals else None,
         'best_match':  best_match,
         'assessment_breakdown': assessment_breakdown,
         'sub_pillar_groups': sub_pillar_groups,
@@ -342,6 +353,8 @@ def student_annual_passport(request):
         vals = [c['score'] for c in all_scores if c.get('score') is not None]
         overall = round(sum(vals) / len(vals), 1) if vals else 0
 
+        from competencies.grading import grade_for
+
         # Enrich each top profile with a match % and its primary competency tags.
         profiles = data.get('top_3_profiles') or []
         prof_tags = {}
@@ -370,6 +383,7 @@ def student_annual_passport(request):
             'emerging': emerging,
             'work_on': [c for c in all_scores if get_label(c['score']) == 'work_on'],
             'overall_score': overall,
+            'overall_grade': grade_for(overall) if vals else None,
             'summary_paragraphs': _build_passport_summary(student, all_scores, very_strong + strong, overall),
             'sub_pillar_groups': group_by_sub_pillar(all_scores),
         })

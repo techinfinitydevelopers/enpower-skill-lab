@@ -30,6 +30,9 @@
     /* COUNT UP */
     function spCountUp(el) {
         if (!el) return;
+        /* The Overall Level card shows a letter grade now. A letter has no
+           data-target, and counting it up would print "0" over the grade. */
+        if (!el.hasAttribute('data-target')) return;
         var target = parseFloat(el.getAttribute('data-target')) || 0;
         var dec = parseInt(el.getAttribute('data-decimals') || '0', 10);
         var suffix = el.getAttribute('data-suffix') || '';

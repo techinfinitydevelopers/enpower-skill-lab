@@ -40,8 +40,13 @@ parent's view of their child's passport, so both stay identical.
             <div class="stat-card">
                 <div class="stat-emoji">⚡</div>
                 <div class="stat-label">Overall Level</div>
-                <div class="stat-value" id="spLevel" data-target="{{ overall_score }}" data-decimals="1">0.0</div>
-                <div class="stat-sub">out of 10.0</div>
+                {% comment %}
+                  The grade replaces the mark here, as the client asked. A
+                  letter cannot count up, so it is written out rather than
+                  animated; spCountUp skips an element with no data-target.
+                {% endcomment %}
+                <div class="stat-value" id="spLevel">{{ overall_grade|default:"—" }}</div>
+                <div class="stat-sub">grade</div>
             </div>
             <div class="stat-card">
                 <div class="stat-emoji">🏆</div>
