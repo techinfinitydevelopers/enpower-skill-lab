@@ -2,6 +2,73 @@
 
 Chronological record of completed tasks (per org policy: log after each completed task).
 
+## 2026-10-16 — The marks stay with the coach
+
+The client read the first cut and tightened it:
+
+> "The idea is to not let parents see the actual score so they don't compare
+> too much. So if possible the scores can be recorded in the TCs entry area.
+> But while showing in parents and students, let's keep grades only."
+
+and, on the coach's screen:
+
+> "The entry will always be marks, coaches won't enter grades. But would be
+> good for them to see what grade it translates into."
+
+Both are simpler than what was built the day before, and stricter.
+
+### Every figure a family sees
+
+A report showing `A` in one place and `8/10` two sections down gives the number
+back and the reason for grades with it. So: the project report, the Skill
+Passport, the Kaushal Bodh report, the parent's list of reports, and the "Year
+in Review" paragraph that quoted the overall out of ten in prose — all letters
+now.
+
+A `grade` template filter does it, because there is nothing to store. The score
+stays out of ten in the database, where the coach reads it and where every
+average is still worked out from it.
+
+### The switch is gone
+
+It was built to let a coach choose, and the client's answer removed the choice:
+families always get grades, coaches always get marks. The toggle, its endpoint
+and `AssessmentGradeDisplay` are all out. The table had been live for a day and
+never carried a row.
+
+The coach's averages now print the mark with its grade underneath, on each
+student's row and on the Class Average card.
+
+### Two things the suite found that reading the diff would not have
+
+**A bare number.** The KB card printed `{{ kb.overall }}` with the words
+underneath. A search for "marks out of ten" sails straight past `8.3`. Slots
+are now judged by the class that holds them — whatever is in `cr-score`,
+`cs-score`, `asmt-avg`, `sh-stat-value` and the rest has to be a letter.
+
+**A section with no data.** Putting a mark back into Common Strengths changed
+nothing any page could show, because that section is empty for almost every
+child in this database. The suite passed with the leak sitting in the file. It
+now reads the templates as well as the pages, which is the only thing that
+catches a leak in a section nobody currently has data for.
+
+### Known and left alone
+
+The raw score is still in `data-score` on each competency row, where the stars
+and the bars are built from it. It is not printed and a reader never sees it.
+Removing it means rebuilding both visuals off a percentage that is the score
+times ten, which hides nothing it did not already hide.
+
+### Proof
+
+`verify_grading.py`, 86 checks. Each guard shown to catch its own bug: a bare
+number on the KB card (1 failure), a mark back in Common Strengths (2, both
+from the source read), the coach losing the grade beside the mark (1).
+
+`verify_pages` caught an unbalanced `<div>` left behind by removing the switch
+— 97 opens against 99 closes on the marks-entry page. Fixed; every suite back
+to zero.
+
 ## 2026-10-15 — Grades, and the project that belongs to no school
 
 The client sent the bands and asked for a switch on the coach's marks-entry
