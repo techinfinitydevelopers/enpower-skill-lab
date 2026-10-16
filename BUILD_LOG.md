@@ -2,6 +2,85 @@
 
 Chronological record of completed tasks (per org policy: log after each completed task).
 
+## 2026-10-16 (later) — Each framework says which reports it shows
+
+The client asked for CSL+ to drop the Kaushal Bodh report and rename its
+annual one, and for CSL Foundation to lose the annual report entirely.
+
+Two of those could not be said at all.
+
+### One flag doing two jobs, and one of them not done
+
+`has_profiling` meant both "run career matching" and "there is an annual
+report". The second half was never read: the annual report was shown to
+everybody regardless, which is why CSL Foundation had one despite the flag
+being off. `show_skill_passport` was computed in the context processor and
+used by no template.
+
+CSL+ wants the annual report without career matching. CSL Foundation wants no
+annual report. One boolean cannot carry both, and overloading that same field
+is what silently disabled profiling everywhere once before -- the comment
+warning about it was already in the model.
+
+`show_annual_report` and `annual_report_title` are now fields of their own.
+
+### Manage Frameworks became the control panel
+
+That page is linked from nowhere; it is reached by typing the URL. It now
+carries the whole set:
+
+    Project Report        always on
+    Annual Report         on/off, with its own name
+    Kaushal Bodh Report   on/off
+    Career Matches        on/off   (the old has_profiling)
+
+and each card lists what its framework actually shows, so the answer is
+readable without opening anything.
+
+A fixed framework opens that dialog too now. "Fixed" protects the pillars, and
+FSL still has to be able to rename its own report; the form locks name and
+prefix and the view refuses them whatever is posted. That also settles the
+open question of whether the rename applies to FSL -- nobody has to ask, it is
+a checkbox.
+
+### Hidden is not deleted
+
+The client wrote "do not delete it, as we may need it in the future", so the
+suite switches Kaushal Bodh back on for CSL+ and reads the report rather than
+trusting that nothing was removed. The pillar and its twelve competencies are
+checked directly as well.
+
+### The URL, not just the link
+
+Taking a link out of a sidebar does nothing about a bookmark or a link mailed
+last term. The Kaushal Bodh page already turned a reader away; the annual one
+did not, and does now.
+
+### Proof
+
+`verify_framework_reports.py`, 41 checks, each guard shown to catch its own
+bug: dropping the URL guard (1 failure), putting the annual report back on
+`has_profiling` (4 -- CSL+ loses the report the client wants kept), and
+deleting the KB pillar instead of hiding it (2).
+
+`verify_pages` held the old contract in five checks: that every framework has
+an annual report, and that both CSL frameworks keep Kaushal Bodh. Those were
+true when written and are not now. Rewritten to the new contract rather than
+deleted, and Manage Frameworks added to the page sweep, which is how its
+markup balance is checked.
+
+### Still open
+
+The Kaushal Bodh annual logic "discussed earlier by Swarnim" appears nowhere
+in this repo. What exists is an annual report -- latest score per competency,
+grouped by sub-pillar, group averages -- and whether that is what was
+discussed is not something the code can answer.
+
+CSL+ on production carries the prefix `KB + DT + EM`, which is a description
+of the framework rather than a code prefix; it renders sub-pillar codes as
+`KB + DT + EM-SP1`. Left alone pending a decision, because changing a prefix
+changes the codes printed on reports.
+
 ## 2026-10-16 — The marks stay with the coach
 
 The client read the first cut and tightened it:
