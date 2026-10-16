@@ -1108,10 +1108,12 @@
                             <span class="material-symbols-outlined">analytics</span>
                             Project Report
                         </a>
+                        {% if show_annual_report %}
                         <a href="{% if sidebar_child_id %}{% url 'parent_child_passport' sidebar_child_id %}{% else %}{% url 'parent_dashboard' %}{% endif %}" id="nav-annual-skill-report">
                             <span class="material-symbols-outlined">workspace_premium</span>
-                            Annual Skill Passport
+                            {{ annual_report_title|default:"Annual Skill Passport" }}
                         </a>
+                        {% endif %}
                         {% if show_kaushal_bodh %}
 <a href="{% if sidebar_child_id %}{% url 'parent_child_kb_report' sidebar_child_id %}{% else %}{% url 'parent_dashboard' %}{% endif %}" id="nav-kb-report">
                             <span class="material-symbols-outlined">handyman</span>

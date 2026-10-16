@@ -3445,14 +3445,41 @@ def manage_frameworks(request):
                 Framework.objects.create(
                     name=name, prefix=prefix, is_fixed=False,
                     has_profiling=bool(request.POST.get('has_profiling')),
+                    show_annual_report=bool(
+                        request.POST.get('show_annual_report')),
+                    annual_report_title=(
+                        request.POST.get('annual_report_title', '').strip()
+                        or 'Annual Skill Passport'),
+                    has_kaushal_bodh=bool(
+                        request.POST.get('has_kaushal_bodh')),
                     order=max_order + 1)
                 messages.success(request, f'Framework "{name}" created! Go to Learning Pillars to add pillars.')
 
         elif action == 'edit':
             fw_id = request.POST.get('fw_id')
             fw = get_object_or_404(Framework, id=fw_id)
+
+            # Which reports a framework shows, and what its annual report is
+            # called. Allowed even on a fixed framework: "fixed" protects the
+            # pillars, and FSL still has to be able to rename its report.
+            reports = {
+                'show_annual_report': bool(
+                    request.POST.get('show_annual_report')),
+                'annual_report_title': (
+                    request.POST.get('annual_report_title', '').strip()
+                    or 'Annual Skill Passport'),
+                'has_kaushal_bodh': bool(request.POST.get('has_kaushal_bodh')),
+                'has_profiling': bool(request.POST.get('has_profiling')),
+            }
+
             if fw.is_fixed:
-                messages.error(request, 'Fixed frameworks cannot be edited.')
+                for field, value in reports.items():
+                    setattr(fw, field, value)
+                fw.save(update_fields=list(reports))
+                messages.success(
+                    request,
+                    f'Reports updated for "{fw.name}". Its name, prefix and '
+                    f'pillars are fixed and were left alone.')
             else:
                 name = request.POST.get('name', '').strip()
                 prefix = request.POST.get('prefix', '').strip()
@@ -3465,7 +3492,8 @@ def manage_frameworks(request):
                 else:
                     fw.name = name
                     fw.prefix = prefix
-                    fw.has_profiling = bool(request.POST.get('has_profiling'))
+                    for field, value in reports.items():
+                        setattr(fw, field, value)
                     fw.save()
                     messages.success(request, f'Framework updated to "{name}".')
 

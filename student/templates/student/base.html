@@ -265,11 +265,17 @@
                     Project Report
                 </a>
 
-                <!-- Annual Skill Passport -->
+                {% comment %}
+                  The annual report, named and switched on per framework from
+                  Manage Frameworks. CSL Foundation reports on the project and
+                  Kaushal Bodh only, so for them this link is not there at all.
+                {% endcomment %}
+                {% if show_annual_report %}
                 <a href="{% url 'student:student_annual_passport' %}" id="nav-annual-passport" class="student-sidebar-nav-link">
                     <span class="material-symbols-outlined">verified</span>
-                    Annual Skill Passport
+                    {{ annual_report_title|default:"Annual Skill Passport" }}
                 </a>
+                {% endif %}
                 {% if show_kaushal_bodh %}
 <a href="{% url 'student:student_kb_report' %}" id="nav-kb-report" class="student-sidebar-nav-link">
                     <span class="material-symbols-outlined">handyman</span>

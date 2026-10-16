@@ -192,10 +192,20 @@ def run():
             check(f'{label} report has NO career matches',
                   'Your Top Career Matches' not in body)
 
-        # 3. annual passport
+        # 3. annual report -- not every framework has one now. CSL Foundation
+        # reports on the project and Kaushal Bodh only, so for them the URL is
+        # meant to turn the reader away; checking for a 200 there would be
+        # checking that the client's request was ignored.
+        _wants_annual = getattr(
+            getattr(student.school, 'framework_ref', None),
+            'show_annual_report', True)
         code, body, _ = fetch(client, '/student/reports/annual/')
-        check(f'{label} annual passport 200', code == 200, f'status {code}')
-        check(f'{label} passport shows skills', 'Your Top Skills' in body)
+        if not _wants_annual:
+            check(f'{label} has no annual report, and the URL says so',
+                  'Your Top Skills' not in body, f'status {code}')
+            continue
+        check(f'{label} annual report 200', code == 200, f'status {code}')
+        check(f'{label} annual report shows skills', 'Your Top Skills' in body)
         check(f'{label} passport not empty-state',
               'No Passport Yet' not in body)
         if expect_profiles:
@@ -238,7 +248,13 @@ def run():
 
             code, body, _ = fetch(client, f'/parent/child/{child.id}/passport/')
             check('parent passport 200', code == 200, f'status {code}')
-            check('parent passport shows skills', 'Your Top Skills' in body)
+            if getattr(getattr(child.school, 'framework_ref', None),
+                       'show_annual_report', True):
+                check('parent annual report shows skills',
+                      'Your Top Skills' in body)
+            else:
+                check('the parent has no annual report either',
+                      'Your Top Skills' not in body)
 
             code, body, _ = fetch(client, f'/parent/child/{child.id}/kaushal-bodh/')
             check('parent KB report 200', code == 200, f'status {code}')
@@ -304,6 +320,7 @@ def run():
         check('login as super admin', False)
     else:
         for url, needle in [
+            ('/super-admin/skill-passport/manage-frameworks/',    'Manage Frameworks'),
             ('/super-admin/skill-passport/learning-pillars/',      'Learning Pillars'),
             ('/super-admin/skill-passport/profiles-competencies/', 'Tech Explorer'),
             ('/super-admin/skill-passport/project-assessment/',    'Oral/Portfolio'),
@@ -606,8 +623,20 @@ def run():
 
         _side = _c.get('/student/dashboard/',
                        follow=True).content.decode('utf-8', 'replace')
+        # The annual report carries whatever this framework calls it, and
+        # may not be offered at all. _WANTED is still right for the rest.
+        _annual = (_fw.annual_report_title
+                   if getattr(_fw, 'show_annual_report', True) else None)
         for _name in _WANTED:
+            if _name in ('Annual Skill Passport', 'Annual Skill Report'):
+                continue
             check(f'{_label} student sidebar says "{_name}"', _name in _side)
+        if _annual:
+            check(f'{_label} student sidebar says "{_annual}"',
+                  _annual in _side)
+        else:
+            check(f'{_label} student sidebar offers no annual report',
+                  'Annual Skill' not in _side)
         _old = [o for o in _RETIRED if o in _side]
         check(f'{_label} student sidebar drops the old names', not _old,
               '; '.join(_old))
@@ -635,7 +664,15 @@ def run():
         _pside = _pc.get('/parent/dashboard/',
                          follow=True).content.decode('utf-8', 'replace')
         for _name in _WANTED:
+            if _name in ('Annual Skill Passport', 'Annual Skill Report'):
+                continue
             check(f'{_label} parent sidebar says "{_name}"', _name in _pside)
+        if _annual:
+            check(f'{_label} parent sidebar says "{_annual}"',
+                  _annual in _pside)
+        else:
+            check(f'{_label} parent sidebar offers no annual report',
+                  'Annual Skill' not in _pside)
         _oldp = [o for o in _RETIRED if o in _pside]
         check(f'{_label} parent sidebar drops the old names', not _oldp,
               '; '.join(_oldp))
@@ -646,9 +683,24 @@ def run():
           not _Fw.objects.filter(has_profiling=True,
                                  has_kaushal_bodh=True).exists(),
           'FSL records no KB scores, so the report would open empty')
-    check('the CSL frameworks keep it',
-          not _Fw.objects.filter(has_profiling=False,
-                                 has_kaushal_bodh=False).exists())
+    # CSL used to be one answer. It is two now: the client asked for Kaushal
+    # Bodh on CSL Foundation, where the scores actually are, and off on CSL+
+    # "for now... we may need it in the future" -- hidden, never deleted.
+    _csl_plus = (_Fw.objects.filter(name__iexact='CSL+').first()
+                 or _Fw.objects.filter(name__iexact='CSL +').first())
+    _csl_f = _Fw.objects.filter(name__iexact='CSL Foundation').first()
+    if _csl_f:
+        check('CSL Foundation keeps Kaushal Bodh', _csl_f.has_kaushal_bodh)
+        check('and has no annual report', not _csl_f.show_annual_report)
+    if _csl_plus:
+        check('CSL+ has Kaushal Bodh hidden', not _csl_plus.has_kaushal_bodh)
+        check('but keeps its annual report', _csl_plus.show_annual_report)
+        check('under the name the client asked for',
+              _csl_plus.annual_report_title == 'Annual Skill Report',
+              _csl_plus.annual_report_title)
+        from competencies.models import Pillar as _P
+        check('and its KB pillar was hidden, not deleted',
+              _P.objects.filter(framework_ref=_csl_plus, is_kb=True).exists())
 
     # ── nothing sends a user to the old droplet's domain ────────────────
     # enpower.techinfinity.link still resolves, to the destroyed droplet's

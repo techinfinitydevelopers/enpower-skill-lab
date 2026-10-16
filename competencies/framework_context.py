@@ -1,10 +1,16 @@
 """Which reports apply to the signed-in person's framework.
 
-Two rules, in opposite directions, and both read the same way:
+Four settings, all read the same way, all set from Manage Frameworks:
 
-    has_profiling     career matching, the Skill Passport idea. FSL only.
-    has_kaushal_bodh  the Kaushal Bodh report. CSL only -- FSL records no
-                      KB scores at all, so the page opens empty there.
+    show_annual_report   whether the annual report page exists at all
+    annual_report_title  what it is called -- "Annual Skill Report" on CSL+,
+                         "Annual Skill Passport" on FSL
+    has_kaushal_bodh     the Kaushal Bodh report. CSL only -- FSL records no
+                         KB scores at all, so the page opens empty there.
+    has_profiling        career matching. It used to stand in for the annual
+                         report as well; it cannot, because CSL+ wants that
+                         report without career matches and CSL Foundation
+                         wants no report at all.
 
 A context processor because the sidebars render on every page of the student
 and parent apps, and setting this per view is how eight of nine views end up
@@ -19,14 +25,24 @@ def _framework_of(school):
     return getattr(school, 'framework_ref', None) if school else None
 
 
+DEFAULT_ANNUAL_TITLE = 'Annual Skill Passport'
+
+
 def _flags(framework):
     """A framework with nothing recorded is treated as FSL, matching
     competencies.engine.profiling_enabled."""
     if framework is None:
-        return {'show_skill_passport': True, 'show_kaushal_bodh': False,
+        return {'show_annual_report': True,
+                'annual_report_title': DEFAULT_ANNUAL_TITLE,
+                'show_career_matches': True,
+                'show_kaushal_bodh': False,
                 'framework_name': None}
     return {
-        'show_skill_passport': bool(getattr(framework, 'has_profiling', False)),
+        'show_annual_report': bool(
+            getattr(framework, 'show_annual_report', True)),
+        'annual_report_title': (getattr(framework, 'annual_report_title', '')
+                                or DEFAULT_ANNUAL_TITLE),
+        'show_career_matches': bool(getattr(framework, 'has_profiling', False)),
         'show_kaushal_bodh': bool(getattr(framework, 'has_kaushal_bodh', True)),
         'framework_name': getattr(framework, 'name', None),
     }

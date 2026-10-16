@@ -390,7 +390,14 @@ def parent_child_report_detail(request, student_id, project_id):
 @login_required
 @user_passes_test(is_parent)
 def parent_child_passport(request, student_id):
-    """The child's Annual Skill Passport, as the student sees it."""
+    """The child's annual report, as the student sees it."""
+    # Same guard as the student's own page: the sidebar link can be hidden and
+    # the URL still reached.
+    from competencies.framework_context import framework_flags
+
+    if not framework_flags(request).get('show_annual_report', True):
+        return redirect('parent_dashboard')
+
     from competencies.engine import (generate_annual_passport,                                      get_top_project, refresh_competency_labels,
                                      group_by_sub_pillar)
     from competencies.models import Profile

@@ -321,9 +321,11 @@ parent's view of their child's report, so both stay identical.
         <a class="sp-btn sp-btn-outline" href="{% if nav_back_url %}{{ nav_back_url }}{% else %}{% url 'student:student_reports' %}{% endif %}">
             <span class="material-symbols-outlined">arrow_back</span> {{ nav_back_label|default:"Back to Project Report" }}
         </a>
+        {% if show_annual_report %}
         <a class="sp-btn sp-btn-primary" href="{% if nav_next_url %}{{ nav_next_url }}{% else %}{% url 'student:student_annual_passport' %}{% endif %}" onclick="spConfettiFire()">
-            <span class="material-symbols-outlined">verified</span> Annual Skill Passport 🏅
+            <span class="material-symbols-outlined">verified</span> {{ annual_report_title|default:"Annual Skill Passport" }} 🏅
         </a>
+        {% endif %}
     </div>
 
 </div>

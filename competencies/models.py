@@ -19,6 +19,19 @@ class Framework(models.Model):
     has_kaushal_bodh = models.BooleanField(
         default=True,
         help_text='Show the Kaushal Bodh report for this framework')
+    # Whether the annual report page exists for this framework at all. Kept
+    # apart from has_profiling, which only decides whether career matching
+    # runs: CSL+ shows the annual report without profiles, CSL Foundation
+    # shows no annual report at all, and one flag cannot say both.
+    show_annual_report = models.BooleanField(
+        default=True,
+        help_text='Show the annual report page for this framework')
+    # What that page is called. The client asked for "Annual Skill Report" on
+    # CSL+ while FSL keeps "Annual Skill Passport", so the name belongs to the
+    # framework rather than to the template.
+    annual_report_title = models.CharField(
+        max_length=60, default='Annual Skill Passport',
+        help_text='Title shown for the annual report, e.g. Annual Skill Report')
     order     = models.PositiveSmallIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 

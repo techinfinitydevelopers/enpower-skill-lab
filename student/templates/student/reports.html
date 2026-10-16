@@ -125,9 +125,11 @@
 
     <!-- Footer Nav -->
     <div class="footer-nav">
+        {% if show_annual_report %}
         <a class="sp-btn sp-btn-outline" href="{% url 'student:student_annual_passport' %}">
-            <span class="material-symbols-outlined">verified</span> Annual Skill Passport
+            <span class="material-symbols-outlined">verified</span> {{ annual_report_title|default:"Annual Skill Passport" }}
         </a>
+        {% endif %}
         <a class="sp-btn sp-btn-primary" href="{% url 'student:student_dashboard' %}" onclick="spConfettiFire()">
             <span class="material-symbols-outlined">home</span> Dashboard 🏠
         </a>

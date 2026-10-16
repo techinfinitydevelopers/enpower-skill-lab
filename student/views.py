@@ -267,6 +267,14 @@ def student_annual_passport(request):
     and the full competency score list. Profiles are shown lightly. No internal
     profile mechanics. Empty-state when no scores exist yet.
     """
+    # CSL Foundation reports on the project and Kaushal Bodh only. Taking the
+    # link out of the sidebar is not enough on its own -- a bookmark, or a link
+    # mailed last term, still reaches the URL.
+    from competencies.framework_context import framework_flags
+
+    if not framework_flags(request).get('show_annual_report', True):
+        return redirect('student:student_dashboard')
+
     from competencies.engine import generate_annual_passport
     from competencies.models import Profile
     from django.utils import timezone
