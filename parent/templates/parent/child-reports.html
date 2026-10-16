@@ -1,5 +1,6 @@
 {% extends 'parent/base.html' %}
 {% load static %}
+{% load grading_tags %}
 
 {% block title %}{{ child.first_name }}'s Reports - Parent{% endblock %}
 
@@ -28,7 +29,7 @@
                 </div>
                 <div style="text-align:right;flex-shrink:0;">
                     {% if r.average %}
-                    <div style="font-size:1.6rem;font-weight:800;color:#5b1f6f;line-height:1;">{{ r.average }}<span style="font-size:.75rem;color:#9ca3af;">/10</span></div>
+                    <div style="font-size:1.6rem;font-weight:800;color:#5b1f6f;line-height:1;">{{ r.average|grade }}</div>
                     <div style="font-size:.65rem;color:#9ca3af;margin-top:.25rem;">{{ r.competency_count }} skill{{ r.competency_count|pluralize }}</div>
                     {% else %}
                     <div style="font-size:1.6rem;font-weight:800;color:#e5e7eb;line-height:1;">—</div>

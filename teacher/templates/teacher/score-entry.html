@@ -33,9 +33,6 @@
     .fb-save-btn { display: inline-flex; align-items: center; gap: 4px; margin-top: 6px; background: rgba(90,31,110,0.07); border: 1.5px solid rgba(90,31,110,0.28); color: #5A1F6E; border-radius: 8px; padding: 5px 12px; font-size: 11px; font-weight: 700; cursor: pointer; font-family: 'Poppins', sans-serif; transition: background 0.15s, border-color 0.15s; }
     .fb-save-btn:hover:not(:disabled) { background: rgba(90,31,110,0.16); border-color: rgba(90,31,110,0.45); }
     .fb-save-btn:disabled { cursor: wait; }
-    .grade-mode-btn { font-size: 11px; font-weight: 700; letter-spacing: 0.03em; padding: 5px 12px; border-radius: 6px; border: none; background: transparent; color: #9c7bb5; cursor: pointer; font-family: 'Poppins', sans-serif; transition: background 0.15s, color 0.15s; }
-    .grade-mode-btn.is-on { background: #5A1F6E; color: #fff; }
-    .grade-mode-btn:disabled { opacity: 0.55; cursor: wait; }
     .saving-indicator { display: none; }
     .saving-indicator.show { display: inline-flex; }
 </style>
@@ -152,21 +149,7 @@
                 <span class="material-symbols-outlined" style="font-size:20px; color:#5A1F6E;">table_chart</span>
                 Student Scores
             </h3>
-            <div style="display:flex; align-items:center; gap:14px;">
-                <span style="font-size:12px; color:#94a3b8;">Click any cell to enter or edit a score (1–10)</span>
-                <!-- Averages as a mark out of ten or as a letter grade. The
-                     choice is saved for this school and is what students and
-                     parents then read on the report. Scores are always typed
-                     in as numbers; only the averages change. -->
-                <div id="gradeToggleWrap" style="display:none; align-items:center; gap:8px; padding-left:14px; border-left:1px solid #f1f5f9;">
-                    <span style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:#94a3b8;">Averages</span>
-                    <div style="display:inline-flex; background:#f3f0f9; border:1px solid #ddd6f0; border-radius:8px; padding:2px;">
-                        <button type="button" id="gradeModeScore" class="grade-mode-btn is-on" onclick="setGradeMode(false)">Out of 10</button>
-                        <button type="button" id="gradeModeGrade" class="grade-mode-btn" onclick="setGradeMode(true)">Grade</button>
-                    </div>
-                    <span id="gradeToggleHint" class="material-symbols-outlined" title="A+ 9–10 · A 7–8.9 · B 5–6.9 · C 3–4.9 · D below 3" style="font-size:16px; color:#cbd5e1; cursor:help;">info</span>
-                </div>
-            </div>
+            <span style="font-size:12px; color:#94a3b8;">Click any cell to enter or edit a score (1–10)</span>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-left" id="scoreTable" style="border-collapse:collapse;">
@@ -267,7 +250,6 @@ const DATA_URL            = "{% url 'teacher:api_score_entry_data' %}";
 const SAVE_URL            = "{% url 'teacher:api_save_score' %}";
 const FEEDBACK_URL        = "{% url 'teacher:api_save_feedback' %}";
 const GENERATE_REPORT_URL = "{% url 'teacher:api_generate_report' %}";
-const GRADE_DISPLAY_URL   = "{% url 'teacher:api_save_grade_display' %}";
 const CSRF_TOKEN          = "{{ csrf_token }}";
 
 const gradeSelect          = document.getElementById('gradeSelect');
@@ -418,19 +400,12 @@ assessmentNumSelect.addEventListener('change', function () {
             currentAssessmentId = a.id;
             currentProjectId    = data.project ? data.project.id : null;
             currentStudentIds   = (data.students || []).map(s => s.id);
-            // Set the switch before drawing, so the page never shows scores
-            // and then flips them to grades in front of the coach.
-            const wrap = document.getElementById('gradeToggleWrap');
-            if (wrap) wrap.style.display = 'flex';
-            setGradeMode(!!data.show_grade, false);
             renderTable(data);
             updateStats(data.stats);
         });
 });
 
 function hideTable() {
-    const wrap = document.getElementById('gradeToggleWrap');
-    if (wrap) wrap.style.display = 'none';
     statsSection.style.display = 'none';
     scoreSection.style.display = 'none';
     emptyState.style.display   = 'block';
@@ -457,12 +432,9 @@ function updateStats(stats) {
     if (avg === null || avg === undefined) {
         avgEl.textContent = '—';
         if (subEl) subEl.textContent = 'not scored yet';
-    } else if (gradeMode) {
-        avgEl.textContent = gradeFor(parseFloat(avg));
-        if (subEl) subEl.textContent = 'class grade';
     } else {
         avgEl.textContent = avg + '/10';
-        if (subEl) subEl.textContent = 'out of 10';
+        if (subEl) subEl.textContent = 'Grade ' + gradeFor(parseFloat(avg));
     }
     document.getElementById('statTotal').textContent = stats.total_students;
 }
@@ -652,8 +624,10 @@ function renderCell(wrapper, key, score) {
 // Mirrors competencies/grading.py. The bands the client sent read as ranges
 // with hairline gaps between them (8.9 to 9.0); each is taken as "this and up"
 // so every number has an answer.
-let gradeMode = false;
-
+// The coach asked to see what a mark translates into, not to choose between
+// the two: "The entry will always be marks, coaches won't enter grades. But
+// would be good for them to see what grade it translates into." So both are
+// printed together and there is nothing to switch.
 function gradeFor(score) {
     if (score === null || score === undefined || isNaN(score)) return null;
     if (score >= 9) return 'A+';
@@ -661,49 +635,6 @@ function gradeFor(score) {
     if (score >= 5) return 'B';
     if (score >= 3) return 'C';
     return 'D';
-}
-
-function setGradeMode(on, save) {
-    on = !!on;
-    const scoreBtn = document.getElementById('gradeModeScore');
-    const gradeBtn = document.getElementById('gradeModeGrade');
-    if (!scoreBtn || !gradeBtn) return;
-
-    const changed = (on !== gradeMode);
-    gradeMode = on;
-    scoreBtn.classList.toggle('is-on', !on);
-    gradeBtn.classList.toggle('is-on', on);
-
-    // Redraw only the figures that change. The score cells stay numbers --
-    // the coach types scores into them, and a letter cannot be typed back.
-    (currentStudentIds || []).forEach(refreshStudentAvg);
-    if (currentData) updateStats(lastStats);
-
-    if (save === false || !changed || !currentAssessmentId) return;
-
-    scoreBtn.disabled = gradeBtn.disabled = true;
-    fetch(GRADE_DISPLAY_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
-        body: JSON.stringify({ assessment_id: currentAssessmentId, show_grade: on })
-    })
-    .then(r => r.json())
-    .then(res => {
-        if (res && res.ok) {
-            notify(on ? 'Averages will show as grades' : 'Averages will show out of 10',
-                   'success');
-        } else {
-            // Put the switch back rather than leave the screen claiming a
-            // setting that was never saved.
-            setGradeMode(!on, false);
-            notify((res && res.error) || 'Could not save that', 'error');
-        }
-    })
-    .catch(() => {
-        setGradeMode(!on, false);
-        notify('Could not save that', 'error');
-    })
-    .finally(() => { scoreBtn.disabled = gradeBtn.disabled = false; });
 }
 
 // ---- Individual student average ----
@@ -725,11 +656,9 @@ function studentAvg(studentId) {
 function formatStudentAvg(a) {
     if (!a) return '<span style="color:#cbd5e1; font-size:13px;">—</span>';
     const colour = a.avg >= 9 ? '#1d4ed8' : a.avg >= 7 ? '#15803d' : a.avg >= 4 ? '#c2410c' : '#b91c1c';
-    const figure = gradeMode
-        ? `<span style="font-size:17px; font-weight:700; color:${colour};">${gradeFor(a.avg)}</span>`
-        : `<span style="font-size:15px; font-weight:700; color:${colour};">${a.avg.toFixed(1)}</span>`
-          + `<span style="font-size:10px; color:#94a3b8;">/10</span>`;
-    return figure
+    return `<span style="font-size:15px; font-weight:700; color:${colour};">${a.avg.toFixed(1)}</span>`
+         + `<span style="font-size:10px; color:#94a3b8;">/10</span>`
+         + `<div style="font-size:12px; font-weight:700; color:${colour}; margin-top:1px;">${gradeFor(a.avg)}</div>`
          + `<div style="font-size:9px; color:#b0a8bc; margin-top:2px;">${a.scored}/${a.total} scored</div>`;
 }
 

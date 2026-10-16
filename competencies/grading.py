@@ -14,10 +14,15 @@ Written as ranges they leave hairline gaps -- 8.95 sits between "7 - 8.9" and
 code has to answer for every number, so each band is read as "this value and
 up" and the gaps close.
 
-A grade is only ever a way of printing a number. Nothing is stored as a letter:
-the scores stay out of ten in the database, and the report turns them into
-letters at the moment it draws them. That means a school can change its mind
-and every report it has already published follows along.
+A grade is only ever a way of printing a number. Nothing is stored as a
+letter: the scores stay out of ten in the database, where the coach reads them
+and every average is still worked out from them, and the family's pages turn
+them into letters as they are drawn.
+
+The client's reason, in their words: "The idea is to not let parents see the
+actual score so they don't compare too much... But while showing in parents
+and students, let's keep grades only." The coach keeps the number, and sees
+the grade beside it.
 """
 
 # Lowest average that earns each grade, best first. Order matters.
@@ -58,46 +63,3 @@ def band_table():
         ('3.0 - 4.9', 'C'),
         ('0 - 2.9', 'D'),
     ]
-
-
-def shows_grade(assessment, school):
-    """Has this school chosen grades for this assessment?
-
-    A Project carries no school -- it is filtered by grade and framework, so
-    one project runs in every school on that framework, and its Assessments are
-    shared along with it. A single flag on the Assessment would therefore let a
-    coach in one school rewrite the reports of every other school's children.
-    The choice is stored per school for that reason.
-
-    Returns False when either side is missing, which is the old behaviour:
-    scores out of ten.
-    """
-    if assessment is None or school is None:
-        return False
-    from .models import AssessmentGradeDisplay
-
-    assessment_id = getattr(assessment, 'id', assessment)
-    school_id = getattr(school, 'id', school)
-    return AssessmentGradeDisplay.objects.filter(
-        assessment_id=assessment_id, school_id=school_id, show_grade=True
-    ).exists()
-
-
-def grade_display_map(assessment_ids, school):
-    """{assessment_id: True} for the assessments this school grades.
-
-    One query for a whole report, rather than one per assessment card.
-    """
-    if not assessment_ids or school is None:
-        return {}
-    from .models import AssessmentGradeDisplay
-
-    school_id = getattr(school, 'id', school)
-    return {
-        row_id: True
-        for row_id in AssessmentGradeDisplay.objects.filter(
-            assessment_id__in=list(assessment_ids),
-            school_id=school_id,
-            show_grade=True,
-        ).values_list('assessment_id', flat=True)
-    }

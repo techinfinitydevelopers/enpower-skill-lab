@@ -355,13 +355,8 @@ def parent_child_report_detail(request, student_id, project_id):
 
     # Letter grades, read the same way as on the student's own copy: the two
     # pages share one partial, so they have to be handed the same fields.
-    from competencies.grading import grade_for, grade_display_map
+    from competencies.grading import grade_for
     breakdown = get_per_assessment_breakdown(child, report.project)
-    graded = grade_display_map([a['assessment_id'] for a in breakdown],
-                               child.school)
-    for a in breakdown:
-        a['show_grade'] = graded.get(a['assessment_id'], False)
-        a['grade'] = grade_for(a['average'])
     overall = round(sum(values) / len(values), 1) if values else 0
 
     return render(request, 'parent/child-report-detail.html', {

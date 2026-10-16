@@ -1,3 +1,4 @@
+{% load grading_tags %}
 {% comment %}
 Project-report body. Shared by the student's own report page and the
 parent's view of their child's report, so both stay identical.
@@ -102,7 +103,7 @@ parent's view of their child's report, so both stay identical.
                         {% if cs.competency_desc %}<div class="cs-desc">{{ cs.competency_desc }}</div>{% endif %}
                         <div class="cs-shared">Shared by {% for n in cs.shared_by %}{{ n }}{% if not forloop.last %} · {% endif %}{% endfor %}</div>
                     </div>
-                    <div class="cs-score">{{ cs.score }}<span>/10</span></div>
+                    <div class="cs-score">{{ cs.score|grade }}</div>
                 </div>
                 {% endfor %}
             </div>
@@ -129,7 +130,7 @@ parent's view of their child's report, so both stay identical.
                 </div>
                 <div class="cr-bar-wrap"><div class="cr-bar"></div></div>
                 <div class="cr-right">
-                    <div class="cr-score">{{ c.score }} / 10</div>
+                    <div class="cr-score">{{ c.score|grade }}</div>
                     {% if c.score >= 8 %}<span class="cr-band band-very-strong">Very Strong</span>{% elif c.score >= 6 %}<span class="cr-band band-strong">Strong</span>{% elif c.score >= 4 %}<span class="cr-band band-emerging">Emerging</span>{% else %}<span class="cr-band band-work-on">Skill to work on</span>{% endif %}
                     <div class="comp-row-level"></div>
                     <div class="cr-stars"></div>
@@ -158,7 +159,7 @@ parent's view of their child's report, so both stay identical.
                 </div>
                 <div class="cr-bar-wrap"><div class="cr-bar"></div></div>
                 <div class="cr-right">
-                    <div class="cr-score">{{ c.score }} / 10</div>
+                    <div class="cr-score">{{ c.score|grade }}</div>
                     {% if c.score >= 8 %}<span class="cr-band band-very-strong">Very Strong</span>{% elif c.score >= 6 %}<span class="cr-band band-strong">Strong</span>{% elif c.score >= 4 %}<span class="cr-band band-emerging">Emerging</span>{% else %}<span class="cr-band band-work-on">Skill to work on</span>{% endif %}
                     <div class="comp-row-level"></div>
                     <div class="cr-stars"></div>
@@ -183,7 +184,7 @@ parent's view of their child's report, so both stay identical.
                 <div class="section-title" style="font-size:16px; margin-bottom:10px;">
                     <div class="section-icon" style="width:30px;height:30px;"><span class="material-symbols-outlined" style="font-size:17px;">account_tree</span></div>
                     {{ g.name }}
-                    {% if g.average %}<span class="section-badge">avg {{ g.average }}/10</span>{% endif %}
+                    {% if g.average %}<span class="section-badge">avg {{ g.average|grade }}</span>{% endif %}
                 </div>
                 <div class="comp-card">
                     {% for c in g.rows %}
@@ -195,7 +196,7 @@ parent's view of their child's report, so both stay identical.
                         </div>
                         <div class="cr-bar-wrap"><div class="cr-bar"></div></div>
                         <div class="cr-right">
-                            <div class="cr-score">{{ c.score }} / 10</div>
+                            <div class="cr-score">{{ c.score|grade }}</div>
                             {% if c.score >= 8 %}<span class="cr-band band-very-strong">Very Strong</span>
                             {% elif c.score >= 6 %}<span class="cr-band band-strong">Strong</span>
                             {% elif c.score >= 4 %}<span class="cr-band band-emerging">Emerging</span>
@@ -231,11 +232,7 @@ parent's view of their child's report, so both stay identical.
                     </div>
                     <div class="asmt-avg-wrap">
                         {% if a.average is not None %}
-                        {% if a.show_grade %}
-                        <div class="asmt-avg">{{ a.grade }}</div>
-                        {% else %}
-                        <div class="asmt-avg">{{ a.average }}<span>/10</span></div>
-                        {% endif %}
+                        <div class="asmt-avg">{{ a.average|grade }}</div>
                         <div class="asmt-sub">{{ a.scored_count }} of {{ a.total_count }} scored</div>
                         {% else %}
                         <div class="asmt-avg asmt-pending">—</div>
@@ -251,7 +248,7 @@ parent's view of their child's report, so both stay identical.
                             {% if c.competency_desc %}<div class="asmt-comp-desc">{{ c.competency_desc }}</div>{% endif %}
                         </div>
                         {% if c.score is not None %}
-                        <div class="asmt-comp-score">{{ c.score }}<span>/10</span></div>
+                        <div class="asmt-comp-score">{{ c.score|grade }}</div>
                         {% else %}
                         <div class="asmt-comp-score asmt-pending">—</div>
                         {% endif %}
@@ -282,7 +279,7 @@ parent's view of their child's report, so both stay identical.
                         <div class="workon-meta">{{ c.competency_code }}</div>
                         <div class="workon-name">{{ c.competency_name }}</div>
                         {% if c.competency_desc %}<div class="workon-desc">{{ c.competency_desc }}</div>{% endif %}
-                        <div class="workon-score">Score: {{ c.score }} / 10</div>
+                        <div class="workon-score">Grade {{ c.score|grade }}</div>
                     </div>
                 </div>
                 {% endfor %}

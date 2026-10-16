@@ -235,15 +235,12 @@ def student_report_detail(request, project_id):
     assessment_breakdown = get_per_assessment_breakdown(student, report.project)
     sub_pillar_groups = group_by_sub_pillar(all_scores)
 
-    # Letter grades. Nothing is stored as a letter -- the number is turned into
-    # one as the page is drawn, so a school changing its mind reaches every
-    # report it has already published without regenerating any of them.
-    from competencies.grading import grade_for, grade_display_map
-    graded = grade_display_map(
-        [a['assessment_id'] for a in assessment_breakdown], student.school)
-    for a in assessment_breakdown:
-        a['show_grade'] = graded.get(a['assessment_id'], False)
-        a['grade'] = grade_for(a['average'])
+    # Letter grades. Nothing is stored as a letter -- the score stays out of ten
+    # in the database, where the coach reads it, and the page prints the letter
+    # the family sees. The template does the conversion through the `grade`
+    # filter; only the Overall Level card needs it here, because an unscored
+    # report has an overall of 0 and 0 is a perfectly good D.
+    from competencies.grading import grade_for
 
     return render(request, 'student/report-detail.html', {
         'student':     student,
@@ -393,15 +390,21 @@ def student_annual_passport(request):
 
 def _build_passport_summary(student, all_scores, strengths, overall):
     """Auto-generate a short 'Year in Review' narrative from real score data.
-    No manual text — always reflects the student's current competencies."""
+    No manual text — always reflects the student's current competencies.
+
+    Written in grades, not marks: the family is not shown the number anywhere
+    else, and a paragraph quoting it would hand it straight back.
+    """
+    from competencies.grading import grade_for
+
     name = (getattr(student, 'full_name', None) or 'This student').split(' ')[0]
     paras = []
 
     n = len(all_scores)
     paras.append(
         f"{name} was assessed across {n} competenc{'y' if n == 1 else 'ies'} this year, "
-        f"with an overall level of {overall}/10. Every score here comes straight from "
-        f"project assessments completed with the thinking coach."
+        f"with an overall grade of {grade_for(overall)}. Every grade here comes "
+        f"straight from project assessments completed with the thinking coach."
     )
 
     if strengths:

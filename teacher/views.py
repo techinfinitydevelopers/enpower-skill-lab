@@ -308,68 +308,20 @@ def api_score_entry_data(request):
         ).values('student_id', 'feedback')
     }
 
-    # Whether this school reads this assessment as a grade. Sent with the data
-    # so the page draws the right thing first time, instead of showing scores
-    # and then swapping them.
-    from competencies.grading import shows_grade
-    show_grade = shows_grade(assessment, _teacher_school(request.user))
-
     return JsonResponse({
         'assessment': {'id': assessment.id, 'name': assessment.name,
-                       'type': assessment.assessment_type,
-                       'show_grade': show_grade},
+                       'type': assessment.assessment_type},
         'project':    {'id': assessment.project.id, 'title': assessment.project.title, 'grade': assessment.project.grade},
         'students':    students,
         'competencies': comp_mappings,
         'scores':      scores,
         'feedback':    feedback,
-        'show_grade':  show_grade,
         'stats': {
             'total_students': len(students),
             'scored_count':   len(scored_student_ids),
             'class_avg':      class_avg,
         },
     })
-
-
-@login_required
-@user_passes_test(is_teacher)
-def api_save_grade_display(request):
-    """AJAX POST: remember whether this school shows a grade for an assessment.
-
-    Saved against the coach's own school. A Project carries no school, so the
-    same Assessment runs in every school on that framework -- without the
-    school key, one coach would be deciding what every other school's parents
-    see on their children's reports.
-    """
-    if request.method != 'POST':
-        return JsonResponse({'error': 'POST required'}, status=405)
-
-    import json
-    from competencies.models import Assessment, AssessmentGradeDisplay
-
-    try:
-        data = json.loads(request.body)
-        assessment_id = int(data['assessment_id'])
-        show_grade = bool(data.get('show_grade'))
-    except (ValueError, KeyError, TypeError):
-        return JsonResponse({'error': 'assessment_id and show_grade required'},
-                            status=400)
-
-    if not Assessment.objects.filter(id=assessment_id).exists():
-        return JsonResponse({'error': 'Not found'}, status=404)
-
-    school = _teacher_school(request.user)
-    if school is None:
-        return JsonResponse(
-            {'error': 'Your account is not attached to a school, so this '
-                      'choice cannot be saved.'}, status=400)
-
-    AssessmentGradeDisplay.objects.update_or_create(
-        assessment_id=assessment_id, school=school,
-        defaults={'show_grade': show_grade, 'updated_by': request.user})
-
-    return JsonResponse({'ok': True, 'show_grade': show_grade})
 
 
 @login_required

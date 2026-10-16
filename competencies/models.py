@@ -218,39 +218,6 @@ class Assessment(models.Model):
         return f"{self.project.title} — {self.name}"
 
 
-class AssessmentGradeDisplay(models.Model):
-    """Whether one school shows this assessment as a grade instead of a score.
-
-    The coach sets it from the marks-entry screen, which is where the client
-    asked for the switch. It is keyed by school as well as assessment because
-    a Project belongs to no school -- it is matched to classes by grade and
-    framework, so the same Project, and the same Assessments under it, run in
-    every school on that framework. Keyed by assessment alone, one coach
-    flipping the switch would have changed what every other school's parents
-    read.
-
-    Absent row means scores out of ten, so nothing changes until somebody asks
-    for it.
-    """
-    assessment = models.ForeignKey(
-        Assessment, on_delete=models.CASCADE, related_name='grade_displays')
-    school = models.ForeignKey(
-        'schools.School', on_delete=models.CASCADE,
-        related_name='assessment_grade_displays')
-    show_grade = models.BooleanField(default=False)
-    updated_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-        null=True, blank=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        unique_together = [('assessment', 'school')]
-
-    def __str__(self):
-        shown = 'grade' if self.show_grade else 'score'
-        return f"{self.school} - {self.assessment} - shows {shown}"
-
-
 class AssessmentCompetency(models.Model):
     COMP_TYPE_CHOICES = [
         ('individual', 'Individual'),

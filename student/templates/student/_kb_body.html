@@ -1,3 +1,4 @@
+{% load grading_tags %}
 {% comment %}
 Kaushal Bodh report body. Shared by the student's own page and the parent's
 view of their child's, so both stay identical.
@@ -19,8 +20,8 @@ view of their child's, so both stay identical.
             <div class="sh-stat">
                 <div class="sh-stat-icon">🛠</div>
                 <div class="sh-stat-label">Overall Level</div>
-                <div class="sh-stat-value">{{ kb.overall }}</div>
-                <div class="sh-stat-sub">out of 10.0</div>
+                <div class="sh-stat-value">{{ kb.overall|grade }}</div>
+                <div class="sh-stat-sub">grade</div>
             </div>
         </div>
     </div>
@@ -32,7 +33,7 @@ view of their child's, so both stay identical.
         <div class="section-title">
             <div class="section-icon" style="background:linear-gradient(135deg,var(--gold),#F77F00);"><span class="material-symbols-outlined">handyman</span></div>
             {{ g.name }}
-            {% if g.average %}<span class="section-badge">avg {{ g.average }}/10</span>{% endif %}
+            {% if g.average %}<span class="section-badge">avg {{ g.average|grade }}</span>{% endif %}
         </div>
         <div class="comp-card">
             {% for c in g.rows %}
@@ -44,7 +45,7 @@ view of their child's, so both stay identical.
                 </div>
                 <div class="cr-bar-wrap"><div class="cr-bar"></div></div>
                 <div class="cr-right">
-                    <div class="cr-score">{{ c.score }} / 10</div>
+                    <div class="cr-score">{{ c.score|grade }}</div>
                     {% if c.score >= 8 %}<span class="cr-band band-very-strong">Very Strong</span>
                     {% elif c.score >= 6 %}<span class="cr-band band-strong">Strong</span>
                     {% elif c.score >= 4 %}<span class="cr-band band-emerging">Emerging</span>
