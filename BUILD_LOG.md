@@ -2,6 +2,73 @@
 
 Chronological record of completed tasks (per org policy: log after each completed task).
 
+## 2026-10-21 — The assessment-type list belongs to the client now
+
+Two asks on Project & Assessment, plus a question that needed answering first.
+
+### The question: a teacher taught 3 of 4 assessments
+
+The client asked whether the average drops, and whether a report can be made
+at all before all four are entered.
+
+Neither. `_scores_for_single_project` is `sum(scores) / len(scores)` -- the
+denominator is the number of scores actually entered, never the number of
+assessments. Scored 8, 6 and 10 across three of four, the competency comes out
+8.0, not 6.0. Demonstrated rather than asserted: built the case and read the
+number back.
+
+Report generation has one condition, and it is not "all four": `No scores
+found for this student in this project`. One score is enough.
+
+The missed assessment still appears on the report, as "Not scored yet", so a
+parent can see it is outstanding. The only thing that disappears is a
+competency that was in that assessment and nowhere else -- the report gets
+narrower, never lower.
+
+### The type list was three lines of markup, in two places
+
+Hardcoded in `ASSESSMENT_TYPE_CHOICES` and written out by hand twice in the
+template. It is a table now, seeded from the three that shipped plus every
+other value any Assessment already carries, so a database imported with
+something else does not lose its own types the moment the list moves.
+
+`Assessment.assessment_type` stays a **string**, not a foreign key. That is
+the whole design: removing a type must not touch an assessment that already
+has it. A foreign key would either refuse the delete (PROTECT) or blank the
+field on live reports (SET_NULL). The suite removes a type used by 56
+assessments and counts them again.
+
+### The dialog says what happens, not "are you sure?"
+
+How many assessments and how many projects use it, that they keep it, that
+their reports are unaffected, and that it can be added back. The numbers come
+from the database and the suite compares the figure printed on the page with
+the real one -- a warning carrying the wrong number is worse than no warning.
+
+An assessment holding a since-removed type still offers it in its own
+dropdown, marked "(removed from list)". Without that, opening the form and
+saving it would silently change the type to whatever sits at the top. That one
+is easy to miss and the suite catches it.
+
+### The framework filter narrows the list, nothing else
+
+Under New Project. A project opened by its own link still opens even when the
+filter would have hidden it: a filter is a view of a list, not permission, and
+a link that stops working because of a dropdown is worse than a list that
+briefly disagrees.
+
+### Proof
+
+`verify_assessment_types.py`, 40 checks, each guard shown to catch its own
+bug: blanking the assessments on removal as a cascade would (1 failure), a
+filter that narrows nothing (3), and dropping the "(removed from list)" option
+(1).
+
+One of its own checks was wrong first time -- it compared project lists as
+**sets**, which swallowed eight duplicate titles and reported 24 where there
+are 32. Sorted lists now, because losing a row is exactly the mistake a filter
+makes.
+
 ## 2026-10-16 (later) — Each framework says which reports it shows
 
 The client asked for CSL+ to drop the Kaushal Bodh report and rename its
