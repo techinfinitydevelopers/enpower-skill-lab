@@ -179,11 +179,39 @@ PROJECT_TYPE_CHOICES = [
 ]
 
 # Spec slide 8/9/12: Type dropdown is [Presentation, Written, Oral/Portfolio].
+# The three the product shipped with. The list is a table now -- the client
+# adds their own from Project & Assessment -- and this stays as the seed for a
+# fresh database and as the fallback if the table is ever emptied.
 ASSESSMENT_TYPE_CHOICES = [
     ('Presentation',    'Presentation'),
     ('Written',         'Written'),
     ('Oral/Portfolio',  'Oral/Portfolio'),
 ]
+
+
+class AssessmentType(models.Model):
+    """A kind of assessment, as offered in the dropdown.
+
+    `Assessment.assessment_type` stays a plain string rather than pointing
+    here. That is deliberate: removing a type must never alter an assessment
+    that already has it, and a foreign key would either refuse the delete or
+    blank out the field on live reports. A removed type simply stops being
+    offered for new ones.
+    """
+    name = models.CharField(max_length=30, unique=True)
+    order = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['order', 'name']
+
+    def __str__(self):
+        return self.name
+
+    def usage(self):
+        """(assessments, projects) currently carrying this type."""
+        used = Assessment.objects.filter(assessment_type=self.name)
+        return used.count(), used.values('project').distinct().count()
 
 
 class Project(models.Model):

@@ -69,12 +69,14 @@ true when written and are not now. Rewritten to the new contract rather than
 deleted, and Manage Frameworks added to the page sweep, which is how its
 markup balance is checked.
 
-### Still open
+### The Kaushal Bodh logic is settled
 
-The Kaushal Bodh annual logic "discussed earlier by Swarnim" appears nowhere
-in this repo. What exists is an annual report -- latest score per competency,
-grouped by sub-pillar, group averages -- and whether that is what was
-discussed is not something the code can answer.
+The client's message pointed at logic "discussed earlier by Swarnim", which
+appears nowhere in this repo. The user settled it on the day: there is no
+separate logic, the report stays as it is -- latest score per competency,
+grouped by sub-pillar, an average per group, an overall grade. Do not re-ask.
+
+### Still open
 
 CSL+ on production carries the prefix `KB + DT + EM`, which is a description
 of the framework rather than a code prefix; it renders sub-pillar codes as

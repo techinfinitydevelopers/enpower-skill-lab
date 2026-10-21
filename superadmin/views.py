@@ -3112,6 +3112,17 @@ def profiles_competencies(request):
     return render(request, 'superadmin/profiles-competencies.html', context)
 
 
+def _pa_back(request, active_id):
+    """Back to the page the Super Admin was on, filter and project intact."""
+    bits = []
+    if active_id:
+        bits.append(f'project={active_id}')
+    fw = request.POST.get('framework_filter', '').strip()
+    if fw.isdigit() and int(fw):
+        bits.append(f'framework={fw}')
+    return f"{request.path}?{'&'.join(bits)}" if bits else request.path
+
+
 @login_required
 @user_passes_test(is_superadmin)
 def project_assessment(request):
@@ -3120,12 +3131,28 @@ def project_assessment(request):
     except (ValueError, TypeError):
         active_id = 0
 
-    projects = Project.objects.prefetch_related('assessments__competency_mappings__competency').all()
+    projects = Project.objects.prefetch_related(
+        'assessments__competency_mappings__competency').all()
+
+    # The sidebar can be narrowed to one framework. The filter only decides
+    # what is listed -- a project opened by its own link still opens, even
+    # when the filter would have hidden it, because a link that stops working
+    # because of a dropdown is worse than a list that briefly disagrees.
+    from competencies.models import Framework as _Fw
+    try:
+        filter_fw_id = int(request.GET.get('framework', 0))
+    except (ValueError, TypeError):
+        filter_fw_id = 0
+    filter_fw = _Fw.objects.filter(id=filter_fw_id).first() if filter_fw_id else None
+    listed = projects.filter(framework_ref=filter_fw) if filter_fw else projects
 
     active_project = None
     if active_id:
         active_project = get_object_or_404(Project, id=active_id)
-    elif projects.exists():
+    elif listed.exists():
+        active_project = listed.first()
+        active_id = active_project.id
+    elif projects.exists() and not filter_fw:
         active_project = projects.first()
         active_id = active_project.id
 
@@ -3179,6 +3206,49 @@ def project_assessment(request):
             active_project.linked_project  = Project.objects.filter(id=linked_id).first() if linked_id else None
             active_project.save()
             messages.success(request, 'Project saved!')
+
+        elif action == 'add_assessment_type':
+            from competencies.models import AssessmentType
+
+            name = request.POST.get('type_name', '').strip()
+            if not name:
+                messages.error(request, 'Type name is required.')
+            elif len(name) > 30:
+                messages.error(
+                    request, 'That name is too long — 30 characters at most.')
+            elif AssessmentType.objects.filter(name__iexact=name).exists():
+                messages.error(request, f'"{name}" is already in the list.')
+            else:
+                last = AssessmentType.objects.order_by('-order').first()
+                AssessmentType.objects.create(
+                    name=name, order=(last.order + 1) if last else 0)
+                messages.success(
+                    request, f'Assessment type "{name}" added.')
+            return redirect(_pa_back(request, active_id))
+
+        elif action == 'delete_assessment_type':
+            from competencies.models import AssessmentType
+
+            t = AssessmentType.objects.filter(
+                id=request.POST.get('type_id')).first()
+            if t is None:
+                messages.error(request, 'That assessment type is already gone.')
+            else:
+                used, _projects = t.usage()
+                name = t.name
+                t.delete()
+                # Nothing is rewritten: assessment_type is a stored string, so
+                # the assessments that already carry this one keep it and the
+                # reports they feed are untouched. It just stops being offered.
+                if used:
+                    messages.success(
+                        request,
+                        f'"{name}" removed from the list. The {used} '
+                        f'assessment{"s" if used != 1 else ""} already using '
+                        f'it keep it; it is no longer offered for new ones.')
+                else:
+                    messages.success(request, f'"{name}" removed.')
+            return redirect(_pa_back(request, active_id))
 
         elif action == 'add_assessment' and active_project:
             name            = request.POST.get('assessment_name', '').strip()
@@ -3240,8 +3310,27 @@ def project_assessment(request):
 
     from competencies.models import GRADE_CHOICES, DEFAULT_PROGRAM_GRADES
 
+    # Each type carries what it is used by, so the confirmation can name the
+    # consequence instead of asking "are you sure?" about nothing.
+    from competencies.models import AssessmentType
+
+    assessment_types = []
+    for t in AssessmentType.objects.all():
+        used, in_projects = t.usage()
+        assessment_types.append({'id': t.id, 'name': t.name,
+                                 'used': used, 'projects': in_projects})
+
+    # A type that is on an assessment but no longer in the list still has to
+    # appear in that assessment's own dropdown, or saving the form would
+    # quietly change it to something else.
+    known = {t['name'] for t in assessment_types}
+
     context = {
-        'projects':        projects,
+        'projects':        listed,
+        'all_project_count': projects.count(),
+        'filter_fw':       filter_fw,
+        'assessment_types': assessment_types,
+        'known_type_names': known,
         'active_project':  active_project,
         'active_id':       active_id,
         'active_fw_obj':   active_fw_obj,

@@ -150,6 +150,34 @@
 .pa-modal-cancel{padding:8px 16px;background:none;border:1px solid var(--border-color,#e5e7eb);border-radius:7px;font-size:.8rem;font-weight:500;color:var(--text-secondary,#6b7280);cursor:pointer;font-family:'Poppins',sans-serif;}
 .pa-modal-save{padding:8px 20px;background:var(--primary,#5A1F6E);color:#fff;border:none;border-radius:7px;font-size:.8rem;font-weight:600;font-family:'Poppins',sans-serif;cursor:pointer;}
 .pa-modal-save:hover{background:rgba(90,31,110,.9);}
+    .pa-fw-filter { padding: 0 2px 10px; }
+    .pa-fw-filter label { display: block; font-size: .68rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #9ca3af; margin-bottom: 4px; }
+    .pa-fw-filter select { width: 100%; font-size: .78rem; padding: 7px 9px; border: 1.5px solid #e5e7eb; border-radius: 8px; background: #fff; color: #374151; cursor: pointer; }
+
+    .pa-types-card { background: #fff; border: 1px solid #ede9f4; border-radius: 12px; padding: 16px 18px; margin-bottom: 16px; }
+    .pa-types-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .pa-types-head p { font-size: .88rem; font-weight: 800; color: #1e1b4b; margin: 0; }
+    .pa-types-head .material-symbols-outlined { font-size: 19px; color: #5A1F6E; }
+    .pa-types-sub { font-size: .72rem; color: #9ca3af; margin-left: auto; }
+    .pa-types-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    .pa-type-chip { display: inline-flex; align-items: center; gap: 6px; background: #f3f0f9; border: 1px solid #ddd6f0; color: #3b1f6b; border-radius: 999px; padding: 5px 6px 5px 13px; font-size: .78rem; font-weight: 700; }
+    .pa-type-count { background: #fff; border-radius: 999px; padding: 1px 7px; font-size: .68rem; color: #7c3aed; }
+    .pa-type-x { background: transparent; border: none; cursor: pointer; display: inline-flex; padding: 2px; border-radius: 50%; color: #9c7bb5; }
+    .pa-type-x:hover { background: #fee2e2; color: #dc2626; }
+    .pa-type-x .material-symbols-outlined { font-size: 15px; }
+    .pa-types-empty { font-size: .78rem; color: #9ca3af; }
+    .pa-types-add { display: flex; gap: 8px; }
+    .pa-types-add input { flex: 1; max-width: 260px; font-size: .8rem; padding: 8px 10px; border: 1.5px solid #e5e7eb; border-radius: 8px; }
+    .pa-types-note { font-size: .7rem; color: #9ca3af; margin: 8px 0 0; }
+
+    .pa-overlay { display: none; position: fixed; inset: 0; background: rgba(15,15,25,.45); z-index: 1200; align-items: center; justify-content: center; }
+    .pa-overlay.open { display: flex; }
+    .pa-modal-sm { background: #fff; border-radius: 14px; padding: 24px 26px; width: min(460px, 92vw); box-shadow: 0 20px 50px rgba(0,0,0,.25); }
+    .pa-modal-sm-title { font-size: 1rem; font-weight: 800; color: #1e1b4b; margin: 0 0 12px; }
+    .pa-modal-sm-body { font-size: .82rem; color: #4b5563; line-height: 1.55; margin: 0 0 10px; }
+    .pa-modal-sm-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+    .pa-btn-danger { background: #dc2626; color: #fff; border: none; border-radius: 8px; padding: .5rem 1rem; font-size: .8rem; font-weight: 700; cursor: pointer; }
+    .pa-btn-danger:hover { background: #b91c1c; }
 </style>
 {% endblock %}
 
@@ -172,6 +200,22 @@
                 <span class="material-symbols-outlined">add</span>
                 New Project
             </button>
+
+            {% comment %}
+              Narrows the list to one framework. It only decides what is
+              listed: a project opened by its own link still opens, so a
+              bookmark does not break because of a dropdown.
+            {% endcomment %}
+            <div class="pa-fw-filter">
+                <label for="paFwFilter">Framework</label>
+                <select id="paFwFilter" onchange="filterByFramework(this.value)">
+                    <option value="">All frameworks ({{ all_project_count }})</option>
+                    {% for fw in all_frameworks %}
+                    <option value="{{ fw.id }}" {% if filter_fw and filter_fw.id == fw.id %}selected{% endif %}>{{ fw.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
             {% for project in projects %}
             <a href="?project={{ project.id }}"
                class="pa-proj-item {% if project.id == active_id %}active{% endif %}">
@@ -183,7 +227,14 @@
                 </div>
             </a>
             {% empty %}
+            {% if filter_fw %}
+            <p style="font-size:.75rem;color:#9ca3af;text-align:center;padding:20px 10px;">
+                No projects on {{ filter_fw.name }}.<br>
+                <a href="?{% if active_id %}project={{ active_id }}{% endif %}" style="color:#6366f1;">Show all frameworks</a>
+            </p>
+            {% else %}
             <p style="font-size:.75rem;color:#9ca3af;text-align:center;padding:20px 10px;">No projects yet.<br>Click "New Project" to start.</p>
+            {% endif %}
             {% endfor %}
         </nav>
     </aside>
@@ -321,9 +372,7 @@
                     <div class="pa-field">
                         <label>Assessment Type</label>
                         <select name="assessment_type">
-                            <option>Presentation</option>
-                            <option>Written</option>
-                            <option>Oral/Portfolio</option>
+                            {% for t in assessment_types %}<option value="{{ t.name }}">{{ t.name }}</option>{% endfor %}
                         </select>
                     </div>
                 </div>
@@ -334,6 +383,70 @@
                     <button type="button" class="pa-btn-secondary" onclick="toggleAddAssessment()">Cancel</button>
                 </div>
             </form>
+        </div>
+
+        <!-- Assessment types: the client keeps this list themselves -->
+        <div class="pa-types-card">
+            <div class="pa-types-head">
+                <span class="material-symbols-outlined">style</span>
+                <p>Assessment Types</p>
+                <span class="pa-types-sub">Offered in the Type dropdown above</span>
+            </div>
+            <div class="pa-types-list">
+                {% for t in assessment_types %}
+                <span class="pa-type-chip">
+                    {{ t.name }}
+                    <span class="pa-type-count">{{ t.used }}</span>
+                    <button type="button" class="pa-type-x" title="Remove this type"
+                            onclick="askRemoveType({{ t.id }}, '{{ t.name|escapejs }}', {{ t.used }}, {{ t.projects }})">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </span>
+                {% empty %}
+                <span class="pa-types-empty">No types yet — add one below.</span>
+                {% endfor %}
+            </div>
+            <form method="post" class="pa-types-add">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add_assessment_type">
+                <input type="hidden" name="framework_filter" value="{{ filter_fw.id|default:'' }}">
+                <input type="text" name="type_name" maxlength="30" required
+                       placeholder="Add a type, e.g. Practical" />
+                <button type="submit" class="pa-btn-secondary">
+                    <span class="material-symbols-outlined">add</span> Add Type
+                </button>
+            </form>
+            <p class="pa-types-note">The number on each type is how many assessments use it.</p>
+        </div>
+
+        <!-- Removing a type: say what it touches before it happens -->
+        <div class="pa-overlay" id="removeTypeOverlay">
+            <div class="pa-modal-sm">
+                <p class="pa-modal-sm-title">Remove "<span id="rtName"></span>"?</p>
+                <div id="rtUsed" style="display:none;">
+                    <p class="pa-modal-sm-body">
+                        This type is used by <strong><span id="rtCount"></span></strong>
+                        across <strong><span id="rtProjects"></span></strong>.
+                    </p>
+                    <p class="pa-modal-sm-body">
+                        Those assessments keep this type and their reports are
+                        not affected. It will simply stop being offered when
+                        adding or editing an assessment.
+                    </p>
+                </div>
+                <p class="pa-modal-sm-body" id="rtUnused" style="display:none;">
+                    No assessment uses this type, so nothing is affected.
+                </p>
+                <p class="pa-modal-sm-body">You can add it again at any time.</p>
+                <form method="post" class="pa-modal-sm-actions">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="delete_assessment_type">
+                    <input type="hidden" name="type_id" id="rtId">
+                    <input type="hidden" name="framework_filter" value="{{ filter_fw.id|default:'' }}">
+                    <button type="button" class="pa-btn-secondary" onclick="closeRemoveType()">Cancel</button>
+                    <button type="submit" class="pa-btn-danger">Remove Type</button>
+                </form>
+            </div>
         </div>
 
         <!-- Assessment accordions -->
@@ -360,9 +473,18 @@
                         <div class="pa-field">
                             <label>Assessment Type</label>
                             <select name="assessment_type">
-                                <option {% if a.assessment_type == 'Presentation' %}selected{% endif %}>Presentation</option>
-                                <option {% if a.assessment_type == 'Written' %}selected{% endif %}>Written</option>
-                                <option {% if a.assessment_type == 'Oral/Portfolio' %}selected{% endif %}>Oral/Portfolio</option>
+                                {% for t in assessment_types %}
+                                <option value="{{ t.name }}" {% if a.assessment_type == t.name %}selected{% endif %}>{{ t.name }}</option>
+                                {% endfor %}
+                                {% comment %}
+                                  A type that was removed from the list is
+                                  still on this assessment. Keeping it here
+                                  means saving the form does not quietly
+                                  change it to whatever sits at the top.
+                                {% endcomment %}
+                                {% if a.assessment_type and a.assessment_type not in known_type_names %}
+                                <option value="{{ a.assessment_type }}" selected>{{ a.assessment_type }} (removed from list)</option>
+                                {% endif %}
                             </select>
                         </div>
                     </div>
@@ -844,5 +966,42 @@ function saveRubricGrid() {
             msg.textContent = 'Save failed.';
         });
 }
+
+// ---- Framework filter on the project list ----
+// Keeps the open project in the URL so changing the filter does not throw
+// the Super Admin back to a different project.
+function filterByFramework(fwId) {
+    var url = new URL(window.location.href);
+    if (fwId) { url.searchParams.set('framework', fwId); }
+    else { url.searchParams.delete('framework'); }
+    window.location.href = url.toString();
+}
+
+// ---- Removing an assessment type ----
+function askRemoveType(id, name, used, projects) {
+    document.getElementById('rtId').value = id;
+    document.getElementById('rtName').textContent = name;
+    var hasUse = used > 0;
+    document.getElementById('rtUsed').style.display = hasUse ? 'block' : 'none';
+    document.getElementById('rtUnused').style.display = hasUse ? 'none' : 'block';
+    if (hasUse) {
+        document.getElementById('rtCount').textContent =
+            used + (used === 1 ? ' assessment' : ' assessments');
+        document.getElementById('rtProjects').textContent =
+            projects + (projects === 1 ? ' project' : ' projects');
+    }
+    document.getElementById('removeTypeOverlay').classList.add('open');
+}
+
+function closeRemoveType() {
+    document.getElementById('removeTypeOverlay').classList.remove('open');
+}
+
+document.addEventListener('click', function (e) {
+    if (e.target && e.target.id === 'removeTypeOverlay') closeRemoveType();
+});
+document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeRemoveType();
+});
 </script>
 {% endblock %}
