@@ -419,7 +419,7 @@ def parent_child_passport(request, student_id):
     }
 
     try:
-        context['attendance_percent'] = student_attendance_stats(child).get('percent') or 0
+        context['attendance_percent'] = student_attendance_stats(child).get('year_percent') or 0
     except Exception:
         pass
     try:

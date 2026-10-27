@@ -64,7 +64,13 @@ def teacher_default_class(user, on_date=None):
 
 
 def attendance_badge(percent):
-    """PPT slide 45 badges. Returns dict(name, emoji, tagline) or None."""
+    """PPT slide 45 badges. Returns dict(name, emoji, tagline) or None.
+
+    One badge, the highest the score reaches -- which is what the bands mean
+    and what the Badges page now shows. Read it off the same window the page
+    uses (the month), or the dashboard and the page name different awards for
+    the same child.
+    """
     if percent is None:
         return None
     if percent >= 99:
@@ -81,9 +87,21 @@ def _pct(part, whole):
 
 
 def student_attendance_stats(student):
-    """Overall + monthly attendance %, current streak, badge for one student."""
+    """Attendance for one student: overall, this academic year, this month.
+
+    Three windows rather than two, because the screens ask for three. The
+    project report card says "this year" and was being handed the overall
+    figure, which has no year in it at all -- true today only because no
+    school here has a second year of data yet.
+
+    A cancelled class is left out of every one of them. The coach marks the
+    session "Class Cancelled" and the register is still saved, so the absences
+    were counting: a child was losing attendance for a class that never ran.
+    """
     try:
-        records = list(student.attendance_records.select_related('session').all())
+        records = [r for r in student.attendance_records
+                   .select_related('session').all()
+                   if r.session and r.session.class_status != 'cancelled']
     except Exception:
         records = []
     total = len(records)
@@ -91,6 +109,19 @@ def student_attendance_stats(student):
     percent = _pct(attended, total)
 
     today = date.today()
+
+    # The Indian academic year, April to March -- the same boundary the rest
+    # of the product uses, so "this year" means one thing everywhere.
+    from enpower_skill_lab.academic_year import academic_year_for
+
+    this_year = academic_year_for(today)
+    year_records = [r for r in records
+                    if r.session and r.session.date
+                    and academic_year_for(r.session.date) == this_year]
+    year_total = len(year_records)
+    year_attended = sum(1 for r in year_records if r.status in ATTENDED)
+    year_percent = _pct(year_attended, year_total)
+
     month_records = [r for r in records if r.session and r.session.date
                      and r.session.date.year == today.year and r.session.date.month == today.month]
     month_total = len(month_records)
@@ -116,11 +147,15 @@ def student_attendance_stats(student):
         'total_sessions': total,
         'attended': attended,
         'percent': percent,
+        'year_percent': year_percent,
+        'year_attended': year_attended,
+        'year_total': year_total,
+        'academic_year': this_year,
         'monthly_percent': monthly_percent,
         'monthly_attended': month_attended,   # PPT slide 45: "Monthly days attended = Monthly streak"
         'monthly_total': month_total,
         'current_streak': streak,
-        'badge': attendance_badge(percent),
+        'badge': attendance_badge(monthly_percent),
     }
 
 

@@ -6,7 +6,15 @@
 {% block content %}
 <div style="max-width:900px;margin:0 auto;">
     <h1 style="font-size:1.5rem;font-weight:700;color:#1f2937;margin-bottom:0.25rem;">Attendance Badges</h1>
-    <p style="color:#6b7280;margin-bottom:1.5rem;">Badges are earned on your <strong>monthly attendance</strong>. This month: <strong>{{ monthly_percent }}%</strong>.</p>
+    {% comment %}
+      Both figures, named. The client read 56% here and 46% on the project
+      report and took it for a miscalculation; they are two different windows,
+      and only one of them was ever labelled. A badge is still a badge for the
+      month -- that is what the deck says -- but the year is on the page now
+      so the two screens cannot look like they disagree.
+    {% endcomment %}
+    <p style="color:#6b7280;margin-bottom:0.35rem;">Badges are earned on your <strong>monthly attendance</strong>. This month: <strong>{{ monthly_percent }}%</strong>.</p>
+    <p style="color:#9ca3af;margin-bottom:1.5rem;font-size:0.875rem;">Across the whole year so far: <strong>{{ attendance.year_percent }}%</strong> — that is the figure on your Project Report.</p>
 
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem;">
         {% for tier in tiers %}

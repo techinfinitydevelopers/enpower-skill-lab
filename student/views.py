@@ -123,14 +123,21 @@ def student_dashboard(request):
 
 def attendance_badge_tiers(monthly_percent):
     """Star/Champion/Legend tiers (PPT slide 45), earned by MONTHLY attendance %.
-    Cumulative: reaching a higher tier also marks the lower ones earned."""
+
+    One badge, not three. The deck gives bands, not floors -- Star 90-94,
+    Champion 95-98, Legend 99-100 -- so a child at 100% has earned Legend and
+    nothing else. The old rule read each band as a floor and marked every tier
+    at or below the score, which handed all three to anyone with perfect
+    attendance. The highest award is only worth something if it is the only
+    one shown.
+    """
     tiers = [
         {'name': 'Star',     'emoji': '\U0001F949', 'min': 90, 'max': 94,  'tagline': 'Showing up and staying committed.'},
         {'name': 'Champion', 'emoji': '\U0001F948', 'min': 95, 'max': 98,  'tagline': 'Consistency is the key to success.'},
         {'name': 'Legend',   'emoji': '\U0001F947', 'min': 99, 'max': 100, 'tagline': 'A model of dedication and reliability.'},
     ]
     for t in tiers:
-        t['earned'] = monthly_percent >= t['min']
+        t['earned'] = t['min'] <= monthly_percent <= t['max']
     return tiers
 
 
@@ -156,7 +163,7 @@ def student_reports(request):
         reports = ProjectReport.objects.filter(student=student).select_related('project').order_by('-project__sequence_number', '-generated_at')
         try:
             from attendance.services import student_attendance_stats
-            attendance_percent = student_attendance_stats(student).get('percent') or 0
+            attendance_percent = student_attendance_stats(student).get('year_percent') or 0
         except Exception:
             attendance_percent = 0
 
@@ -313,7 +320,7 @@ def student_annual_passport(request):
             pass
         try:
             from attendance.services import student_attendance_stats
-            context['attendance_percent'] = student_attendance_stats(student).get('percent') or 0
+            context['attendance_percent'] = student_attendance_stats(student).get('year_percent') or 0
         except Exception:
             context['attendance_percent'] = 0
 
