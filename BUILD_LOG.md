@@ -2,6 +2,68 @@
 
 Chronological record of completed tasks (per org policy: log after each completed task).
 
+## 2026-11-02 — A credentials email that fails now says so
+
+The client reported that several principals never received the login they
+were onboarded with, and suggested the passwords had expired. They had not --
+nothing in this product expires a password. Two real faults, and one limit
+worth stating plainly.
+
+### The forms said "sent" whichever way it went
+
+`send_onboarding` does not raise. `competencies.emails._send` catches every
+exception, writes one line to the log and returns False. The School Admin and
+Program Coordinator onboarding forms wrapped the call in a `try` that could
+therefore never fire, and printed `Credentials sent to ...` regardless. The
+person onboarding a principal was told it had worked when it had not.
+
+Both now read the return value and print the login ID and password on screen
+when the mail did not leave, which is the one moment that information is
+still available.
+
+### The bulk importer was quieter still
+
+Each row reported a clean `success` while the credentials email failed.
+`_send_welcome_email` now returns True, False or None -- None for Students and
+Parents, who are never emailed, so their non-send is the rule rather than a
+fault -- and both the batch and the streaming report carry
+`created, but the credentials email did not go out` on the row.
+
+### What still cannot be known
+
+No send is recorded anywhere. There is no table, and the host keeps logs for
+days, not months. An email sent a month ago can be neither confirmed nor
+denied from inside this system; only ZeptoMail's own delivery log can say
+whether it was delivered, bounced or blocked.
+
+The Status column does not answer it either. `school_admin/views.py` turns
+`pending` into `active` when the password is **changed**, not when the person
+signs in -- so someone who logged in happily and left the password alone
+still reads Pending. `User.last_login` is the honest answer.
+
+### Sending again
+
+`python manage.py resend_credentials` -- audit first, then `--apply`.
+
+- `--check` opens a connection to the mail server and reports whether it
+  accepts us, sending nothing to anybody.
+- `--link` sends a reset link. The current password keeps working until it is
+  used, and it expires after 24 hours. The right choice for someone already
+  signed in and working.
+- default sends a new password, set immediately. The only choice for someone
+  who never got in, and the wrong one for someone who did.
+- `--only-never-logged-in` narrows to the second group.
+
+The mail server is tested before a single password changes. Resetting one for
+a person whose mail never arrives locks them out of an account that worked,
+and Forgot Password cannot rescue them because it travels the same path.
+
+`SchoolAdmin.temporary_password` is left alone deliberately: the form stores a
+hash of it and the bulk importer stores the password as typed. The two
+disagree, nothing reads either, and settling that is a separate decision.
+
+`verify_email.py` 79 checks, `verify_bulk_import.py` 98, `verify_pages.py` 145.
+
 ## 2026-10-21 — The assessment-type list belongs to the client now
 
 Two asks on Project & Assessment, plus a question that needed answering first.
