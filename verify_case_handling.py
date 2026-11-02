@@ -29,7 +29,8 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 
 from accounts import throttle
-from accounts.logins import login_exists, normalise_login, resolve_login
+from accounts.logins import (login_exists, normalise_login, resolve_login,
+                            sync_login_email)
 from attendance.models import Timetable
 from schools.models import School
 from student.models import Student
@@ -137,6 +138,93 @@ def check_roster_finds_the_other_case(coach):
           and _class_students(school, '6', 'C').count() == 2)
 
 
+def check_login_follows_the_profile():
+    """Changing a profile's address has to move the login with it.
+
+    The three edit forms wrote the new address onto the profile row and
+    stopped. Sign-in reads `User.username`, so the list showed one address
+    while a different one was the only one that worked, and the person got
+    "Invalid credentials" -- the same words as a wrong password.
+
+    BKG Global School's principal lived in that gap for two months: her
+    profile read principal@bkgglobalschool.com and no account by that name
+    existed at all.
+    """
+    print('\n6. the login follows the profile address')
+
+    user = U.objects.create_user(username='zz.old@example.com',
+                                 email='zz.old@example.com',
+                                 password=PASSWORD, role='SCHOOL_ADMIN')
+
+    moved = sync_login_email(user, 'ZZ.New@Example.com')
+    user.refresh_from_db()
+    check('the username moves to the new address', moved
+          and user.username == 'zz.new@example.com', user.username)
+    check('and so does the email field', user.email == 'zz.new@example.com',
+          user.email)
+    check('the new address can sign in',
+          Client().login(username='zz.new@example.com', password=PASSWORD))
+    check('the old one cannot, which is the point',
+          not Client().login(username='zz.old@example.com',
+                             password=PASSWORD))
+    check('the password is untouched by the move',
+          user.check_password(PASSWORD))
+
+    check('saying the same address again changes nothing',
+          sync_login_email(user, 'zz.new@example.com') is False)
+
+    # A registration ID is not an address and must never be overwritten by
+    # one, so the helper refuses anything that is not email-shaped.
+    student = U.objects.create_user(username='ZZCASE-9-stu',
+                                    password=PASSWORD, role='STUDENT')
+    check('a blank address is ignored', sync_login_email(student, '') is False)
+    check('and so is something that is not an address',
+          sync_login_email(student, 'not-an-address') is False)
+    student.refresh_from_db()
+    check('the registration ID is still the login',
+          student.username == 'ZZCASE-9-stu', student.username)
+
+    # Two people cannot share a login. Letting the save fail on the unique
+    # constraint would show the Super Admin a database error, not a reason.
+    other = U.objects.create_user(username='zz.taken@example.com',
+                                  email='zz.taken@example.com',
+                                  password=PASSWORD, role='THINKING_COACH')
+    try:
+        sync_login_email(user, 'ZZ.Taken@Example.com')
+        check('an address another account holds is refused', False)
+    except ValueError as e:
+        check('an address another account holds is refused', True)
+        check('and the message names who holds it',
+              'already the login' in str(e), str(e)[:70])
+    user.refresh_from_db()
+    check('the refused move left the login alone',
+          user.username == 'zz.new@example.com', user.username)
+    other.delete()
+
+    # A profile switched off while its login stays on is not switched off.
+    sync_login_email(user, 'zz.new@example.com', is_active=False)
+    user.refresh_from_db()
+    check('deactivating the profile deactivates the login',
+          not user.is_active)
+    check('and a deactivated login cannot sign in',
+          not Client().login(username='zz.new@example.com',
+                             password=PASSWORD))
+    sync_login_email(user, 'zz.new@example.com', is_active=True)
+    user.refresh_from_db()
+    check('switching it back on lets them in again',
+          user.is_active
+          and Client().login(username='zz.new@example.com',
+                             password=PASSWORD))
+
+    # And the forms have to call it, or none of the above reaches anybody.
+    views = open('superadmin/views.py', encoding='utf-8').read()
+    check('all three edit forms move the login',
+          views.count('sync_login_email(') == 3,
+          str(views.count('sync_login_email(')))
+    check('the coordinator form no longer moves the email on its own',
+          'coordinator.user.email = coordinator.official_email' not in views)
+
+
 def run():
     try:
         with transaction.atomic():
@@ -149,6 +237,7 @@ def run():
             check_lockout_cannot_be_walked(coach)
             check_duplicates_refused(coach)
             check_roster_finds_the_other_case(coach)
+            check_login_follows_the_profile()
             raise Rollback
     except Rollback:
         pass

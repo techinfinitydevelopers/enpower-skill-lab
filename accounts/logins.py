@@ -66,3 +66,64 @@ def resolve_login(value):
         user_model.objects.filter(username__iexact=text)
         .values_list('username', flat=True)[:2])
     return matches[0] if len(matches) == 1 else None
+
+
+def sync_login_email(user, new_email, is_active=None):
+    """Move an account's login to a new address when its profile moves.
+
+    The edit forms for School Admins, Thinking Coaches and Coordinators write
+    the new address onto the profile row and stopped there. The login lives on
+    the User, so it stayed at the old address: the list on screen showed one
+    address, the person signed in with it, and got "Invalid credentials" --
+    the same words a wrong password gets, so nothing on either side said what
+    had happened.
+
+    That is how BKG Global School's principal spent two months unable to get
+    in. Her profile read principal@bkgglobalschool.com; there was no account
+    by that name at all, because the login was still the address she had been
+    onboarded with.
+
+    Only called for roles whose login *is* their address. Students sign in
+    with a registration ID and Parents with a generated username, so changing
+    their email must leave the login alone.
+
+    Returns True when something moved. Raises ValueError if the address
+    already belongs to somebody else, rather than letting the save fail on a
+    unique constraint with a message nobody can act on.
+    """
+    if user is None:
+        return False
+
+    wanted = normalise_login(new_email)
+    if not wanted or '@' not in wanted:
+        return False
+
+    moved = False
+    if normalise_login(user.username) != wanted:
+        from django.contrib.auth import get_user_model
+
+        clash = (get_user_model().objects
+                 .filter(username__iexact=wanted)
+                 .exclude(pk=user.pk).first())
+        if clash is not None:
+            raise ValueError(
+                f'{wanted} is already the login for another account '
+                f'({clash.get_full_name() or clash.username}, '
+                f'{clash.role}). Free that address first, or use a '
+                f'different one.')
+        user.username = wanted
+        moved = True
+
+    if normalise_login(user.email) != wanted:
+        user.email = wanted
+        moved = True
+
+    # A profile switched off while its login stays on is not switched off:
+    # sign-in reads User.is_active and has never looked at the profile row.
+    if is_active is not None and user.is_active != bool(is_active):
+        user.is_active = bool(is_active)
+        moved = True
+
+    if moved:
+        user.save(update_fields=['username', 'email', 'is_active'])
+    return moved

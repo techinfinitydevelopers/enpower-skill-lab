@@ -7,7 +7,7 @@ from django.db import models, transaction
 from django.db.models import Q
 from django.contrib.auth import get_user_model, logout
 from django.contrib.auth.hashers import make_password
-from accounts.logins import login_exists, normalise_login
+from accounts.logins import login_exists, normalise_login, sync_login_email
 from competencies.emails import send_notice, send_onboarding
 # Shared with the select-and-delete endpoint so a row goes the same way
 # whether it is removed one at a time or in a batch.
@@ -699,9 +699,15 @@ def edit_school_admin(request, admin_id):
             admin.account_status = data.get('account_status', admin.account_status)
             is_active = data.get('is_active', 'true')
             admin.is_active = is_active == 'true'
-            
+
+            # The login lives on the User, not here. Without this the address
+            # on screen and the address they sign in with drift apart, and the
+            # only thing the principal sees is "Invalid credentials".
+            moved = sync_login_email(admin.user, admin.email, admin.is_active)
+
             admin.save()
-            messages.success(request, f'School Admin "{admin.full_name}" updated successfully!')
+            messages.success(request, f'School Admin "{admin.full_name}" updated successfully!'
+                      + (f' Their login is now {admin.user.username}.' if moved else ''))
             return redirect('school_admin_list')
         except Exception as e:
             messages.error(request, f'Error updating school admin: {str(e)}')
@@ -1503,9 +1509,15 @@ def edit_teacher(request, teacher_id):
             is_active = request.POST.get('is_active', 'true')
             teacher.is_active = is_active == 'true'
 
+            # Same reason as the School Admin form: the login lives on the
+            # User and does not follow the profile unless it is moved.
+            moved = sync_login_email(teacher.user, teacher.official_email,
+                                     teacher.is_active)
+
             teacher.save()
 
-            messages.success(request, f'Teacher {teacher.full_name} updated successfully!')
+            messages.success(request, f'Teacher {teacher.full_name} updated successfully!'
+                      + (f' Their login is now {teacher.user.username}.' if moved else ''))
             return redirect('teacher_list')
         except Exception as e:
             messages.error(request, f'Error updating teacher: {str(e)}')
@@ -2139,6 +2151,11 @@ def edit_coordinator(request, coordinator_id):
             # Status
             coordinator.is_active = data.get('isActive') == 'true'
 
+            # Same reason as the School Admin form above.
+            moved = sync_login_email(coordinator.user,
+                                     coordinator.official_email,
+                                     coordinator.is_active)
+
             # Profile photo
             if request.FILES.get('profilePhoto'):
                 coordinator.profile_photo = request.FILES['profilePhoto']
@@ -2149,12 +2166,13 @@ def edit_coordinator(request, coordinator_id):
             school_ids = data.getlist('schools')
             coordinator.schools_assigned.set(school_ids)
 
-            # Update linked user email if changed
-            if coordinator.user and coordinator.user.email != coordinator.official_email:
-                coordinator.user.email = coordinator.official_email
-                coordinator.user.save()
+            # The email on the User was already being kept in step here. The
+            # username was not, and sign-in reads the username -- so the
+            # address on screen stopped being the address that worked.
+            # sync_login_email above moves both.
 
-            messages.success(request, f'Coordinator "{coordinator.full_name}" updated successfully!')
+            messages.success(request, f'Coordinator "{coordinator.full_name}" updated successfully!'
+                      + (f' Their login is now {coordinator.user.username}.' if moved else ''))
             return redirect('coordinator_list')
 
         except Exception as e:
