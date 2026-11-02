@@ -97,9 +97,13 @@ def stream_rows(rows, numbers, role, user):
         row = {k: (v.strip() if isinstance(v, str) else v) for k, v in row.items()}
         name = _get_display_name(row, role)
         try:
-            processor(row, user)
+            mailed = processor(row, user)
             success += 1
             record = {'type': 'row', 'row': number, 'name': name, 'status': 'success'}
+            # A created account whose credentials email failed is not a clean
+            # success, and the report has to say so.
+            if mailed is False:
+                record['note'] = 'created, but the credentials email did not go out'
         except Exception as e:
             failed += 1
             # str(e) on its own is often bare ("full_name is required"), so the

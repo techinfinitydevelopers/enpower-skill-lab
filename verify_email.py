@@ -310,8 +310,36 @@ for role, marker in [('Student', 'students are not emailed'),
 
 bulk = open('superadmin/bulk_import.py', encoding='utf-8').read()
 check('bulk import routes through competencies.emails',
-      'from competencies.emails import send_onboarding' in bulk
+      'send_onboarding' in bulk
+      and 'from competencies.emails import' in bulk
       and 'from django.core.mail import send_mail' not in bulk)
+
+# An import that reports a clean success while the credentials email failed is
+# how a school full of principals came to be waiting for a login that was
+# never sent. The helper has to hand that result back, and the report has to
+# carry it.
+check('the bulk helper returns whether the mail went',
+      'return bool(send_onboarding(' in bulk)
+check('and a non-send for a suppressed role is not reported as a failure',
+      'if is_suppressed(role_label):' in bulk and 'return None' in bulk)
+check('every processor hands that result up',
+      bulk.count('return _send_welcome_email(') == 5,
+      str(bulk.count('return _send_welcome_email(')))
+for path in ('superadmin/bulk_import.py', 'superadmin/bulk_stream.py'):
+    report = open(path, encoding='utf-8').read()
+    check(f'{path.split("/")[-1]} says so on the row',
+          'the credentials email did not go out' in report)
+
+# The two forms that onboard an adult used to print "Credentials sent to ..."
+# whichever way the send went, because send_onboarding returns False rather
+# than raising and nobody read it.
+calls = src.count('send_onboarding(') - src.count('import send_onboarding')
+read = src.count('sent = send_onboarding(')
+check('every onboarding form reads the return value, not just some',
+      calls == read and calls == 5, f'{read} of {calls} read')
+check('and says so on screen when the mail did not go',
+      src.count('THE EMAIL DID NOT GO OUT') == 2,
+      str(src.count('THE EMAIL DID NOT GO OUT')))
 
 # Manual and bulk must produce the same email for one role, or a principal
 # onboarded by hand receives a different message from one who was imported.

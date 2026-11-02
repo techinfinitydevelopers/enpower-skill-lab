@@ -1053,9 +1053,14 @@ def bulk_import(request, role):
         # Strip whitespace from all values
         row = {k: (v.strip() if v else '') for k, v in row.items()}
         try:
-            processor(row, request.user)
+            mailed = processor(row, request.user)
             success_count += 1
-            results.append({'row': i + 1, 'name': _get_display_name(row, role), 'status': 'success'})
+            entry = {'row': i + 1, 'name': _get_display_name(row, role), 'status': 'success'}
+            # The account exists either way; saying so without saying the
+            # credentials never left is what hid this for a month.
+            if mailed is False:
+                entry['note'] = 'created, but the credentials email did not go out'
+            results.append(entry)
         except Exception as e:
             fail_count += 1
             results.append({'row': i + 1, 'name': _get_display_name(row, role), 'status': 'failed', 'reason': str(e)})
@@ -1341,7 +1346,7 @@ def _process_school_admin(row, created_by):
             created_by=created_by,
         )
 
-    _send_welcome_email(email, full_name, password, 'School Admin')
+    return _send_welcome_email(email, full_name, password, 'School Admin')
 
 
 def _process_teacher(row, created_by):
@@ -1453,7 +1458,7 @@ def _process_teacher(row, created_by):
             achievements=_opt(row.get('achievements')),
         )
 
-    _send_welcome_email(email, row['full_name'], password, 'Thinking Coach')
+    return _send_welcome_email(email, row['full_name'], password, 'Thinking Coach')
 
 
 def _process_student(row, created_by):
@@ -1606,7 +1611,7 @@ def _process_student(row, created_by):
                 # otherwise has to be made from the parent sheet.
                 pass
 
-    _send_welcome_email(email, f"{row['first_name']} {row['last_name']}", password, 'Student', login_id=reg_id)
+    return _send_welcome_email(email, f"{row['first_name']} {row['last_name']}", password, 'Student', login_id=reg_id)
 
 
 import re as _re
@@ -1777,7 +1782,7 @@ def _process_parent(row, created_by):
         for student in linked_students:
             parent.students.add(student)
 
-    _send_welcome_email(email, row['full_name'], password, 'Parent', login_id=username)
+    return _send_welcome_email(email, row['full_name'], password, 'Parent', login_id=username)
 
 
 def _process_coordinator(row, created_by):
@@ -1887,7 +1892,7 @@ def _process_coordinator(row, created_by):
             career_aspirations=_opt(row.get('career_aspirations')),
         )
 
-    _send_welcome_email(email, row['full_name'], password, 'Program Coordinator')
+    return _send_welcome_email(email, row['full_name'], password, 'Program Coordinator')
 
 
 # ============================================================
@@ -1929,14 +1934,22 @@ def _send_welcome_email(email, name, password, role_label, login_id=None,
     """Onboarding email, using the wording agreed in the changes document.
 
     Still non-blocking: a mail failure is logged inside the template helper and
-    never aborts an import.
-    """
-    from competencies.emails import send_onboarding
+    never aborts an import. It is no longer silent, though. The result travels
+    back to the import report, because an import that says "7 success" while
+    seven credential emails failed is how a school full of principals came to
+    be waiting for a login that was never sent.
 
-    send_onboarding(
+    Returns True sent, False failed, None not applicable -- Students and
+    Parents are never emailed, so a non-send there is the rule, not a fault.
+    """
+    from competencies.emails import is_suppressed, send_onboarding
+
+    if is_suppressed(role_label):
+        return None
+    return bool(send_onboarding(
         to=email, name=name, login_id=login_id or email, password=password,
         role=role_label, school_name=school_name, program_name=program_name,
-    )
+    ))
 
 
 ROLE_PROCESSORS = {

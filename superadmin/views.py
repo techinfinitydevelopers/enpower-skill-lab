@@ -820,16 +820,25 @@ def onboard_school_admin(request):
                 school_admin.profile_photo = request.FILES['profilePhoto']
                 school_admin.save()
 
-            # Send email with credentials
+            # Send email with credentials.
+            #
+            # send_onboarding never raises -- it swallows the failure, logs it
+            # and returns False -- so the old `try` here caught nothing and
+            # this page said "Credentials sent to ..." whether the mail left
+            # the server or not. Several principals were onboarded under that
+            # message and never received anything. Read the return value.
             try:
                 school = School.objects.get(id=data.get('school'))
-                send_onboarding(
+                sent = send_onboarding(
                     to=school_admin.email, name=school_admin.full_name,
                     login_id=user.username, password=temp_password,
                     role='SCHOOL_ADMIN',
                     school_name=getattr(school, 'school_name', None))
 
-                messages.success(request, f'School Admin "{school_admin.full_name}" has been successfully onboarded! Credentials sent to {school_admin.email}.')
+                messages.success(request, f'School Admin "{school_admin.full_name}" has been successfully onboarded! '
+                          + (f'Credentials sent to {school_admin.email}.' if sent else
+                             f'THE EMAIL DID NOT GO OUT - hand these over yourself. '
+                             f'Login ID: {user.username} | Password: {temp_password}'))
             except Exception as email_error:
                 messages.warning(request, f'School Admin created but email failed to send: {str(email_error)}. Temporary password: {temp_password}')
 
@@ -1985,14 +1994,18 @@ def onboard_coordinator(request):
                 if valid_ids:
                     coordinator.schools_assigned.set(School.objects.filter(id__in=valid_ids))
             
-            # Send email with credentials
+            # Send email with credentials. The return value is the only signal
+            # a send failed -- see the School Admin form above for why.
             try:
-                send_onboarding(
+                sent = send_onboarding(
                     to=coordinator.official_email, name=coordinator.full_name,
                     login_id=user.email, password=temp_password,
                     role='PROGRAM_COORDINATOR')
 
-                messages.success(request, f'Program Coordinator "{coordinator.full_name}" onboarded successfully! Credentials sent to {coordinator.official_email}.')
+                messages.success(request, f'Program Coordinator "{coordinator.full_name}" onboarded successfully! '
+                          + (f'Credentials sent to {coordinator.official_email}.' if sent else
+                             f'THE EMAIL DID NOT GO OUT - hand these over yourself. '
+                             f'Login ID: {user.email} | Password: {temp_password}'))
             except Exception as email_error:
                 messages.warning(request, f'Program Coordinator created but email failed to send: {str(email_error)}. Temporary password: {temp_password}')
             
