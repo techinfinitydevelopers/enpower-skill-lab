@@ -37,6 +37,7 @@ urlpatterns = [
     path('api/score-entry-data/', views.api_score_entry_data, name='api_score_entry_data'),
     path('api/save-score/', views.api_save_score, name='api_save_score'),
     path('api/projects-by-grade/', views.api_projects_by_grade, name='api_projects_by_grade'),
+    path('api/divisions-by-grade/', views.api_divisions_by_grade, name='api_divisions_by_grade'),
     path('api/project-details/', views.api_project_details, name='api_project_details'),
     path('assessment/<int:assessment_id>/student/<int:student_id>/', views.student_score_detail, name='student_score_detail'),
     path('api/save-feedback/', views.api_save_feedback, name='api_save_feedback'),

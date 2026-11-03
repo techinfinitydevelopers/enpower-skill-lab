@@ -186,7 +186,7 @@ def score_entry(request):
     return render(request, 'teacher/score-entry.html', context)
 
 
-def annotate_scoring_progress(assessments, project_id, user):
+def annotate_scoring_progress(assessments, project_id, user, division=''):
     """Tag each assessment with whether this coach's class has scored it.
 
     Scoped to the coach's own school: a project runs across many schools, and
@@ -194,15 +194,30 @@ def annotate_scoring_progress(assessments, project_id, user):
     counting another school's scores would report a project as fully scored
     when the coach's own class has an assessment untouched.
 
+    Scoped to the division for the same reason one step down. The progress
+    line sits beside a student count that already follows the division, so
+    leaving it on the whole grade would read "4 of 4 assessments scored" over
+    "28 students" who have nothing.
+
     Mutates `assessments` in place; returns how many are scored.
     """
-    from competencies.models import ScoreEntry
+    from competencies.models import Project, ScoreEntry
 
     entries = ScoreEntry.objects.filter(
         assessment_competency__assessment__project_id=project_id, score__isnull=False)
     school = _teacher_school(user)
     if school:
         entries = entries.filter(student__school=school)
+
+    grade = Project.objects.filter(id=project_id).values_list(
+        'grade', flat=True).first()
+    if grade:
+        from competencies.models import STAGE_TO_GRADES
+
+        class_range = STAGE_TO_GRADES.get(grade, [grade])
+        students, _, _ = _students_for_scoring(user, class_range, grade,
+                                               division)
+        entries = entries.filter(student__in=students)
 
     scored_ids = set(
         entries.values_list('assessment_competency__assessment_id', flat=True).distinct()
@@ -230,12 +245,116 @@ def api_assessments_by_project(request):
         .order_by('order', 'id')
         .values('id', 'name', 'assessment_type')
     )
-    scored = annotate_scoring_progress(assessments, project_id, request.user)
+    scored = annotate_scoring_progress(assessments, project_id, request.user,
+                                       request.GET.get('division', ''))
     return JsonResponse({
         'assessments': assessments,
         'assessments_total': len(assessments),
         'assessments_scored': scored,
     })
+
+
+def _coach_divisions(user, grade):
+    """The divisions this coach is timetabled for in one grade, upper-cased.
+
+    A Timetable row is school + grade + division + coach, and it is already
+    what the Attendance screen trusts. Score Entry trusted nothing: it showed
+    every student in the grade at the coach's school, so a coach could enter
+    scores for a colleague's class without noticing.
+
+    Returns an empty list when the coach has no schedule for that grade. That
+    is not the same as "no divisions" and must not be read as one -- see
+    `_students_for_scoring`, which keeps such a coach working rather than
+    handing them an empty screen.
+    """
+    from attendance.models import Timetable
+
+    school = _teacher_school(user)
+    if not school or not grade:
+        return []
+    rows = (Timetable.objects
+            .filter(thinking_coach=user, school=school, grade=str(grade).strip())
+            .values_list('division', flat=True))
+    # Case-folded, because a section spelt 'c' on one sheet and 'C' on another
+    # is the same class -- that mismatch once showed a coach an empty roster of
+    # 41 students.
+    seen = {}
+    for division in rows:
+        key = (division or '').strip().upper()
+        if key:
+            seen.setdefault(key, key)
+    return sorted(seen)
+
+
+def _students_for_scoring(user, class_range, grade, division=''):
+    """The students a coach may score, narrowed to one division on request.
+
+    Two rules, in this order:
+
+    1. A coach sees only the divisions they are timetabled for. This is the
+       access rule the client asked for, not a convenience filter.
+    2. A coach with no timetable for the grade sees the whole grade at their
+       school, exactly as before. Rule 1 would otherwise take the screen away
+       from anyone whose schedule has not been uploaded yet, which is a worse
+       failure than the one being fixed. The page says when this is happening,
+       so it is visible rather than silent.
+
+    Returns (queryset, allowed_divisions, restricted).
+    """
+    from student.models import Student
+
+    students = Student.objects.filter(student_class__in=class_range,
+                                      is_active=True)
+    school = _teacher_school(user)
+    if school:
+        students = students.filter(school=school)
+
+    allowed = _coach_divisions(user, grade)
+    restricted = bool(allowed)
+    if restricted:
+        students = students.filter(_division_q(allowed))
+    else:
+        # No schedule for this grade: offer whatever divisions the grade
+        # actually holds, so the dropdown is still useful.
+        allowed = sorted({(d or '').strip().upper()
+                          for d in students.values_list('division', flat=True)
+                          if (d or '').strip()})
+
+    wanted = (division or '').strip().upper()
+    if wanted and wanted in allowed:
+        students = students.filter(division__iexact=wanted)
+
+    return students, allowed, restricted
+
+
+def _division_q(divisions):
+    """OR of case-insensitive division matches.
+
+    `division__iexact__in` is not a lookup Django has, and `division__in`
+    would compare exactly -- which is the bug this is written to avoid.
+    """
+    from django.db.models import Q
+
+    query = Q()
+    for division in divisions:
+        query |= Q(division__iexact=division)
+    return query
+
+
+@login_required
+@user_passes_test(is_teacher)
+def api_divisions_by_grade(request):
+    """AJAX: the divisions a coach may enter scores for in one grade."""
+    grade = request.GET.get('grade', '')
+    from competencies.models import STAGE_TO_GRADES
+
+    class_range = STAGE_TO_GRADES.get(grade, [grade] if grade else [])
+    if not class_range:
+        return JsonResponse({'divisions': [], 'restricted': False})
+
+    _, allowed, restricted = _students_for_scoring(request.user, class_range,
+                                                   grade)
+    return JsonResponse({'divisions': allowed, 'restricted': restricted})
 
 
 @login_required
@@ -261,13 +380,12 @@ def api_score_entry_data(request):
     grade = assessment.project.grade
     class_range = STAGE_TO_GRADES.get(grade, [grade] if grade else [])
 
-    teacher_obj = getattr(request.user, 'teacher_profile', None)
-    students_qs = Student.objects.filter(
-        student_class__in=class_range,
-        is_active=True
-    )
-    if teacher_obj and teacher_obj.school:
-        students_qs = students_qs.filter(school=teacher_obj.school)
+    # Scoped to the divisions this coach actually teaches, and narrowed
+    # further when one is picked. The stats below are computed from the same
+    # list on purpose: filtering the table while the cards still counted the
+    # whole grade would put two different class sizes on one screen.
+    students_qs, allowed_divisions, restricted = _students_for_scoring(
+        request.user, class_range, grade, request.GET.get('division', ''))
 
     students = list(
         students_qs.order_by('first_name', 'last_name')
@@ -313,6 +431,8 @@ def api_score_entry_data(request):
                        'type': assessment.assessment_type},
         'project':    {'id': assessment.project.id, 'title': assessment.project.title, 'grade': assessment.project.grade},
         'students':    students,
+        'divisions':   allowed_divisions,
+        'restricted':  restricted,
         'competencies': comp_mappings,
         'scores':      scores,
         'feedback':    feedback,

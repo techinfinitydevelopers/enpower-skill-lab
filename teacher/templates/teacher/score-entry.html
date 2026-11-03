@@ -67,8 +67,8 @@
             <span style="font-size:12px; color:#b0a8bc; margin-left:4px;">— follow the steps below</span>
         </div>
         <div class="px-6 pb-5 pt-4 space-y-4">
-            <!-- Row 1: Grade, Project, Assessment # -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <!-- Row 1: Grade, Division, Project, Assessment # -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
                 <!-- Grade -->
                 <div>
                     <label style="display:flex; align-items:center; gap:7px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:#94a3b8; margin-bottom:8px;">
@@ -86,10 +86,25 @@
                         <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style="font-size:18px; color:#cbd5e1;">expand_more</span>
                     </div>
                 </div>
-                <!-- Project -->
+                <!-- Division -->
                 <div>
                     <label style="display:flex; align-items:center; gap:7px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:#94a3b8; margin-bottom:8px;">
                         <span id="step2Badge" style="width:18px; height:18px; border-radius:50%; background:#e2e8f0; color:#94a3b8; font-size:10px; font-weight:700; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; transition:all 0.2s;">2</span>
+                        Division
+                    </label>
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style="font-size:17px; color:#9c7bb5;">groups</span>
+                        <select id="divisionSelect" class="w-full rounded-lg cursor-pointer" style="outline:none; font-size:14px; color:#374151; padding:11px 40px 11px 36px; border:1.5px solid #e2e8f0; background:#f8fafc; transition:border-color 0.15s; opacity:0.6;" disabled>
+                            <option value="">Select grade first</option>
+                        </select>
+                        <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style="font-size:18px; color:#cbd5e1;">expand_more</span>
+                    </div>
+                    <p id="divisionNote" style="display:none; font-size:11px; color:#b45309; margin-top:6px; line-height:1.45;"></p>
+                </div>
+                <!-- Project -->
+                <div>
+                    <label style="display:flex; align-items:center; gap:7px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:#94a3b8; margin-bottom:8px;">
+                        <span id="step3Badge" style="width:18px; height:18px; border-radius:50%; background:#e2e8f0; color:#94a3b8; font-size:10px; font-weight:700; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; transition:all 0.2s;">3</span>
                         Project
                     </label>
                     <div class="relative">
@@ -103,7 +118,7 @@
                 <!-- Assessment # -->
                 <div>
                     <label style="display:flex; align-items:center; gap:7px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:#94a3b8; margin-bottom:8px;">
-                        <span id="step3Badge" style="width:18px; height:18px; border-radius:50%; background:#e2e8f0; color:#94a3b8; font-size:10px; font-weight:700; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; transition:all 0.2s;">3</span>
+                        <span id="step4Badge" style="width:18px; height:18px; border-radius:50%; background:#e2e8f0; color:#94a3b8; font-size:10px; font-weight:700; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; transition:all 0.2s;">4</span>
                         Assessment No.
                     </label>
                     <div class="relative">
@@ -159,7 +174,7 @@
         </div>
         <div id="noStudents" class="hidden py-14 text-center">
             <span class="material-symbols-outlined" style="font-size:40px; color:#e2e8f0; display:block; margin-bottom:8px;">groups</span>
-            <p style="font-size:14px; color:#94a3b8;">No active students found for this grade.</p>
+            <p id="noStudentsText" style="font-size:14px; color:#94a3b8;">No active students found for this grade.</p>
         </div>
         <div id="tableFooter" style="display:none; padding:12px 24px; border-top:1px solid #f1f5f9;">
             <span id="showingCount" style="font-size:12px; color:#94a3b8;"></span>
@@ -190,7 +205,7 @@
                 <span style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:#94a3b8;">Total Students</span>
             </div>
             <p id="statTotal" style="font-size:26px; font-weight:700; color:#1e1b4b;">—</p>
-            <p style="font-size:12px; color:#94a3b8; margin-top:2px;">in this grade</p>
+            <p id="statTotalScope" style="font-size:12px; color:#94a3b8; margin-top:2px;">in this grade</p>
         </div>
     </div>
 
@@ -245,6 +260,7 @@
 {% block extra_js %}
 <script>
 const GRADE_URL           = "{% url 'teacher:api_projects_by_grade' %}";
+const DIVISION_URL        = "{% url 'teacher:api_divisions_by_grade' %}";
 const PROJECT_URL         = "{% url 'teacher:api_assessments_by_project' %}";
 const DATA_URL            = "{% url 'teacher:api_score_entry_data' %}";
 const SAVE_URL            = "{% url 'teacher:api_save_score' %}";
@@ -253,6 +269,8 @@ const GENERATE_REPORT_URL = "{% url 'teacher:api_generate_report' %}";
 const CSRF_TOKEN          = "{{ csrf_token }}";
 
 const gradeSelect          = document.getElementById('gradeSelect');
+const divisionSelect       = document.getElementById('divisionSelect');
+const divisionNote         = document.getElementById('divisionNote');
 const projectSelect        = document.getElementById('projectSelect');
 const assessmentNumSelect  = document.getElementById('assessmentNumSelect');
 const assessmentTypeSelect = document.getElementById('assessmentTypeSelect');
@@ -275,6 +293,7 @@ let currentProjectTitle = '';
 
 const step2Badge = document.getElementById('step2Badge');
 const step3Badge = document.getElementById('step3Badge');
+const step4Badge = document.getElementById('step4Badge');
 
 function setStepActive(badge, active) {
     if (!badge) return;
@@ -293,18 +312,114 @@ function setSelectEnabled(sel, enabled) {
 function resetFromProject() {
     assessmentNumSelect.innerHTML = '<option value="">Select project first</option>';
     setSelectEnabled(assessmentNumSelect, false);
-    setStepActive(step3Badge, false);
+    setStepActive(step4Badge, false);
     row2Filters.style.display = 'none';
     allAssessments = [];
     hideTable();
+}
+
+// The division the coach is looking at, '' meaning all of theirs. Every call
+// for students carries it, so the table, the stats cards and the Generate
+// Report button are always counting the same children.
+function currentDivision() {
+    return divisionSelect ? divisionSelect.value : '';
+}
+
+function projectUrl(projectId) {
+    const division = currentDivision();
+    return `${PROJECT_URL}?project_id=${encodeURIComponent(projectId)}`
+         + (division ? `&division=${encodeURIComponent(division)}` : '')
+         + `&_=${Date.now()}`;
+}
+
+function dataUrl(assessmentId) {
+    const division = currentDivision();
+    return `${DATA_URL}?assessment_id=${encodeURIComponent(assessmentId)}`
+         + (division ? `&division=${encodeURIComponent(division)}` : '')
+         + `&_=${Date.now()}`;
+}
+
+// Grade → the divisions this coach may score. Timetable-driven: a coach sees
+// the classes they are assigned to, not the whole grade.
+function loadDivisions(grade) {
+    divisionSelect.innerHTML = '<option value="">Loading...</option>';
+    setSelectEnabled(divisionSelect, false);
+    setStepActive(step2Badge, false);
+    divisionNote.style.display = 'none';
+    if (!grade) {
+        divisionSelect.innerHTML = '<option value="">Select grade first</option>';
+        return;
+    }
+
+    fetch(`${DIVISION_URL}?grade=${encodeURIComponent(grade)}&_=${Date.now()}`, {cache:'no-store'})
+        .then(r => r.json())
+        .then(data => {
+            const divisions = data.divisions || [];
+            if (!divisions.length) {
+                divisionSelect.innerHTML = '<option value="">No divisions found</option>';
+                setSelectEnabled(divisionSelect, false);
+                return;
+            }
+            divisionSelect.innerHTML = divisions.length > 1
+                ? '<option value="">All my divisions</option>' : '';
+            divisions.forEach(d => {
+                const o = document.createElement('option');
+                o.value = d; o.textContent = `Division ${d}`;
+                divisionSelect.appendChild(o);
+            });
+            // One division and nothing to choose between: pick it rather than
+            // making the coach open a dropdown with a single entry.
+            setSelectEnabled(divisionSelect, true);
+            setStepActive(step2Badge, true);
+            if (divisions.length === 1) {
+                divisionSelect.value = divisions[0];
+                // This resolves after the project did when the page is opened
+                // from a "Start Scoring" link, so anything already on screen
+                // was fetched without the division and has to be recounted.
+                divisionSelect.dispatchEvent(new Event('change'));
+            }
+
+            // Said out loud rather than left to be discovered: this coach has
+            // no schedule for the grade, so they are seeing all of it.
+            if (!data.restricted) {
+                divisionNote.textContent =
+                    'No classes are assigned to you for this grade, so every '
+                  + 'division in it is shown.';
+                divisionNote.style.display = 'block';
+            }
+        });
+}
+
+divisionSelect.addEventListener('change', function () {
+    // Division narrows students only — the project and assessment lists are
+    // unaffected, so nothing below is rebuilt, only recounted.
+    if (currentProjectId && allAssessments.length) {
+        refreshProjectStudentCount();
+        refreshProjectProgress();
+    }
+    if (assessmentNumSelect.value !== '') {
+        assessmentNumSelect.dispatchEvent(new Event('change'));
+    }
+});
+
+function refreshProjectStudentCount() {
+    const first = allAssessments[0];
+    if (!first) return;
+    fetch(dataUrl(first.id), {cache:'no-store'})
+        .then(r => r.json())
+        .then(d => {
+            currentStudentIds = (d.students || []).map(s => s.id);
+            updateGenerateSection(currentProjectTitle);
+        });
 }
 
 gradeSelect.addEventListener('change', function () {
     const grade = this.value;
     projectSelect.innerHTML = '<option value="">Loading...</option>';
     setSelectEnabled(projectSelect, false);
-    setStepActive(step2Badge, false);
+    setStepActive(step3Badge, false);
     resetFromProject();
+    loadDivisions(grade);
     if (!grade) {
         projectSelect.innerHTML = '<option value="">Select grade first</option>';
         return;
@@ -321,7 +436,7 @@ gradeSelect.addEventListener('change', function () {
                     projectSelect.appendChild(o);
                 });
                 setSelectEnabled(projectSelect, true);
-                setStepActive(step2Badge, true);
+                setStepActive(step3Badge, true);
             } else {
                 projectSelect.innerHTML = '<option value="">No active projects for this grade</option>';
                 setSelectEnabled(projectSelect, false);
@@ -337,7 +452,7 @@ projectSelect.addEventListener('change', function () {
     document.getElementById('generateSection').style.display = 'none';
     if (!pid) return;
 
-    fetch(`${PROJECT_URL}?project_id=${encodeURIComponent(pid)}&_=${Date.now()}`, {cache:'no-store'})
+    fetch(projectUrl(pid), {cache:'no-store'})
         .then(r => r.json())
         .then(data => {
             allAssessments = data.assessments || [];
@@ -352,7 +467,7 @@ projectSelect.addEventListener('change', function () {
                     assessmentNumSelect.appendChild(o);
                 });
                 setSelectEnabled(assessmentNumSelect, true);
-                setStepActive(step3Badge, true);
+                setStepActive(step4Badge, true);
             } else {
                 assessmentNumSelect.innerHTML = '<option value="">No assessments found</option>';
                 setSelectEnabled(assessmentNumSelect, false);
@@ -364,12 +479,7 @@ projectSelect.addEventListener('change', function () {
             assessmentsTotal  = data.assessments_total  || allAssessments.length;
             assessmentsScored = data.assessments_scored || 0;
             currentProjectTitle = projectTitle;
-            fetch(`${DATA_URL}?assessment_id=${encodeURIComponent(allAssessments[0]?.id)}&_=${Date.now()}`, {cache:'no-store'})
-                .then(r => r.json())
-                .then(d => {
-                    currentStudentIds = (d.students || []).map(s => s.id);
-                    updateGenerateSection(projectTitle);
-                });
+            refreshProjectStudentCount();
         });
 });
 
@@ -393,7 +503,7 @@ assessmentNumSelect.addEventListener('change', function () {
 
     row2Filters.style.display = 'block';
 
-    fetch(`${DATA_URL}?assessment_id=${encodeURIComponent(a.id)}&_=${Date.now()}`, {cache:'no-store'})
+    fetch(dataUrl(a.id), {cache:'no-store'})
         .then(r => r.json())
         .then(data => {
             currentData = data;
@@ -437,6 +547,13 @@ function updateStats(stats) {
         if (subEl) subEl.textContent = 'Grade ' + gradeFor(parseFloat(avg));
     }
     document.getElementById('statTotal').textContent = stats.total_students;
+    // The card has to name the same set the table is showing, or one screen
+    // carries two different class sizes.
+    const scopeEl = document.getElementById('statTotalScope');
+    if (scopeEl) {
+        const d = currentDivision();
+        scopeEl.textContent = d ? `in Division ${d}` : 'in this grade';
+    }
 }
 
 const AVATAR_COLORS = [
@@ -482,6 +599,13 @@ function renderTable(data) {
     // Build body
     if (students.length === 0) {
         tbody.innerHTML = '';
+        const emptyText = document.getElementById('noStudentsText');
+        if (emptyText) {
+            const d = currentDivision();
+            emptyText.textContent = d
+                ? `No active students found in Division ${d}.`
+                : 'No active students found for this grade.';
+        }
         noStudents.classList.remove('hidden');
         tableFooter.style.display = 'none';
         return;
@@ -811,7 +935,7 @@ function escHtml(str) {
 // changes, so it went stale the moment the coach entered a score.
 function refreshProjectProgress() {
     if (!currentProjectId) return;
-    fetch(`${PROJECT_URL}?project_id=${encodeURIComponent(currentProjectId)}&_=${Date.now()}`, {cache:'no-store'})
+    fetch(projectUrl(currentProjectId), {cache:'no-store'})
         .then(r => r.json())
         .then(data => {
             assessmentsTotal  = data.assessments_total  || assessmentsTotal;
