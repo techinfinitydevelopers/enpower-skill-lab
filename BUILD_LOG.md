@@ -2,6 +2,59 @@
 
 Chronological record of completed tasks (per org policy: log after each completed task).
 
+## 2026-11-03 - Score Entry, one division at a time
+
+    "there is no option to filter students by division. As a result, all
+     students across the selected grade appear together"  -- client, 30 Oct
+
+### What it really was
+
+The filter was the small part. `api_score_entry_data` scoped students to
+grade + the coach's school and nothing else, so a Thinking Coach could enter
+scores for any class in the grade, including a colleague's. Asked which the
+dropdown should hold -- every division in the grade, or only the coach's own
+-- the client chose the coach's own. So this is an access rule, not a
+convenience filter, and the suite tests it as one: asking for another
+division by name over the wire returns nothing of theirs.
+
+A `Timetable` row is already school + grade + division + coach, and the
+Attendance screen has always trusted it. Score Entry now trusts the same
+thing.
+
+### The fallback, stated out loud
+
+A coach with no timetable for the grade keeps seeing all of it. Applying the
+rule to them would take the screen away from anyone whose schedule has not
+been uploaded yet, which is worse than the fault being fixed. The page says
+so where it happens rather than leaving it to be discovered. Production has
+10 active coaches and all 10 are timetabled, so this path is unused today --
+it exists so the next unmapped coach is not locked out.
+
+### Three places the division had to reach, or the filter would be a lie
+
+- the student table
+- the stats cards, which are computed server-side -- a filtered table beside
+  an unfiltered count puts two class sizes on one screen
+- the scoring-progress line above the Generate button, which would otherwise
+  read "4 of 4 assessments scored" over a division with nothing
+
+Generate Report follows for free: it loops over the student list the page
+last fetched, which is now division-scoped.
+
+### Case
+
+Every division comparison is `__iexact`. A section spelt 'c' against a
+timetable holding 'C' once showed a coach an empty roster of 41 students, and
+`division__in` would have reintroduced exactly that.
+
+### Impact, measured before deploying
+
+10 active coaches, 10 with timetables, 0 who had ever entered a score outside
+their own divisions. Nobody loses access to work they had been doing.
+
+`verify_division_filter.py` 44 checks. `verify_pages.py` 145,
+`verify_reports.py` 53, `verify_timetable.py` 115, `verify_grading.py` 86.
+
 ## 2026-11-02 — A credentials email that fails now says so
 
 The client reported that several principals never received the login they
