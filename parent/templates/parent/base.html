@@ -680,6 +680,23 @@
             object-fit: contain;
         }
 
+        /* School logo strip. Renders only when the school has uploaded one,
+           so a school without a logo sees the sidebar exactly as before.
+           The esl- prefix keeps these names clear of Bootstrap. */
+        .esl-school-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0 24px 14px;
+        }
+
+        .esl-school-brand-logo {
+            height: 50px;
+            width: auto;
+            max-width: 240px;
+            object-fit: contain;
+        }
+
         .sidebar-close {
             display: none;
             background: none;
@@ -1040,6 +1057,11 @@
                     <span class="material-symbols-outlined">close</span>
                 </button>
             </div>
+            {% if school_logo_url %}
+            <div class="esl-school-brand">
+                <img src="{{ school_logo_url }}" alt="School logo" class="esl-school-brand-logo" />
+            </div>
+            {% endif %}
             <nav class="sidebar-nav">
                 <p class="menu-label">menu</p>
 

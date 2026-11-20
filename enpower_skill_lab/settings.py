@@ -156,6 +156,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'school_admin.context_processors.school_admin_profile',
+                'schools.context_processors.school_branding',
                 'competencies.context_processors.nav_notifications',
                 'attendance.notifications.project_upload_notifications',
                 'parent.context_processors.parent_sidebar',

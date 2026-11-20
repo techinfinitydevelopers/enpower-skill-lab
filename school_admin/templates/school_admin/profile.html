@@ -5,6 +5,27 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/school_admin/school-admin-profile.css' %}">
+<style>
+    /* School Logo card. The esl- prefix keeps these clear of Bootstrap. */
+    .esl-logo-row { display: flex; align-items: flex-start; gap: 20px; flex-wrap: wrap; }
+    .esl-logo-preview {
+        width: 96px; height: 96px; flex: 0 0 96px;
+        border: 1px dashed #d2d2d7; border-radius: 12px; background: #fff;
+        display: flex; align-items: center; justify-content: center; overflow: hidden;
+    }
+    .esl-logo-preview img { max-width: 84px; max-height: 84px; object-fit: contain; }
+    .esl-logo-preview .material-symbols-outlined { font-size: 34px; color: #b0b0b5; }
+    .esl-logo-fields { flex: 1 1 260px; min-width: 240px; }
+    .esl-logo-hint { font-size: 13px; color: #6e6e73; margin: 0 0 10px; line-height: 1.45; }
+    .esl-logo-input { display: block; width: 100%; max-width: 360px; font-size: 13px; margin-bottom: 12px; }
+    .esl-logo-actions { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .esl-logo-save {
+        background: #6b21a8; color: #fff; border: none; border-radius: 8px;
+        padding: 9px 20px; font-size: 14px; font-weight: 600; cursor: pointer;
+    }
+    .esl-logo-save:hover { background: #581c87; }
+    .esl-logo-remove { font-size: 13px; color: #6e6e73; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -149,6 +170,41 @@
                     </div>
                 </div>
             </div>
+
+            <!-- School Logo Card -->
+            {% if school %}
+            <div class="profile-card">
+                <div class="profile-card-header">
+                    <span class="material-symbols-outlined">image</span>
+                    <h2>School Logo</h2>
+                </div>
+
+                <form method="POST" enctype="multipart/form-data" action="{% url 'school_admin_school_logo' %}">
+                    {% csrf_token %}
+                    <div class="esl-logo-row">
+                        <div class="esl-logo-preview">
+                            {% if school.school_logo %}
+                                <img src="{{ school.school_logo.url }}" alt="{{ school.school_name }} logo">
+                            {% else %}
+                                <span class="material-symbols-outlined">add_photo_alternate</span>
+                            {% endif %}
+                        </div>
+                        <div class="esl-logo-fields">
+                            <p class="esl-logo-hint">Shown in the sidebar on your own dashboard, and on the Student and Parent dashboards. A square PNG with a transparent background works best.</p>
+                            <input type="file" name="school_logo" class="esl-logo-input" accept=".png,.jpg,.jpeg,.webp">
+                            <div class="esl-logo-actions">
+                                <button type="submit" class="esl-logo-save">Save Logo</button>
+                                {% if school.school_logo %}
+                                <label class="esl-logo-remove">
+                                    <input type="checkbox" name="remove_school_logo" value="1"> Remove current logo
+                                </label>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            {% endif %}
 
             <!-- Account Security Card -->
             <div class="profile-card">

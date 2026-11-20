@@ -101,6 +101,48 @@ def school_admin_profile_update(request):
 
 @login_required
 @user_passes_test(is_school_admin)
+def school_admin_school_logo(request):
+    """The principal sets their own school's logo.
+
+    Super Admin can already do this from Edit School. Doing it there for every
+    school does not scale, so the principal can do it for their own.
+
+    The school comes from the signed-in user's own profile and never from the
+    request, so a posted school id cannot point this at somebody else's
+    school. This is the only school field a School Admin may write.
+    """
+    if request.method != 'POST':
+        return redirect('school_admin_profile')
+
+    from .models import SchoolAdmin
+
+    profile = (SchoolAdmin.objects
+               .select_related('school')
+               .filter(user=request.user)
+               .first())
+    school = profile.school if profile else None
+    if not school:
+        messages.error(request, 'No school is assigned to your account.')
+        return redirect('school_admin_profile')
+
+    # An unchanged file input posts nothing, so the field is only touched when
+    # a file actually arrives. Clearing it takes the explicit checkbox.
+    if 'school_logo' in request.FILES:
+        school.school_logo = request.FILES['school_logo']
+        school.save(update_fields=['school_logo'])
+        messages.success(request, 'School logo updated.')
+    elif request.POST.get('remove_school_logo') == '1':
+        school.school_logo = None
+        school.save(update_fields=['school_logo'])
+        messages.success(request, 'School logo removed.')
+    else:
+        messages.error(request, 'Choose an image file to upload.')
+
+    return redirect('school_admin_profile')
+
+
+@login_required
+@user_passes_test(is_school_admin)
 def school_admin_change_password(request):
     """School Admin Change Password View"""
     if request.method == 'POST':

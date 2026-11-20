@@ -113,6 +113,21 @@
                             <option value="false" {% if not school.is_active %}selected{% endif %}>Inactive</option>
                         </select>
                     </div>
+
+                    <div class="form-group">
+                        <label for="schoolLogo" class="form-label">School Logo</label>
+                        {% if school.school_logo %}
+                        <p style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                            <img src="{{ school.school_logo.url }}" alt="{{ school.school_name }} logo"
+                                 style="height: 40px; width: auto; max-width: 160px; object-fit: contain; border: 1px solid #e5e5e7; border-radius: 6px; padding: 2px; background: #fff;">
+                            <label style="font-size: 12px; color: #6e6e73; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
+                                <input type="checkbox" name="remove_school_logo" value="1"> Remove
+                            </label>
+                        </p>
+                        {% endif %}
+                        <input type="file" id="schoolLogo" name="school_logo" class="form-input" accept=".png,.jpg,.jpeg,.webp">
+                        <p style="font-size: 12px; color: #6e6e73; margin-top: 4px;">Shown on the School Admin, Student and Parent dashboards. PNG with a transparent background works best.</p>
+                    </div>
                 </div>
             </div>
 

@@ -95,6 +95,11 @@
         .student-sidebar.collapsed { width: 0; min-width: 0; border-right: none; overflow: hidden; }
         .student-sidebar-header { height: 88px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; }
         .student-sidebar-logo { height: 50px; width: auto; max-width: 240px; object-fit: contain; }
+        /* School logo strip. Renders only when the school has uploaded one,
+           so a school without a logo sees the sidebar exactly as before.
+           The esl- prefix keeps these names clear of Bootstrap. */
+        .esl-school-brand { display: flex; align-items: center; gap: 10px; padding: 0 24px 14px; }
+        .esl-school-brand-logo { height: 50px; width: auto; max-width: 240px; object-fit: contain; }
         .student-sidebar-close { display: none; background: none; border: none; color: #1f2937; cursor: pointer; padding: 8px; }
 
         /* Sidebar Navigation */
@@ -241,6 +246,11 @@
                     <span class="material-symbols-outlined">close</span>
                 </button>
             </div>
+            {% if school_logo_url %}
+            <div class="esl-school-brand">
+                <img src="{{ school_logo_url }}" alt="School logo" class="esl-school-brand-logo" />
+            </div>
+            {% endif %}
             <nav class="student-sidebar-nav">
                 <p class="student-menu-label">Menu</p>
 

@@ -2,6 +2,156 @@
 
 Chronological record of completed tasks (per org policy: log after each completed task).
 
+## 2026-11-20 - The school logo reaches three dashboards
+
+    "In edit school - Add a option to add a school logo that will reflect on
+     that schools, Student and Parent Dashboard"
+                              -- Phase 2 deck, small change 3 (priority)
+
+### Most of it already existed
+
+`School.school_logo` has been on the model since the first migration, and
+onboarding has always accepted one (`superadmin/views.py:313`). Two things
+were missing.
+
+The Edit School form never read the field. A logo could therefore be set only
+on the day a school was created, and never afterwards -- which is why no
+school had one.
+
+And nothing rendered it. A grep for `school_logo` found the model, the
+migration, the Django admin and that one line in onboarding. No template.
+
+### Resolved once, not in every view
+
+The logo belongs in the sidebar header, which `base.html` renders on every
+page of three different dashboards. Passing it from each view would have
+meant touching dozens of views and forgetting one, so
+`schools/context_processors.py` resolves it once and the templates read
+`school_logo_url`.
+
+The three roles reach their school by three different paths -- School Admin
+through `SchoolAdmin.school`, Student through `Student.school`, Parent
+through the first active child. The parent path deliberately matches
+`parent.context_processors.parent_sidebar`, so a parent with children in two
+schools sees the same school in both places rather than two different ones.
+
+The processor swallows its own exceptions. Branding is never a good reason
+for a page to fail to render.
+
+### Additive, on purpose
+
+The strip renders only when a logo is set, so every school without one sees
+the sidebar exactly as before -- no empty box, no shifted spacing. The
+ENpower logo stays where it is; the school logo sits under it. Replacing the
+ENpower branding was not asked for and was not assumed.
+
+### The trap in the form
+
+`school.school_logo = request.FILES.get('school_logo')` would have cleared
+the logo every time anyone edited an unrelated field, because an unchanged
+file input posts nothing. The field is only touched when a file is actually
+uploaded, and clearing it needs the explicit Remove checkbox. There is a
+check for exactly this.
+
+### Verified
+
+`verify_school_logo.py`, 26 checks, all passing: the processor for all three
+roles plus an anonymous request, the logo actually present in the HTML of all
+three dashboards, the ENpower logo still present, a school without a logo
+rendering no strip at all, and the form saving, keeping and clearing.
+
+Uploads land on disk, which a rollback does not undo, so the suite deletes
+every file it wrote and counts them.
+
+Also green: `verify_pages.py` 145, `verify_division_filter.py` 44,
+`verify_reports.py` 53, `verify_grading.py` 86.
+
+Media serving needed no work: `SERVE_MEDIA` already defaults to True and the
+root urlconf serves `/media/` with DEBUG off, with a comment that names
+school logos as the reason.
+
+### Then it was looked at, and changed
+
+It was reviewed on a local server with a real logo, which is the only way the
+next three decisions could have been made.
+
+**The school name came out of the strip.** With a long name -- "Sacred
+International Educational Center" -- it wrapped onto three lines and
+outweighed the logo it was supposed to label. The name already appears in the
+page's own cards, so the strip now carries the logo alone.
+
+**The logo was resized to match the ENpower logo**, 50px tall and up to 240px
+wide. At the first 34px it read as a sub-item of the ENpower mark rather than
+the school's own.
+
+**The principal can now upload it themselves**, which the deck did not ask
+for. Doing it from Super Admin for every school does not scale.
+`school_admin_school_logo` takes the school from the signed-in user's own
+profile and never from the request, so a posted school id cannot reach
+another school -- there is a check that posts one and confirms it is ignored.
+This is the only school field a School Admin may write. Spec slide 51 says
+School Admin is view-only; profile and password were already exceptions, and
+this is now a third.
+
+Both routes write the same field, so whichever is used last wins.
+
+### Still not verified
+
+The Student and Parent dashboards were not opened after the resize. The
+School Admin one was.
+
+## 2026-11-16 - BKG Global, Saint Capitanio, Shiv Vani logins restored
+
+    "Please help us with the login id & password for BKG Global School,
+     Saint Capitanio & Shiv Vani asap."  -- client, 16 Nov
+
+### Three schools, three different stories
+
+No code changed today. This entry records what was run against production and
+what it proved, because one of the three answers is not a password problem and
+will be asked about again.
+
+**Saint Capitanio** (`kansamajit@hotmail.com`) and **Shiv Vani**
+(`priyabenoy@gmail.com`) were never locked out. Capitanio signed in on 6 Oct
+and set their own password; Shiv Vani signed in on 3 Nov and was still using
+the password that was mailed to them. Neither password can be read back, so
+the only thing to offer is a new one. `resend_credentials ... --apply` issued
+both, which deliberately invalidated the password Capitanio had chosen -- the
+client was told.
+
+**BKG Global School** was the real fault, and it was not the password. The
+profile read `principal@bkgglobalschool.com`; `User.username` was still
+`shini_sanj@rediffmail.com`. Everyone, including the principal, was typing an
+address that had no account behind it. An edit form before `0e6ef38` moved the
+profile address without moving the login, so the record had been broken since
+whenever that email was changed.
+
+### The repair
+
+`sync_login_email` shipped on 3 Nov for exactly this. Opening
+`/super-admin/school-admin/5/edit/` and pressing **Save Changes** -- with no
+field touched -- moved the login. The page came back with:
+
+    School Admin "Shahnaz" updated successfully!
+    Their login is now principal@bkgglobalschool.com.
+
+So the fix is live and it repairs old records, not just new edits. The
+password issued minutes earlier still works; only the address in front of it
+changed. The edit forms send no email, which is why the credentials went out
+as a separate `resend_credentials` run first.
+
+### Worth keeping
+
+Status columns were useless again. Accounts read `active` with
+`last_login = NEVER`, because Account Status is a plain dropdown on the edit
+form and gets set by hand. `last_login` is the only field that answers
+"did they ever get in".
+
+`SENT` from `resend_credentials` still means the SMTP server accepted the
+message, not that anyone received it. ZeptoMail's delivery log remains the
+only place Delivered / Bounced / Blocked exists, and it has not been checked
+for any of the seven mails sent on 2 Nov and 16 Nov.
+
 ## 2026-11-03 - Score Entry, one division at a time
 
     "there is no option to filter students by division. As a result, all

@@ -11,6 +11,8 @@ urlpatterns = [
     path('logout/', views.school_admin_logout, name='school_admin_logout'),
     path('profile/', views.school_admin_profile, name='school_admin_profile'),
     path('profile/update/', views.school_admin_profile_update, name='school_admin_profile_update'),
+    # The one school field a principal may write: their own school's logo.
+    path('profile/school-logo/', views.school_admin_school_logo, name='school_admin_school_logo'),
     path('change-password/', views.school_admin_change_password, name='school_admin_change_password'),
     path('students/', views.school_admin_student_list, name='school_admin_student_list'),
     path('parents/', views.school_admin_parent_list, name='school_admin_parent_list'),

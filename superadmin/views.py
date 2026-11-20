@@ -534,6 +534,14 @@ def edit_school(request, school_id):
             if 'go_live_certificate' in request.FILES:
                 school.go_live_certificate = request.FILES['go_live_certificate']
 
+            # The logo the School Admin, Student and Parent dashboards show.
+            # Onboarding already accepted one; editing a school did not, so a
+            # logo could only ever be set on the day the school was created.
+            if 'school_logo' in request.FILES:
+                school.school_logo = request.FILES['school_logo']
+            elif data.get('remove_school_logo') == '1':
+                school.school_logo = None
+
             # I. Additional Information
             school.exceptions_for_school = data.get('exceptions_for_school') or None
             school.notable_alumni = data.get('notable_alumni') or None
