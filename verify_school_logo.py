@@ -255,8 +255,18 @@ def check_edit_form(bare):
         is_staff=True, is_superuser=True)
     client = sign_in(superuser)
 
+    # A school whose website is NULL. This is the shape that made the form
+    # unsaveable: `website` is the only nullable field on it, so it is the
+    # only one that can render as the literal "None", and in a type="url"
+    # input the browser then refuses to submit -- taking the logo with it.
+    # Dev data has a real URL on every school, which is why it went unseen.
+    bare.website = None
+    bare.save(update_fields=['website'])
+
     html = page(client, f'/super-admin/school/{bare.id}/edit/')
     check('the form offers a School Logo field', 'name="school_logo"' in html)
+    check('a null website renders as an empty box, not "None"',
+          'value="None"' not in html)
 
     fields = {
         'school_name': bare.school_name, 'school_code': bare.school_code,

@@ -152,7 +152,11 @@
 
                     <div class="form-group">
                         <label for="website" class="form-label">Website</label>
-                        <input type="url" id="website" name="website" class="form-input" value="{{ school.website }}">
+                        {# website is the only nullable field on this form, so it is the only one
+                           that can render as the literal string "None". In a type="url" input that
+                           is not a valid URL, the browser blocks the submit, and the whole form --
+                           logo included -- silently refuses to save. #}
+                        <input type="url" id="website" name="website" class="form-input" value="{{ school.website|default_if_none:'' }}">
                     </div>
                 </div>
             </div>

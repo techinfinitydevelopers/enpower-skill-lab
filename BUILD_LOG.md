@@ -2,6 +2,61 @@
 
 Chronological record of completed tasks (per org policy: log after each completed task).
 
+## 2026-11-24 - Edit School could not be saved at all
+
+    "while uploading school logo form asks for website without it its not
+     being saved"  -- client, 24 Nov
+
+### Not the logo
+
+The logo field was added to Edit School on 20 Nov, which is why people
+started opening that form again. The fault was already there and had nothing
+to do with the logo: the whole form could not be submitted.
+
+`website` is the only nullable field on Edit School. Every other field on it
+-- school_email, principal_name, city, pincode and the rest -- is
+`null=False`, so none of them can ever be None. The template rendered it
+without a filter:
+
+    value="{{ school.website }}"
+
+Django renders None as the string "None", so the box came up holding `None`,
+and the input is `type="url"`. The browser validates a non-empty url input
+before submitting, "None" is not a URL, so it refused to submit and showed
+its own bubble beside the Website field. Nothing on the form saved -- the
+logo least of all.
+
+The client read that bubble as the form demanding a website. The field was
+never required; the box simply was not empty.
+
+### It set its own trap
+
+`edit_school` does `school.website = data.get('website', school.website) or
+None`. Saving once with the website blank writes None, and from then on that
+school's Edit page cannot be submitted again. Every school that was never
+given a website was already stuck.
+
+### Why no suite caught it
+
+All eight schools in the dev database hold a real URL. Not one is NULL or
+blank, so the shape that breaks never existed locally, and the logo suite's
+own fixtures create schools whose website is '' rather than None.
+
+### The fix
+
+    value="{{ school.website|default_if_none:'' }}"
+
+Changing the input to `type="text"` would also stop the bubble, and would be
+wrong: "None" would then save as the school's website.
+
+No data cleanup. A None website still renders as an empty box, and the only
+other place website is displayed (`view-school.html:97`) already carries
+`|default:"-"`.
+
+`verify_school_logo.py` now sets a school's website to None, opens Edit
+School and asserts `value="None"` is absent -- confirmed to fail without the
+template fix and pass with it. 31 checks. `verify_pages.py` 148.
+
 ## 2026-11-20 - The school logo reaches three dashboards
 
     "In edit school - Add a option to add a school logo that will reflect on
