@@ -2,6 +2,116 @@
 
 Chronological record of completed tasks (per org policy: log after each completed task).
 
+## 2026-11-27 - The rest of the Phase 2 small changes
+
+Six of the thirteen were still open. Three stay open and are named at the
+end; nothing was guessed at to close them.
+
+### Two questions asked before anything was built
+
+The deck says Dashboard becomes Assessment and Score Entry moves under it,
+but not what happens to the dashboard page itself, and "Remove class
+overview" does not say whether the dashboard card goes too. Both were put to
+the user rather than assumed. Assessment is a dropdown holding Overview --
+the old dashboard page, which carries the coach's own stats -- and Score
+Entry. Class Overview goes entirely, card included.
+
+### The menus
+
+Dashboard was a plain link, so becoming a parent of Score Entry meant
+becoming a dropdown. Score Entry keeps `/teacher/academics/score-entry/`:
+four verification files hit that address and coaches have it bookmarked.
+
+Score Viewing and Class Overview were deleted, not unlinked -- module,
+template, route and url name. A page that is only unlinked is still reachable
+by typing the address, and both suites now assert 404 rather than a missing
+menu entry. The Class Overview card on the School Admin dashboard went with
+it; its figures were hardcoded placeholders (15 sessions, Grade 10A, 96%) on
+a live principal's screen.
+
+### A filter, deliberately not an access rule
+
+Class Performance takes Grade and Division. Score Entry restricts a coach to
+the divisions they are timetabled for, because entering another class's
+scores is wrong. This screen only reads, so the whole-school view stays the
+default and the dropdowns narrow it.
+
+The filter reaches the stat cards and the competency averages, not only the
+table. A heading that says 7 students over a table of 3 is worse than no
+filter, so there is a check that the two agree.
+
+### Copying an assessment, and why it matches on names
+
+The CSL + projects at BKG had no assessments while their FSL twins had four
+each. Copying them by hand is around sixty dropdown selections per project.
+
+Competencies are matched by **name**. Each framework owns its own rows -- FSL
+spells one `Skills-SP1.C1` where CSL + spells the same competency `KB1.C1` --
+so ids map to nothing across frameworks and codes map to nothing either. A
+competency with no counterpart is skipped and named on the page; a copy that
+came back quietly thinner is the one outcome nobody would notice.
+
+### Files got rows of their own
+
+`StudentProjectUpload.file` held exactly one, so a coach with six photographs
+of one build either picked the best or made six uploads. Files now live in
+`ProjectUploadFile`.
+
+Every upload made before today has its file on the old field and the
+templates read rows, so migration 0008 copies each one across. The field
+stays, the migration reverses cleanly, and `attachments` still falls back to
+it -- not dead code: it covers a row the migration could not reach, so one
+bad row shows its file rather than appearing empty.
+
+My Projects is the student's page for that work. The dashboard listed uploads
+inline with no room for several photos each; it now carries the count and the
+way in. **The bell moved with them.** It cleared on the dashboard because
+that is where the uploads were, and its items pointed at an anchor there --
+both now point at My Projects. Clearing a notification on a page that no
+longer shows the work would hide something the student never saw.
+
+### One report, three readers
+
+Student Reports lets the principal find a child by grade, section, name or
+registration id -- which is what a parent reads out over the phone -- and
+open their project report.
+
+That report is the same page the student and parent see.
+`competencies/report_context.py` assembles it once; `parent/views.py` held
+sixty lines of that assembly and a third copy is how one child ends up with
+two different reports. The suite reads the same report through two roles and
+compares what each names.
+
+The school comes from the principal's own profile, so a student id from
+another school is a 404. There is a check that asks for one.
+
+### Verified
+
+New: `verify_phase2_nav.py` 32, `verify_clone_assessment.py` 23,
+`verify_project_files.py` 26, `verify_sa_student_reports.py` 25.
+
+Still green: `verify_pages.py` 134 (down from 148 -- the four Score Viewing
+views went with the screen), `verify_school_logo.py` 31,
+`verify_reports.py` 53, `verify_division_filter.py` 44,
+`verify_grading.py` 86.
+
+`verify_security.py` reports 8 failures locally -- DEBUG, SSL, the dev
+SECRET_KEY, the admin path. All environment, none touched here.
+
+### Not verified
+
+No browser. The checks prove the markup and the figures; they say nothing
+about how the new My Projects cards or the report filters look on a screen.
+
+### Left open on purpose
+
+* **Assessment type dropdown (change 2)** -- blocked on the client. The eight
+  new names either replace the four live ones, which clears the type on every
+  existing assessment, or sit alongside them.
+* **Monthly and cumulative attendance (change 4)** and **monthly attendance
+  percentage** -- both read Planned vs Actual Sessions, which the deck itself
+  lists under New Development. There is nothing stable to build them on yet.
+
 ## 2026-11-24 - Edit School could not be saved at all
 
     "while uploading school logo form asks for website without it its not
