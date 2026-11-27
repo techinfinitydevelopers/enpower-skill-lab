@@ -54,8 +54,9 @@
                 <input name="title" class="ctrl" maxlength="200" required>
             </div>
             <div>
-                <label class="lbl">File (img / ppt / pdf / doc)</label>
-                <input name="file" type="file" accept=".png,.jpg,.jpeg,.gif,.ppt,.pptx,.pdf,.doc,.docx" class="ctrl">
+                <label class="lbl">Files (img / ppt / pdf / doc)</label>
+                <input name="files" type="file" multiple accept=".png,.jpg,.jpeg,.gif,.ppt,.pptx,.pdf,.doc,.docx" class="ctrl">
+                <div style="font-size:12px; color:#94a3b8;">You can pick more than one.</div>
             </div>
             <div>
                 <label class="lbl">OR Video Link</label>
@@ -90,7 +91,7 @@
             {% if u.project %}<div style="font-size:12px; color:#7c3aed; margin-top:3px;">{{ u.project.title }}</div>{% endif %}
             {% if u.description %}<div style="font-size:13px; color:#6b7280; margin-top:6px;">{{ u.description }}</div>{% endif %}
             <div style="display:flex; gap:14px; margin-top:8px; font-size:12px;">
-                {% if u.file %}<a href="{{ u.file.url }}" target="_blank" style="color:#5A1F6E; font-weight:600; text-decoration:none;"><span class="material-symbols-outlined" style="font-size:14px; vertical-align:middle;">description</span> File</a>{% endif %}
+                {% for f in u.attachments %}<a href="{{ f.file.url }}" target="_blank" style="color:#5A1F6E; font-weight:600; text-decoration:none;"><span class="material-symbols-outlined" style="font-size:14px; vertical-align:middle;">description</span> File {% if u.attachment_count > 1 %}{{ forloop.counter }}{% endif %}</a>{% endfor %}
                 {% if u.video_link %}<a href="{{ u.video_link }}" target="_blank" style="color:#5A1F6E; font-weight:600; text-decoration:none;"><span class="material-symbols-outlined" style="font-size:14px; vertical-align:middle;">play_circle</span> Video</a>{% endif %}
                 <span style="color:#94a3b8;">{{ u.students.count }} student(s)</span>
             </div>

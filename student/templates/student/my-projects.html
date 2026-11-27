@@ -1,0 +1,104 @@
+{% extends 'student/base.html' %}
+{% load static %}
+
+{% block title %}My Projects - Student{% endblock %}
+
+{% block extra_css %}
+<style>
+    .mp-page { padding: 1.5rem; }
+    .mp-head { margin-bottom: 1.25rem; }
+    .mp-title { font-size: 1.3rem; font-weight: 700; color: #1f2937; margin: 0 0 .25rem; display: flex; align-items: center; gap: .5rem; }
+    .mp-title .material-symbols-outlined { color: #6b277e; }
+    .mp-sub { color: #6b7280; font-size: .875rem; margin: 0; }
+
+    .mp-card { background: #fff; border: 1px solid #e5e7eb; border-radius: .75rem; padding: 1.25rem; margin-bottom: 1rem; }
+    .mp-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+    .mp-card-title { font-size: 1.05rem; font-weight: 600; color: #1f2937; margin: 0; }
+    .mp-project { font-size: .75rem; font-weight: 600; color: #6b277e; text-transform: uppercase; letter-spacing: .04em; margin: .2rem 0 0; }
+    .mp-date { font-size: .75rem; color: #9ca3af; white-space: nowrap; }
+    .mp-desc { color: #4b5563; font-size: .9rem; margin: .75rem 0 0; line-height: 1.55; }
+
+    .mp-photos { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1rem; }
+    .mp-photos img { width: 180px; height: 135px; object-fit: cover; border-radius: .5rem; border: 1px solid #e5e7eb; display: block; }
+
+    .mp-files { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1rem; }
+    .mp-file { display: inline-flex; align-items: center; gap: 6px; border: 1px solid #e5e7eb; border-radius: .5rem; padding: .45rem .8rem; font-size: .82rem; color: #6b277e; text-decoration: none; background: #faf7fc; }
+    .mp-file:hover { background: #f3ebf7; }
+    .mp-file .material-symbols-outlined { font-size: 18px; }
+
+    .mp-empty { background: #fff; border: 1px dashed #d1d5db; border-radius: .75rem; padding: 3rem 1.5rem; text-align: center; color: #6b7280; }
+    .mp-empty .material-symbols-outlined { font-size: 40px; color: #d1d5db; display: block; margin: 0 auto .75rem; }
+
+    @media (max-width: 640px) {
+        .mp-photos img { width: 100%; height: auto; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mp-page">
+    <div class="mp-head">
+        <h1 class="mp-title">
+            <span class="material-symbols-outlined">folder_open</span>
+            My Projects
+        </h1>
+        <p class="mp-sub">Work your Thinking Coach has shared with you — photos, documents and notes.</p>
+    </div>
+
+    {% for upload in uploads %}
+    <div class="mp-card">
+        <div class="mp-card-head">
+            <div>
+                <h2 class="mp-card-title">{{ upload.title }}</h2>
+                {% if upload.project %}<p class="mp-project">{{ upload.project.title }}</p>{% endif %}
+            </div>
+            <span class="mp-date">{{ upload.created_at|date:"d M Y" }}</span>
+        </div>
+
+        {% if upload.description %}
+        <p class="mp-desc">{{ upload.description }}</p>
+        {% endif %}
+
+        {% comment %}
+            Photographs are shown, everything else is linked. A coach uploads
+            pictures of the work far more often than documents, and a photo
+            behind a "View File" link reads as though nothing arrived.
+        {% endcomment %}
+        {% with photos=upload.photo_attachments documents=upload.document_attachments %}
+        {% if photos %}
+        <div class="mp-photos">
+            {% for f in photos %}
+            <a href="{{ f.file.url }}" target="_blank" rel="noopener">
+                <img src="{{ f.file.url }}" alt="{{ upload.title }}">
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if documents or upload.video_link %}
+        <div class="mp-files">
+            {% for f in documents %}
+            <a class="mp-file" href="{{ f.file.url }}" target="_blank" rel="noopener">
+                <span class="material-symbols-outlined">attach_file</span>
+                Document{% if documents|length > 1 %} {{ forloop.counter }}{% endif %}
+            </a>
+            {% endfor %}
+            {% if upload.video_link %}
+            <a class="mp-file" href="{{ upload.video_link }}" target="_blank" rel="noopener">
+                <span class="material-symbols-outlined">play_circle</span>
+                Watch Video
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% endwith %}
+    </div>
+    {% empty %}
+    <div class="mp-empty">
+        <span class="material-symbols-outlined">folder_off</span>
+        Nothing has been shared with you yet.<br>
+        Your Thinking Coach will upload your project work here.
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

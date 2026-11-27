@@ -14,6 +14,36 @@ def is_student(user):
 
 @login_required
 @user_passes_test(is_student)
+def student_my_projects(request):
+    """Everything the coach has uploaded for this student.
+
+    Phase 2 moved this off the dashboard, which listed the uploads inline and
+    had no room for several photographs each. The dashboard now links here.
+
+    Reading this page is what clears the bell, because this is where the
+    uploads are now shown; leaving `mark_seen` on the dashboard would have
+    cleared the notification for something the student never saw.
+    """
+    from attendance.notifications import mark_seen
+    from attendance.services import student_project_uploads
+
+    student = (getattr(request.user, 'student_profile', None)
+               or getattr(request.user, 'student', None))
+
+    uploads = []
+    if student:
+        uploads = student_project_uploads(student)
+        uploads.sort(key=lambda u: u.created_at, reverse=True)
+        mark_seen(request.user)
+
+    return render(request, 'student/my-projects.html', {
+        'student': student,
+        'uploads': uploads,
+    })
+
+
+@login_required
+@user_passes_test(is_student)
 def student_dashboard(request):
     """Student dashboard view (PPT slides 44-46) wired to real data."""
     from attendance.services import (
@@ -94,13 +124,12 @@ def student_dashboard(request):
         context['projects_total'] = total
         context['attendance'] = student_attendance_stats(student)
 
-        # Project completion report + uploads (slide 46)
+        # Project completion report (slide 46). The uploads themselves moved
+        # to My Projects in Phase 2; only the count is shown here, and the
+        # bell is cleared there rather than here -- clearing it on a page that
+        # no longer shows the uploads would hide work the student never saw.
         context['sessions_completed'] = sessions_completed(student)
-        context['project_uploads'] = student_project_uploads(student)
-        # The dashboard is where the uploads are listed, so reading it
-        # is what clears the bell.
-        from attendance.notifications import mark_seen
-        mark_seen(request.user)
+        context['project_upload_count'] = len(student_project_uploads(student))
     else:
         context['attendance'] = {
             'total_sessions': 0, 'attended': 0, 'percent': 0,

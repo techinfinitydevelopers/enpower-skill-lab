@@ -241,6 +241,63 @@ class StudentProjectUpload(models.Model):
         name = getattr(self.file, 'name', '') or ''
         return name.lower().endswith(self.PICTURE_SUFFIXES)
 
+    @property
+    def attachments(self):
+        """Every file on this upload, in order.
+
+        One session produces several photographs, so Phase 2 moved files to
+        their own rows. `file` stays on the model and every old row's file was
+        copied into the new table by migration, so nothing that was uploaded
+        before has gone anywhere.
+
+        The fallback below is not dead code: it covers a row whose file the
+        migration could not reach, so one bad row shows its own file rather
+        than appearing empty.
+        """
+        rows = list(self.files.all())
+        if rows:
+            return rows
+        if self.file:
+            return [self]
+        return []
+
+    @property
+    def attachment_count(self):
+        return len(self.attachments)
+
+    @property
+    def photo_attachments(self):
+        return [f for f in self.attachments if f.is_picture]
+
+    @property
+    def document_attachments(self):
+        return [f for f in self.attachments if not f.is_picture]
+
+
+class ProjectUploadFile(models.Model):
+    """One file on a project upload.
+
+    `StudentProjectUpload.file` held exactly one, which meant a coach with six
+    photographs of the same build either uploaded the best one or made six
+    uploads of the same project.
+    """
+    upload = models.ForeignKey(StudentProjectUpload, on_delete=models.CASCADE,
+                               related_name='files')
+    file   = models.FileField(upload_to='student_projects/',
+                              help_text='image/ppt/pdf/doc')
+    order  = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ['order', 'id']
+
+    def __str__(self):
+        return f"{self.upload_id}: {self.file.name}"
+
+    @property
+    def is_picture(self):
+        name = getattr(self.file, 'name', '') or ''
+        return name.lower().endswith(StudentProjectUpload.PICTURE_SUFFIXES)
+
 
 # ============================================================
 # Project uploads: "has this person seen the new ones yet?"

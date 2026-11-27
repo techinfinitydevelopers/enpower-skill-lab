@@ -1919,9 +1919,14 @@ def student_project_upload(request):
             description=request.POST.get('description', '').strip(),
             created_by=request.user,
         )
-        if 'file' in request.FILES:
-            upload.file = request.FILES['file']
-            upload.save()
+        # Several files per upload (Phase 2). `file` is still accepted so an
+        # older cached form, or anything posting the single field, keeps
+        # working; both end up as rows.
+        from attendance.models import ProjectUploadFile
+
+        incoming = request.FILES.getlist('files') or request.FILES.getlist('file')
+        for order, f in enumerate(incoming):
+            ProjectUploadFile.objects.create(upload=upload, file=f, order=order)
 
         # Link selected students (must belong to teacher's school)
         student_ids = request.POST.getlist('students')

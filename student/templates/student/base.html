@@ -276,6 +276,15 @@
                 </a>
 
                 {% comment %}
+                    My Projects sits beside Project Report, where Phase 2 asked
+                    for it: the report is the scoring, this is the work itself.
+                {% endcomment %}
+                <a href="{% url 'student:student_my_projects' %}" id="nav-my-projects" class="student-sidebar-nav-link">
+                    <span class="material-symbols-outlined">folder_open</span>
+                    My Projects
+                </a>
+
+                {% comment %}
                   The annual report, named and switched on per framework from
                   Manage Frameworks. CSL Foundation reports on the project and
                   Kaushal Bodh only, so for them this link is not there at all.
@@ -344,7 +353,7 @@
                                     thing the student actually did.
                                 {% endcomment %}
                                 {% for upload in nav_project_uploads %}
-                                <a href="{% url 'student:student_dashboard' %}#view-projects" class="student-notification-item unread">
+                                <a href="{% url 'student:student_my_projects' %}" class="student-notification-item unread">
                                     <div class="student-notification-icon bg-green">
                                         <span class="material-symbols-outlined">photo_library</span>
                                     </div>

@@ -285,44 +285,25 @@
             </div>
         </div>
 
-        <!-- View Projects -->
+        {% comment %}
+            The uploads themselves moved to My Projects (Phase 2). What stays
+            here is the way in, so a student who used to find them on the
+            dashboard is not left wondering where they went.
+        {% endcomment %}
         <div class="stud-dash-card" style="margin-top:1.5rem;">
-            <h3 class="stud-dash-gamification-title">View Projects</h3>
-            {% for upload in project_uploads %}
-            <div style="border:1px solid #e5e7eb;border-radius:0.5rem;padding:1rem;margin-top:0.75rem;">
-                <h4 style="font-size:1rem;font-weight:600;color:#1f2937;margin-bottom:0.25rem;">{{ upload.title }}</h4>
-                {% if upload.description %}
-                <p style="color:#4b5563;font-size:0.875rem;margin-bottom:0.5rem;">{{ upload.description }}</p>
+            <h3 class="stud-dash-gamification-title">My Projects</h3>
+            <p style="color:#6b7280;font-size:0.875rem;margin:0.5rem 0 1rem;">
+                {% if project_upload_count %}
+                {{ project_upload_count }} project{{ project_upload_count|pluralize }} your Thinking Coach has shared with you.
+                {% else %}
+                No projects have been shared with you yet.
                 {% endif %}
-                {% comment %}
-                    Coaches upload photographs of the work. Showing those as a
-                    "View File" link meant the dashboard looked empty to anyone
-                    expecting to see the project, which is how this was
-                    reported. Pictures are shown as pictures; anything else
-                    (a PDF, a slide deck) still gets a link.
-                {% endcomment %}
-                {% if upload.is_picture %}
-                <a href="{{ upload.file.url }}" target="_blank" rel="noopener">
-                    <img src="{{ upload.file.url }}" alt="{{ upload.title }}"
-                         style="width:100%;max-width:320px;border-radius:0.5rem;margin-bottom:0.5rem;display:block;">
-                </a>
-                {% endif %}
-                <div style="display:flex;gap:1rem;flex-wrap:wrap;">
-                    {% if upload.file and not upload.is_picture %}
-                    <a href="{{ upload.file.url }}" target="_blank" rel="noopener" style="color:#6b277e;font-size:0.875rem;display:inline-flex;align-items:center;gap:4px;">
-                        <span class="material-symbols-outlined">attach_file</span>View File
-                    </a>
-                    {% endif %}
-                    {% if upload.video_link %}
-                    <a href="{{ upload.video_link }}" target="_blank" rel="noopener" style="color:#6b277e;font-size:0.875rem;display:inline-flex;align-items:center;gap:4px;">
-                        <span class="material-symbols-outlined">play_circle</span>Watch Video
-                    </a>
-                    {% endif %}
-                </div>
-            </div>
-            {% empty %}
-            <p style="color:#6b7280;margin-top:0.75rem;">No projects uploaded yet.</p>
-            {% endfor %}
+            </p>
+            <a href="{% url 'student:student_my_projects' %}"
+               style="display:inline-flex;align-items:center;gap:6px;background:#6b277e;color:#fff;padding:0.5rem 1rem;border-radius:0.5rem;font-size:0.875rem;font-weight:600;text-decoration:none;">
+                <span class="material-symbols-outlined" style="font-size:18px;">folder_open</span>
+                View My Projects
+            </a>
         </div>
     </div>
 </div>

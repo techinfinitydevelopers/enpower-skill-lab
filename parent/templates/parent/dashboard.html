@@ -137,18 +137,18 @@
                 {% if upload.description %}
                 <p style="color:#4b5563;font-size:.875rem;margin-bottom:.5rem;">{{ upload.description }}</p>
                 {% endif %}
-                {% if upload.is_picture %}
-                <a href="{{ upload.file.url }}" target="_blank" rel="noopener">
-                    <img src="{{ upload.file.url }}" alt="{{ upload.title }}"
+                {% for f in upload.attachments %}{% if f.is_picture %}
+                <a href="{{ f.file.url }}" target="_blank" rel="noopener">
+                    <img src="{{ f.file.url }}" alt="{{ upload.title }}"
                          style="width:100%;max-width:320px;border-radius:.5rem;margin-bottom:.5rem;display:block;">
                 </a>
-                {% endif %}
+                {% endif %}{% endfor %}
                 <div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:center;">
-                    {% if upload.file and not upload.is_picture %}
-                    <a href="{{ upload.file.url }}" target="_blank" rel="noopener" style="color:#6b277e;font-size:.875rem;display:inline-flex;align-items:center;gap:4px;">
-                        <span class="material-symbols-outlined">attach_file</span>View File
+                    {% for f in upload.attachments %}{% if not f.is_picture %}
+                    <a href="{{ f.file.url }}" target="_blank" rel="noopener" style="color:#6b277e;font-size:.875rem;display:inline-flex;align-items:center;gap:4px;">
+                        <span class="material-symbols-outlined">attach_file</span>View File{% if upload.attachment_count > 1 %} {{ forloop.counter }}{% endif %}
                     </a>
-                    {% endif %}
+                    {% endif %}{% endfor %}
                     {% if upload.video_link %}
                     <a href="{{ upload.video_link }}" target="_blank" rel="noopener" style="color:#6b277e;font-size:.875rem;display:inline-flex;align-items:center;gap:4px;">
                         <span class="material-symbols-outlined">play_circle</span>Watch Video
