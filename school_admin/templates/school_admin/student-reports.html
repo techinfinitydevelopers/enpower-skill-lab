@@ -1,0 +1,90 @@
+{% extends 'school_admin/base.html' %}
+{% load static %}
+
+{% block title %}Student Reports - School Admin{% endblock %}
+
+{% block extra_css %}{% include 'school_admin/_page_styles.html' %}
+<style>
+    .sr-filters { display:flex; align-items:flex-end; gap:14px; flex-wrap:wrap; margin-bottom:1.25rem; }
+    .sr-label { display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#9ca3af; margin-bottom:5px; }
+    .sr-input { background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:9px 14px; font-size:14px; color:#1f2937; min-width:170px; }
+    .sr-go { background:#6b21a8; color:#fff; border:none; border-radius:10px; padding:10px 20px; font-size:14px; font-weight:600; cursor:pointer; }
+    .sr-clear { font-size:13px; font-weight:600; color:#6b21a8; text-decoration:none; padding-bottom:11px; }
+    .sr-count { font-size:12px; color:#6b7280; margin:0 0 .75rem; }
+    .sr-open { color:#6b21a8; font-weight:600; text-decoration:none; }
+    .sr-none { color:#9ca3af; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="sa-page">
+    <div class="sa-head">
+        <div>
+            <h1 class="sa-title">Student Reports</h1>
+            <p class="sa-sub">Open any student's project report by grade, section or name.</p>
+        </div>
+    </div>
+
+    <form method="get" class="sr-filters">
+        <div>
+            <label class="sr-label" for="gradeFilter">Grade</label>
+            <select name="grade" id="gradeFilter" class="sr-input" onchange="this.form.division.value=''; this.form.submit();">
+                <option value="">All grades</option>
+                {% for g in grades %}
+                <option value="{{ g }}" {% if g == selected_grade %}selected{% endif %}>Grade {{ g }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="sr-label" for="divisionFilter">Section</label>
+            <select name="division" id="divisionFilter" class="sr-input" onchange="this.form.submit();">
+                <option value="">All sections</option>
+                {% for d in divisions %}
+                <option value="{{ d }}" {% if d == selected_division %}selected{% endif %}>Section {{ d }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="sr-label" for="nameFilter">Name</label>
+            <input type="search" name="name" id="nameFilter" class="sr-input" value="{{ name_query }}" placeholder="Name or registration ID">
+        </div>
+        <button type="submit" class="sr-go">Search</button>
+        {% if selected_grade or selected_division or name_query %}
+        <a href="{% url 'school_admin_student_reports' %}" class="sr-clear">Clear</a>
+        {% endif %}
+    </form>
+
+    <p class="sr-count">{{ rows|length }} student{{ rows|length|pluralize }}</p>
+
+    <div class="sa-card">
+        <table class="sa-table">
+            <thead>
+                <tr>
+                    <th>Student</th>
+                    <th>Registration ID</th>
+                    <th>Class</th>
+                    <th>Reports</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in rows %}
+                <tr>
+                    <td style="font-weight:600;">{{ r.student.first_name }} {{ r.student.last_name }}</td>
+                    <td>{{ r.student.skill_lab_reg_id|default:"—" }}</td>
+                    <td>{{ r.student.student_class }}{% if r.student.division %}-{{ r.student.division|upper }}{% endif %}</td>
+                    <td>{% if r.reports %}{{ r.reports }}{% else %}<span class="sr-none">None yet</span>{% endif %}</td>
+                    <td>
+                        {% if r.reports %}
+                        <a class="sr-open" href="{% url 'school_admin_student_report_list' r.student.id %}">Open</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" style="text-align:center; color:#9ca3af; padding:28px 0;">No students match.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

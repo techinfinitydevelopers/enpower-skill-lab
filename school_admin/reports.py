@@ -106,3 +106,128 @@ def _export_workbook(school, panels):
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     wb.save(response)
     return response
+
+
+# ── Individual student project reports ──────────────────────────────────
+#
+# "Provide access to individual student project reports by Grade, Section &
+#  Name - Add under reports"  -- Phase 2 deck, small change 13
+#
+# The principal could see grade-wise panels and download a workbook, but not
+# open one child's report, which is what a parent asks them about.
+
+@login_required
+@user_passes_test(is_school_admin)
+def student_reports(request):
+    """Pick a student by Grade, Section and Name, and see their reports."""
+    from competencies.models import ProjectReport
+    from student.models import Student
+
+    school, bail = _school_or_redirect(request)
+    if bail:
+        return bail
+
+    students = Student.objects.filter(school=school, is_active=True)
+
+    grades = sorted(
+        {str(g).strip() for g in students.values_list('student_class', flat=True)
+         if str(g).strip()},
+        key=lambda g: (not g.isdigit(), int(g) if g.isdigit() else 0, g))
+
+    grade = (request.GET.get('grade') or '').strip()
+    if grade not in grades:
+        grade = ''
+    if grade:
+        students = students.filter(student_class=grade)
+
+    # Sections are free text and have been stored in both cases, so they are
+    # folded here and compared with __iexact below.
+    divisions = sorted({(d or '').strip().upper()
+                        for d in students.values_list('division', flat=True)
+                        if (d or '').strip()})
+
+    division = (request.GET.get('division') or '').strip().upper()
+    if division not in divisions:
+        division = ''
+    if division:
+        students = students.filter(division__iexact=division)
+
+    name = (request.GET.get('name') or '').strip()
+    if name:
+        from django.db.models import Q
+        students = students.filter(Q(first_name__icontains=name)
+                                   | Q(last_name__icontains=name)
+                                   | Q(skill_lab_reg_id__icontains=name))
+
+    students = students.order_by('student_class', 'division',
+                                 'first_name', 'last_name')
+
+    # One query for the counts rather than one per student.
+    counts = {}
+    for sid in ProjectReport.objects.filter(
+            student__in=students).values_list('student_id', flat=True):
+        counts[sid] = counts.get(sid, 0) + 1
+
+    rows = [{'student': s, 'reports': counts.get(s.id, 0)} for s in students]
+
+    return render(request, 'school_admin/student-reports.html', {
+        'school': school,
+        'rows': rows,
+        'grades': grades,
+        'divisions': divisions,
+        'selected_grade': grade,
+        'selected_division': division,
+        'name_query': name,
+        'page_title': 'Student Reports',
+    })
+
+
+@login_required
+@user_passes_test(is_school_admin)
+def student_report_list(request, student_id):
+    """Which project reports exist for one student of this school."""
+    from django.shortcuts import get_object_or_404
+
+    from competencies.report_context import project_report_rows
+    from student.models import Student
+
+    school, bail = _school_or_redirect(request)
+    if bail:
+        return bail
+
+    # Scoped to the principal's own school, so a student id from elsewhere is
+    # a 404 rather than another school's child.
+    student = get_object_or_404(Student, id=student_id, school=school)
+
+    return render(request, 'school_admin/student-report-list.html', {
+        'school': school,
+        'student': student,
+        'reports': project_report_rows(student),
+        'page_title': f'{student.first_name} — Reports',
+    })
+
+
+@login_required
+@user_passes_test(is_school_admin)
+def student_report_detail(request, student_id, project_id):
+    """One project report, the same page the student and parent see."""
+    from django.shortcuts import get_object_or_404
+    from django.urls import reverse
+
+    from competencies.report_context import build_project_report_context
+    from student.models import Student
+
+    school, bail = _school_or_redirect(request)
+    if bail:
+        return bail
+
+    student = get_object_or_404(Student, id=student_id, school=school)
+
+    context = build_project_report_context(
+        student, project_id,
+        nav_back_url=reverse('school_admin_student_report_list',
+                             args=[student.id]),
+        nav_back_label=f"Back to {student.first_name}'s Reports",
+        nav_next_url='')
+    context['school'] = school
+    return render(request, 'school_admin/student-report-detail.html', context)

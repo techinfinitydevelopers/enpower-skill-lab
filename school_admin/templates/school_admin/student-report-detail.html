@@ -1,0 +1,19 @@
+{% extends 'school_admin/base.html' %}
+{% load static %}
+
+{% block title %}{{ report.project.title }} — {{ student.first_name }}{% endblock %}
+
+{% block extra_css %}{% include 'student/_passport_styles.html' %}{% endblock %}
+
+{% block content %}
+{% comment %}
+    The same report the student and the parent see, through the same partial.
+    The principal gets no extra detail and no less: three different renderings
+    of one child's scores is how two of them end up disagreeing.
+{% endcomment %}
+<div style="width:100%;max-width:1536px;margin:0 auto;padding:2rem 1.5rem;">
+{% include 'student/_report_body.html' %}
+</div>
+{% endblock %}
+
+{% block extra_js %}{% include 'student/_passport_scripts.html' %}{% endblock %}

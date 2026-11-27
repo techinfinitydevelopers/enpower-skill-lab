@@ -295,96 +295,31 @@ def _child_or_404(request, student_id):
 @user_passes_test(is_parent)
 def parent_child_reports(request, student_id):
     """List a child's generated project reports, plus a link to the passport."""
-    from competencies.models import ProjectReport
+    from competencies.report_context import project_report_rows
 
     child = _child_or_404(request, student_id)
-    reports = (
-        ProjectReport.objects.filter(student=child)
-        .select_related('project')
-        .order_by('project__sequence_number', 'project__title')
-    )
-
-    rows = []
-    for r in reports:
-        values = [c['score'] for c in (r.all_competency_scores or []) if c.get('score') is not None]
-        rows.append({
-            'project_id': r.project_id,
-            'title': r.project.title,
-            'category': r.project.project_type,
-            'average': round(sum(values) / len(values), 1) if values else None,
-            'competency_count': len(values),
-            'generated_at': r.generated_at,
-        })
-
-    return render(request, 'parent/child-reports.html', {'child': child, 'reports': rows})
+    return render(request, 'parent/child-reports.html',
+                  {'child': child, 'reports': project_report_rows(child)})
 
 
 @login_required
 @user_passes_test(is_parent)
 def parent_child_report_detail(request, student_id, project_id):
-    """One project report for the parent's child — same content the student sees."""
-    from competencies.models import ProjectReport, Profile, StudentAssessmentFeedback
-    from competencies.engine import (refresh_competency_labels,
-                                     get_per_assessment_breakdown, group_by_sub_pillar)
+    """One project report for the parent's child, as the student sees it.
+
+    The context is built by competencies.report_context, which the student,
+    the parent and the principal all share: the partial below reads a long
+    list of keys, and three copies of that assembly drifted apart.
+    """
+    from competencies.report_context import build_project_report_context
 
     child = _child_or_404(request, student_id)
-    report = get_object_or_404(ProjectReport, student=child, project_id=project_id)
-
-    all_scores = report.all_competency_scores or []
-    # Every stored list that renders a competency name, so a rename shows the
-    # same way here as in the live per-assessment breakdown below.
-    refresh_competency_labels(all_scores, report.skills_to_work_on,
-                              report.top_5_competencies, report.common_strengths)
-
-    def label(score):
-        if score >= 8: return 'very_strong'
-        if score >= 6: return 'strong'
-        if score >= 4: return 'emerging'
-        return 'skill_to_work_on'
-
-    values = [c['score'] for c in all_scores if c.get('score') is not None]
-    profiles = report.top_3_profiles or []
-    prof_tags = {}
-    prof_ids = [p['profile_id'] for p in profiles if p.get('profile_id')]
-    if prof_ids:
-        for pr in Profile.objects.filter(id__in=prof_ids).prefetch_related('primary_competencies'):
-            prof_tags[pr.id] = [c.name for c in pr.primary_competencies.all()[:3]]
-    for p in profiles:
-        p['match_percent'] = int(round((p.get('score') or 0) * 10))
-        p['tags'] = prof_tags.get(p.get('profile_id'), [])
-
-    # Letter grades, read the same way as on the student's own copy: the two
-    # pages share one partial, so they have to be handed the same fields.
-    from competencies.grading import grade_for
-    breakdown = get_per_assessment_breakdown(child, report.project)
-    overall = round(sum(values) / len(values), 1) if values else 0
-
-    return render(request, 'parent/child-report-detail.html', {
-        'child': child,
-        'student': child,                     # shared passport partials read `student`
-        'report': report,
-        'very_strong': [c for c in all_scores if label(c['score']) == 'very_strong'],
-        'strong':      [c for c in all_scores if label(c['score']) == 'strong'],
-        'emerging':    [c for c in all_scores if label(c['score']) == 'emerging'],
-        'feedbacks': StudentAssessmentFeedback.objects.filter(
-            student=child, assessment__project_id=project_id
-        ).select_related('entered_by').order_by('-updated_at'),
-        # The coach's overall note on the project — saved by teachers but not
-        # rendered anywhere until now.
-        'project_feedback': StudentProjectFeedback.objects.filter(
-            student=child, project_id=project_id
-        ).select_related('entered_by').first(),
-        'overall_score': overall,
-        'overall_grade': grade_for(overall) if values else None,
-        'best_match': profiles[0]['match_percent'] if profiles else 0,
-        'assessment_breakdown': breakdown,
-        'sub_pillar_groups': group_by_sub_pillar(all_scores),
-        # Footer nav — the shared partial defaults to student URLs, which a
-        # parent cannot open (they were bounced to /login).
-        'nav_back_url':   reverse('parent_child_reports', args=[child.id]),
-        'nav_back_label': "Back to %s's Reports" % child.first_name,
-        'nav_next_url':   reverse('parent_child_passport', args=[child.id]),
-    })
+    context = build_project_report_context(
+        child, project_id,
+        nav_back_url=reverse('parent_child_reports', args=[child.id]),
+        nav_back_label="Back to %s's Reports" % child.first_name,
+        nav_next_url=reverse('parent_child_passport', args=[child.id]))
+    return render(request, 'parent/child-report-detail.html', context)
 
 
 @login_required

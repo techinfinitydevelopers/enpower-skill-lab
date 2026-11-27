@@ -21,5 +21,9 @@ urlpatterns = [
     path('thinking-coaches/<int:teacher_id>/', pages.view_teacher, name='school_admin_view_teacher'),
     path('classes/attendance/', pages.class_attendance, name='school_admin_class_attendance'),
     path('reports/download/', reports.download_reports, name='school_admin_download_reports'),
+    # Individual student project reports, by grade, section and name.
+    path('reports/students/', reports.student_reports, name='school_admin_student_reports'),
+    path('reports/students/<int:student_id>/', reports.student_report_list, name='school_admin_student_report_list'),
+    path('reports/students/<int:student_id>/<int:project_id>/', reports.student_report_detail, name='school_admin_student_report_detail'),
     path('announcements/', views.school_admin_announcements, name='school_admin_announcements'),
 ]
