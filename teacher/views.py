@@ -832,6 +832,44 @@ def reports_analytics(request):
 
     students = Student.objects.filter(school=teacher_school, is_active=True).order_by('first_name', 'last_name')
 
+    # Grade and Division filters (Phase 2). This is a filter, not an access
+    # rule: unlike Score Entry, which restricts a coach to the divisions they
+    # are timetabled for because entering someone else's scores is wrong, this
+    # screen only reads. Leaving both unset keeps the whole-school view the
+    # coach had before.
+    grades = sorted(
+        {str(g).strip() for g in students.values_list('student_class', flat=True)
+         if str(g).strip()},
+        key=lambda g: (not g.isdigit(), int(g) if g.isdigit() else 0, g))
+
+    grade = (request.GET.get('grade') or '').strip()
+    if grade not in grades:
+        grade = ''
+
+    if grade:
+        students = students.filter(student_class=grade)
+
+    # Sections are free text and have been stored in both cases, so they are
+    # folded here and compared with __iexact below. See the 'c' against 'C'
+    # that once emptied a roster of 41.
+    divisions = sorted({(d or '').strip().upper()
+                        for d in students.values_list('division', flat=True)
+                        if (d or '').strip()})
+
+    division = (request.GET.get('division') or '').strip().upper()
+    if division not in divisions:
+        division = ''
+
+    if division:
+        students = students.filter(division__iexact=division)
+
+    if grade and division:
+        scope_label = f'in Grade {grade}-{division}'
+    elif grade:
+        scope_label = f'in Grade {grade}'
+    else:
+        scope_label = 'in your school'
+
     scores = ScoreEntry.objects.filter(
         student__in=students, score__isnull=False
     ).select_related('assessment_competency__competency')
@@ -874,6 +912,11 @@ def reports_analytics(request):
         'competencies_tracked': len(competency_rows),
         'competency_rows': competency_rows,
         'student_rows': student_rows,
+        'grades': grades,
+        'divisions': divisions,
+        'selected_grade': grade,
+        'selected_division': division,
+        'scope_label': scope_label,
     }
     return render(request, 'teacher/reports-analytics.html', context)
 

@@ -245,10 +245,23 @@
                 </button>
             </div>
             <nav class="sidebar-nav">
-                <a href="{% url 'teacher:teacher_dashboard' %}" id="nav-dashboard" class="sidebar-nav-link">
-                    <span class="material-symbols-outlined">dashboard</span>
-                    Dashboard
-                </a>
+                {% comment %}
+                    Was a plain "Dashboard" link. Phase 2 renames it to Assessment and
+                    moves Score Entry under it, so it has to become a dropdown. The
+                    dashboard page itself stays, as "Overview" -- it carries the coach's
+                    own stats and nothing replaces it.
+                {% endcomment %}
+                <div class="sidebar-dropdown">
+                    <a href="#" class="sidebar-dropdown-toggle" id="assessment-dropdown">
+                        <span class="material-symbols-outlined">dashboard</span>
+                        Assessment
+                        <span class="material-symbols-outlined dropdown-icon">expand_more</span>
+                    </a>
+                    <div class="sidebar-dropdown-menu">
+                        <a href="{% url 'teacher:teacher_dashboard' %}" id="nav-dashboard"><span class="material-symbols-outlined">space_dashboard</span>Overview</a>
+                        <a href="{% url 'teacher:score_entry' %}" id="nav-score-entry"><span class="material-symbols-outlined">edit_square</span>Score Entry</a>
+                    </div>
+                </div>
                 <div class="sidebar-dropdown">
                     <a href="#" class="sidebar-dropdown-toggle" id="students-dropdown">
                         <span class="material-symbols-outlined">school</span>
@@ -268,16 +281,6 @@
                     <div class="sidebar-dropdown-menu">
                         <a href="{% url 'teacher:lesson_library' %}" id="nav-lessons"><span class="material-symbols-outlined">library_books</span>Lesson Library</a>
                         <a href="{% url 'teacher:add_lesson' %}" id="nav-add-lesson"><span class="material-symbols-outlined">add_circle</span>Create Lesson</a>
-                    </div>
-                </div>
-                <div class="sidebar-dropdown">
-                    <a href="#" class="sidebar-dropdown-toggle" id="academics-dropdown">
-                        <span class="material-symbols-outlined">school</span>
-                        Academics
-                        <span class="material-symbols-outlined dropdown-icon">expand_more</span>
-                    </a>
-                    <div class="sidebar-dropdown-menu">
-                        <a href="{% url 'teacher:score_entry' %}" id="nav-score-entry"><span class="material-symbols-outlined">edit_square</span>Score Entry</a>
                     </div>
                 </div>
                 <div class="sidebar-dropdown">
@@ -312,7 +315,6 @@
                         <span class="material-symbols-outlined dropdown-icon">expand_more</span>
                     </a>
                     <div class="sidebar-dropdown-menu">
-                        <a href="{% url 'teacher:score_viewing' %}" id="nav-score-viewing"><span class="material-symbols-outlined">table_view</span>Score Viewing</a>
                         <a href="{% url 'teacher:reports_analytics' %}#class-performance" id="nav-class-performance"><span class="material-symbols-outlined">insights</span>Class Performance</a>
                         <a href="{% url 'teacher:reports_analytics' %}#competency-reports" id="nav-competency-reports"><span class="material-symbols-outlined">assessment</span>Competency Reports</a>
                         <a href="{% url 'teacher:reports_analytics' %}#student-reports" id="nav-student-reports"><span class="material-symbols-outlined">summarize</span>Student Reports</a>

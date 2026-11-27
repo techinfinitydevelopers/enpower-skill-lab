@@ -1,6 +1,5 @@
 from django.urls import path
 from . import views
-from . import score_views
 # The timetable pages are shared with the coordinator; see
 # coordinator/views.py _timetable_queryset / _timetable_chrome.
 from django.contrib.auth.decorators import user_passes_test
@@ -24,8 +23,6 @@ urlpatterns = [
     path('students/', views.student_list, name='student_list'),
     path('students/<int:student_id>/', views.view_student, name='view_student'),
     path('reports/', views.reports_analytics, name='reports_analytics'),
-    # Score Viewing — spec slide 14 (four views over the same scores)
-    path('score-viewing/', score_views.score_viewing, name='score_viewing'),
     path('lessons/', views.lesson_library, name='lesson_library'),
     path('lessons/add/', views.add_lesson, name='add_lesson'),
     path('lessons/<int:lesson_id>/', views.view_lesson, name='view_lesson'),

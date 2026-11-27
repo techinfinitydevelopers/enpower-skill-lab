@@ -259,8 +259,13 @@ def run():
             code, body, _ = fetch(client, f'/parent/child/{child.id}/kaushal-bodh/')
             check('parent KB report 200', code == 200, f'status {code}')
 
-    # Thinking Coach — Score Viewing, the four views on spec slide 14
-    print('\nRendering teacher Score Viewing (slide 14)')
+    # Thinking Coach — Score Entry and the pages around it.
+    #
+    # Score Viewing (spec slide 14) was checked here until Phase 2 removed the
+    # screen as "old version that is not relevant anymore". Its four views went
+    # with it; what remains is a check that the route is gone, not merely
+    # unlinked.
+    print('\nRendering teacher Score Entry')
     from teacher.models import Teacher
     from competencies.models import ScoreEntry
 
@@ -274,21 +279,10 @@ def run():
         if not client:
             check('login as coach', False, str(coach.user))
         else:
-            grade = str(Student.objects
-                        .filter(school=coach.school, score_entries__isnull=False)
-                        .values_list('student_class', flat=True).first())
-            for key, label, columns in [
-                ('project_wise',   'Project Wise',                        ['Assessed in', 'Score']),
-                ('agg_competency', 'Agg Competency Wise',                 ['Aggregate', 'Sub-pillar']),
-                ('percentile',     'Percentile Competency',               ['Class avg', 'Median', 'Spread']),
-                ('comparative',    'Project Level Aggregate Comparative', ['Coverage', 'Class avg']),
-            ]:
-                code, body, _ = fetch(client, f'/teacher/score-viewing/?view={key}&grade={grade}')
-                check(f'{label} 200', code == 200, f'status {code}')
-                check(f'{label} renders its columns', all(c in body for c in columns))
-                check(f'{label} has data (not an empty state)',
-                      not any(m in body for m in ('No scores recorded', 'No projects',
-                                                  'Nothing to aggregate')))
+            code, _, _ = fetch(client, '/teacher/score-viewing/')
+            check('Score Viewing is no longer reachable', code == 404,
+                  f'status {code}')
+
             # Score Entry: the Generate button is project-level but sits under
             # whichever assessment is open, so it must show project-wide progress.
             code, body, _ = fetch(client, '/teacher/academics/score-entry/')
@@ -304,13 +298,6 @@ def run():
             code, body, _ = fetch(client, '/teacher/events/')
             check('coach event calendar 200', code == 200, f'status {code}')
             check('coach event calendar renders its heading', 'Event Calendar' in body)
-
-            code, body, _ = fetch(client, f'/teacher/score-viewing/?view=project_wise&grade={grade}')
-            check('slide 14 "repeated competencies" note',
-                  'Repeated competencies are aggregated' in body)
-            check('slide 14 Generate Profile Report action', 'Generate Profile Report' in body)
-            check('slide 14 Show Grade / Show Project filters',
-                  'Show Grade' in body and 'Show Project' in body)
 
     # Super Admin pages — where the last leak actually showed up
     print('\nRendering super admin pages')

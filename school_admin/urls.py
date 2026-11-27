@@ -19,7 +19,6 @@ urlpatterns = [
     # Pages whose sidebar links were dead (changes document, 'Need to work on')
     path('thinking-coaches/', pages.teacher_list, name='school_admin_teacher_list'),
     path('thinking-coaches/<int:teacher_id>/', pages.view_teacher, name='school_admin_view_teacher'),
-    path('classes/overview/', pages.class_overview, name='school_admin_class_overview'),
     path('classes/attendance/', pages.class_attendance, name='school_admin_class_attendance'),
     path('reports/download/', reports.download_reports, name='school_admin_download_reports'),
     path('announcements/', views.school_admin_announcements, name='school_admin_announcements'),

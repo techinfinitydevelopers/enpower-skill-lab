@@ -3,7 +3,7 @@ School Admin pages whose sidebar entries were dead links (href="#").
 
 The changes document lists Thinking Coaches ("should be able to see TC profile"),
 Class Overview and Class Attendance as not working — none of them had a URL, a
-view or a template.
+view or a template. Class Overview was removed again in Phase 2; the rest stay.
 
 School Admin is view-only per PPT slide 51 (the principal), so every page here
 reads; nothing writes.
@@ -101,63 +101,6 @@ def view_teacher(request, teacher_id):
 
 
 # ── Classes ─────────────────────────────────────────────────────────────
-
-@login_required
-@user_passes_test(is_school_admin)
-def class_overview(request):
-    """One row per class: its coach, how many students, sessions held so far."""
-    from attendance.models import AttendanceSession
-    from schools.models import Class
-    from student.models import Student
-
-    school, bail = _school_or_redirect(request)
-    if bail:
-        return bail
-
-    classes = list(
-        Class.objects.filter(school=school)
-        .select_related('thinking_coach')
-        .order_by('grade', 'division')
-    )
-
-    # Students are stored with their own grade/division rather than a Class FK,
-    # so they're counted by that pair.
-    head_count = defaultdict(int)
-    for grade, division in Student.objects.filter(
-            school=school, is_active=True).values_list('student_class', 'division'):
-        head_count[(str(grade), str(division))] += 1
-
-    sessions_held = defaultdict(int)
-    for grade, division in AttendanceSession.objects.filter(
-            school=school, class_status='held').values_list('grade', 'division'):
-        sessions_held[(str(grade), str(division))] += 1
-
-    rows = []
-    for c in classes:
-        key = (str(c.grade), str(c.division))
-        rows.append({
-            'klass': c,
-            'students': head_count.get(key, 0),
-            'sessions_held': sessions_held.get(key, 0),
-            'coach': c.thinking_coach,
-        })
-
-    # Classes a student sits in that have no Class row yet would otherwise be
-    # invisible to the principal, so they're listed as unregistered.
-    known = {(str(c.grade), str(c.division)) for c in classes}
-    orphans = [
-        {'grade': g, 'division': d, 'students': n}
-        for (g, d), n in sorted(head_count.items()) if (g, d) not in known
-    ]
-
-    return render(request, 'school_admin/class-overview.html', {
-        'school': school,
-        'rows': rows,
-        'orphans': orphans,
-        'total_students': sum(head_count.values()),
-        'page_title': 'Class Overview',
-    })
-
 
 @login_required
 @user_passes_test(is_school_admin)

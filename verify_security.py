@@ -269,7 +269,7 @@ print('\nSOURCE')
 SKIP = {'venv', '.venv', '__pycache__', '.git', 'node_modules', 'staticfiles', 'migrations'}
 views = [p for p in Path(settings.BASE_DIR).rglob('*.py')
          if not any(part in SKIP for part in p.parts)
-         and p.name in ('views.py', 'pages.py', 'reports.py', 'score_views.py',
+         and p.name in ('views.py', 'pages.py', 'reports.py',
                         'bulk_import.py', 'password_reset.py')]
 
 undecorated = []
