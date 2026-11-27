@@ -353,11 +353,63 @@
         <!-- Assessments section -->
         <div class="pa-section-head">
             <h2 class="pa-section-title">Assessments &amp; Competency Mapping</h2>
-            <button class="pa-btn-secondary" onclick="toggleAddAssessment()">
-                <span class="material-symbols-outlined">add</span>
-                Add Assessment
-            </button>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                {% if clone_sources %}
+                <button class="pa-btn-secondary" onclick="toggleCloneAssessment()">
+                    <span class="material-symbols-outlined">content_copy</span>
+                    Copy from another project
+                </button>
+                {% endif %}
+                <button class="pa-btn-secondary" onclick="toggleAddAssessment()">
+                    <span class="material-symbols-outlined">add</span>
+                    Add Assessment
+                </button>
+            </div>
         </div>
+
+        {% comment %}
+            Copy assessments in from another project. Built because the same
+            project exists under more than one framework and the assessments
+            were only ever written under one of them, leaving the others
+            unusable. Competencies are matched by name on the server, since
+            each framework has its own codes for the same competency.
+        {% endcomment %}
+        {% if clone_sources %}
+        <div class="pa-add-assess-card" id="cloneAssessCard">
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="clone_assessment">
+                <div class="pa-add-assess-grid">
+                    <div class="pa-field">
+                        <label>Copy from project</label>
+                        <select name="source_project" id="cloneSourceProject" required onchange="fillCloneAssessments()">
+                            <option value="">Select a project</option>
+                            {% for p in clone_sources %}
+                            <option value="{{ p.id }}">{{ p.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="pa-field">
+                        <label>Which assessment</label>
+                        <select name="source_assessment" id="cloneSourceAssessment" disabled>
+                            <option value="all">All assessments</option>
+                        </select>
+                    </div>
+                </div>
+                <p style="font-size:.72rem;color:var(--text-secondary,#6b7280);margin:0 0 10px;">
+                    Name, type, placement, descriptors and competency mapping are copied.
+                    Competencies are matched by name, so a copy across frameworks keeps its mapping.
+                    Anything already here is kept — copies are added, not replaced.
+                </p>
+                <div style="display:flex;gap:8px;">
+                    <button type="submit" class="pa-btn-primary" style="font-size:.8rem;padding:.5rem 1rem;">
+                        <span class="material-symbols-outlined">content_copy</span> Copy
+                    </button>
+                    <button type="button" class="pa-btn-secondary" onclick="toggleCloneAssessment()">Cancel</button>
+                </div>
+            </form>
+        </div>
+        {% endif %}
 
         <!-- Add assessment inline form -->
         <div class="pa-add-assess-card" id="addAssessCard">
@@ -828,6 +880,44 @@ function toggleAccordion(id) {
 /* Add assessment form toggle */
 function toggleAddAssessment() {
     document.getElementById('addAssessCard').classList.toggle('show');
+}
+
+/* Copy an assessment from another project. The sources are embedded rather
+   than fetched: there are a dozen projects, and a second dropdown that waits
+   on a request feels broken. */
+var CLONE_SOURCES = {{ clone_sources_json|safe }};
+
+function toggleCloneAssessment() {
+    var card = document.getElementById('cloneAssessCard');
+    if (card) card.classList.toggle('show');
+}
+
+function fillCloneAssessments() {
+    var pick = document.getElementById('cloneSourceProject');
+    var list = document.getElementById('cloneSourceAssessment');
+    if (!pick || !list) return;
+
+    var chosen = CLONE_SOURCES.filter(function (p) {
+        return String(p.id) === String(pick.value);
+    })[0];
+
+    list.innerHTML = '';
+    if (!chosen) {
+        list.innerHTML = '<option value="all">All assessments</option>';
+        list.disabled = true;
+        return;
+    }
+    var all = document.createElement('option');
+    all.value = 'all';
+    all.textContent = 'All assessments (' + chosen.assessments.length + ')';
+    list.appendChild(all);
+    chosen.assessments.forEach(function (a) {
+        var o = document.createElement('option');
+        o.value = a.id;
+        o.textContent = a.name;
+        list.appendChild(o);
+    });
+    list.disabled = false;
 }
 
 /* Sidebar toggle */

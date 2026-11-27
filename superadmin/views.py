@@ -3299,6 +3299,92 @@ def project_assessment(request):
             else:
                 messages.error(request, 'Assessment name is required.')
 
+        elif action == 'clone_assessment' and active_project:
+            # Copy assessments in from another project.
+            #
+            # Competencies are matched by NAME, never by id or code. Each
+            # framework owns its own competency rows -- FSL spells one
+            # 'Skills-SP1.C1' where CSL + spells the same thing 'KB1.C1' --
+            # so copying ids across frameworks would map to nothing, and
+            # copying codes would map to nothing either. The names are what
+            # the two have in common.
+            source_id = (request.POST.get('source_project') or '').strip()
+            source = (Project.objects.filter(id=source_id).first()
+                      if source_id.isdigit() else None)
+            if not source:
+                messages.error(request, 'Choose a project to copy from.')
+                return redirect(_pa_back(request, active_id))
+            if source.id == active_project.id:
+                messages.error(request, 'That is the project you are in.')
+                return redirect(_pa_back(request, active_id))
+
+            wanted = request.POST.get('source_assessment', '').strip()
+            sources = source.assessments.order_by('order', 'id')
+            if wanted.isdigit():
+                sources = sources.filter(id=wanted)
+            sources = list(sources)
+            if not sources:
+                messages.error(request, 'That project has no assessments to copy.')
+                return redirect(_pa_back(request, active_id))
+
+            # The competencies this project is allowed to use, by name.
+            target_by_name = {
+                c.name.strip().lower(): c for c in Competency.objects.filter(
+                    status='Active',
+                    sub_pillar__pillar__framework_ref=active_fw_obj)
+            }
+
+            copied = 0
+            mapped = 0
+            unmatched = set()
+            with transaction.atomic():
+                order = active_project.assessments.count()
+                for src in sources:
+                    new = Assessment.objects.create(
+                        project=active_project,
+                        name=src.name,
+                        assessment_type=src.assessment_type,
+                        placement_after_challenge=src.placement_after_challenge,
+                        output_descriptor=src.output_descriptor,
+                        additional_instructions=src.additional_instructions,
+                        # The same stored file, not a second copy of it.
+                        rubric_file=src.rubric_file.name or '',
+                        order=order,
+                    )
+                    order += 1
+                    copied += 1
+
+                    seen = set()
+                    m_order = 0
+                    for m in src.competency_mappings.select_related(
+                            'competency').order_by('order', 'id'):
+                        name = (m.competency.name or '').strip().lower()
+                        target = target_by_name.get(name)
+                        if target is None:
+                            unmatched.add(m.competency.name)
+                            continue
+                        if target.id in seen:
+                            continue
+                        seen.add(target.id)
+                        AssessmentCompetency.objects.create(
+                            assessment=new, competency=target,
+                            comp_type=m.comp_type, order=m_order)
+                        m_order += 1
+                        mapped += 1
+
+            note = (f'Copied {copied} assessment{"s" if copied != 1 else ""} '
+                    f'from "{source.title}" with {mapped} competency mapping'
+                    f'{"s" if mapped != 1 else ""}.')
+            if unmatched:
+                # Say so rather than leave a silently thinner copy behind.
+                messages.warning(
+                    request,
+                    note + ' These competencies have no match in this '
+                    'framework and were left out: ' + ', '.join(sorted(unmatched)))
+            else:
+                messages.success(request, note)
+            return redirect(_pa_back(request, active_id))
+
         elif action == 'save_assessment' and active_project:
             a = get_object_or_404(Assessment, id=request.POST.get('assessment_id'), project=active_project)
             a.name                    = request.POST.get('name', a.name).strip() or a.name
@@ -3364,9 +3450,31 @@ def project_assessment(request):
     # quietly change it to something else.
     known = {t['name'] for t in assessment_types}
 
+    # Sources for "copy an assessment from another project". Every project
+    # that has assessments, whatever its framework -- the whole point of the
+    # feature is that CSL + can take what was already written under FSL.
+    # Carried as JSON so the second dropdown can fill without a round trip;
+    # there are a dozen projects, not a thousand.
+    clone_sources = []
+    for p in (Project.objects.exclude(id=active_id)
+              .prefetch_related('assessments')
+              .order_by('framework_ref__order', 'grade', 'title')):
+        rows = [{'id': a.id, 'name': a.name}
+                for a in p.assessments.all().order_by('order', 'id')]
+        if not rows:
+            continue
+        clone_sources.append({
+            'id': p.id,
+            'label': f'{p.title} — Grade {p.grade}'
+                     f'{" · " + p.framework_ref.name if p.framework_ref else ""}',
+            'assessments': rows,
+        })
+
     context = {
         'projects':        listed,
         'all_project_count': projects.count(),
+        'clone_sources':   clone_sources,
+        'clone_sources_json': json.dumps(clone_sources),
         'filter_fw':       filter_fw,
         'assessment_types': assessment_types,
         'known_type_names': known,
